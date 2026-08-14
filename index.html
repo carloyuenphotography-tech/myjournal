@@ -2,6 +2,25 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <!-- 1. 禁用縮放，讓體驗更像原生 App -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Rapid Logging</title>
+
+  <!-- 2. 開啟 iOS Web App 全螢幕模式（隱藏 Safari 網址列與工具列） -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  
+  <!-- 3. 設定 iOS 頂部狀態列樣式（default: 白色, black: 黑色, black-translucent: 透明半浸入） -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  
+  <!-- 4. 設定 App 在主畫面顯示名稱 -->
+  <meta name="apple-mobile-web-app-title" content="RapidLog">
+
+  <!-- 5. 設定 iPhone 桌面 App 圖示 (Apple Touch Icon) -->
+  <!-- ⚠️ 提示：你可以將下方網址替換為你喜歡的 180x180 圖片網址 -->
+  <link rel="apple-touch-icon" href="https://img.icons8.com/emoji/180/lightning-bolt-emoji.png">
+
+  <!-- 原本的 <style> 樣式放在這下面... -->
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Rapid Logging</title>
   <style>
@@ -92,7 +111,7 @@
 
 <script>
   // ⚠️ 請替換成你的 Google Apps Script Web App URL
-  const GAS_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxcp61r5UTR7Sjd1aRBWe3H8XEp5Smy27hywXS72P_QcAL8jYG8zGGCiBbM_oKFy0kF/exec";
 
   let allLogs = []; // 儲存所有從 Google Sheet 抓回來的資料
 
