@@ -11,20 +11,19 @@
   <meta name="apple-mobile-web-app-title" content="RapidLog">
   <link rel="apple-touch-icon" href="https://img.icons8.com/emoji/180/lightning-bolt-emoji.png">
 
+  <!-- 引入 Google 官方 Identity SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f2f2f7; margin: 0; padding: 16px; display: flex; justify-content: center; }
     .container { width: 100%; max-width: 500px; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     
-    /* 1. 登入鎖樣式 */
-    #loginOverlay { display: flex; flex-direction: column; gap: 12px; text-align: center; padding: 20px 0; }
-    .login-input { padding: 12px; border: 1px solid #e5e5ea; border-radius: 10px; font-size: 1rem; text-align: center; outline: none; }
-    .login-btn { background: #007aff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; }
-
-    /* 主介面 (預設隱藏，驗證通過才顯示) */
+    /* 1. Google 登入區 */
+    #loginOverlay { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px 0; text-align: center; }
     #mainApp { display: none; }
 
-    /* 2. 導覽頁籤 */
+    /* 導覽頁籤 */
     .nav-tabs { display: flex; border-bottom: 2px solid #e5e5ea; margin-bottom: 16px; }
     .tab-btn { flex: 1; padding: 10px; text-align: center; font-weight: 600; color: #8e8e93; border: none; background: none; cursor: pointer; font-size: 1rem; }
     .tab-btn.active { color: #007aff; border-bottom: 2px solid #007aff; margin-bottom: -2px; }
@@ -38,27 +37,24 @@
     .btn { padding: 12px 8px; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
     .btn:active { transform: scale(0.97); opacity: 0.8; }
     
-    /* 3. Category 色彩設定 (按鈕與標籤通用) */
-    .cat-idea  { background-color: #fff9c4 !important; color: #f57f17 !important; } /* 💡 靈感 (黃) */
-    .cat-todo  { background-color: #e3f2fd !important; color: #1976d2 !important; } /* ☐ 待辦 (藍) */
-    .cat-event { background-color: #e8f5e9 !important; color: #388e3c !important; } /* 📅 事件 (綠) */
-    .cat-mood  { background-color: #fce4ec !important; color: #c2185b !important; } /* 💭 感受 (粉) */
-    .cat-note  { background-color: #f3e5f5 !important; color: #7b1fa2 !important; } /* 📝 雜記 (紫) */
+    /* Category 色彩設定 */
+    .cat-idea  { background-color: #fff9c4 !important; color: #f57f17 !important; }
+    .cat-todo  { background-color: #e3f2fd !important; color: #1976d2 !important; }
+    .cat-event { background-color: #e8f5e9 !important; color: #388e3c !important; }
+    .cat-mood  { background-color: #fce4ec !important; color: #c2185b !important; }
+    .cat-note  { background-color: #f3e5f5 !important; color: #7b1fa2 !important; }
 
     .toast { margin-top: 12px; font-size: 0.85rem; text-align: center; height: 18px; color: #8e8e93; }
 
-    /* 歷史查閱與編輯區 */
+    /* 歷史查閱區 */
     .filter-box { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
     .search-input, .select-filter { width: 100%; padding: 10px; border: 1px solid #e5e5ea; border-radius: 8px; font-size: 0.95rem; outline: none; }
     .refresh-btn { background: #e5e5ea; color: #333; border: none; padding: 8px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    
     .log-list { display: flex; flex-direction: column; gap: 10px; max-height: 450px; overflow-y: auto; }
     .log-item { background: #f9f9fb; border: 1px solid #e5e5ea; padding: 12px; border-radius: 10px; }
     .log-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #8e8e93; margin-bottom: 6px; }
     .log-type { font-weight: bold; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; }
     .log-content { font-size: 0.95rem; color: #1c1c1e; white-space: pre-wrap; word-break: break-all; }
-    
-    /* 編輯模式按鈕 */
     .action-btn { background: none; border: none; color: #007aff; font-size: 0.8rem; cursor: pointer; padding: 2px 6px; font-weight: 600; }
     .edit-textarea { width: 100%; height: 60px; padding: 6px; margin-top: 4px; border: 1px solid #007aff; border-radius: 6px; font-size: 0.9rem; }
   </style>
@@ -66,11 +62,18 @@
 <body>
 
 <div class="container">
-  <!-- 🔒 1. 密碼驗證關卡 -->
+  <!-- 🔒 1. Google 登入關卡 -->
   <div id="loginOverlay">
-    <h2>🔒 請輸入解鎖密碼</h2>
-    <input type="password" id="passInput" class="login-input" placeholder="密碼">
-    <button class="login-btn" onclick="checkPassword()">進入系統</button>
+    <h2>⚡ Rapid Logging</h2>
+    <p style="color: #8e8e93; font-size: 0.9rem; margin-top: -10px;">請先透過 Google 帳號驗證身分</p>
+    
+    <!-- Google 登入按鈕容器 -->
+    <div id="g_id_onload"
+         data-client_id="972795263729-ilj7p51v81gj074hshsebu01gt1htfkc.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse">
+    </div>
+    <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"></div>
+
     <div id="loginErr" style="color: #ff3b30; font-size: 0.85rem;"></div>
   </div>
 
@@ -121,24 +124,66 @@
 </div>
 
 <script>
-  // ⚠️ 1. 請替換為你的 Google Apps Script URL
+  // ⚠️ 1. 替換為你的 Apps Script URL
   const GAS_URL = "https://script.google.com/macros/s/AKfycbxkwB3tjRWDQV0ZBV87e2ExqBduxpSEibkbfkX01WASG-JOY3ycBB6vKUt9Mvm6NTQ/exec";
   
-  // ⚠️ 2. 設定你的個人密碼（建議修改）
-  const MY_PASSWORD = "Rapid0716"; 
+  // ⚠️ 2. 替換為你在 Google Cloud 申請的 Client ID
+  const GOOGLE_CLIENT_ID = "972795263729-ilj7p51v81gj074hshsebu01gt1htfkc.apps.googleusercontent.com";
+  
+  // ⚠️ 3. 設定你「允許進入」的私人 Gmail 帳號（防止其他擁有 Google 帳號的人登入）
+  // 修正後：允許陣列中的所有 Email
+  const ALLOWED_EMAILS = [
+ 	 "carloyuenphotography@gmail.com",   // 你的主要帳號
+	  "carloy.work@gmail.com",    // 你的備用帳號
+	  "carloyuen@gmail.com",       // 其他你想授權的帳號
+	  "yuenck@web.wfjlps.edu.hk", 
+	];
+
+// 登入邏輯改為檢查 Email 是否在陣列中
+function handleCredentialResponse(response) {
+  const responsePayload = parseJwt(response.credential);
+  const userEmail = responsePayload.email;
+
+  // 使用 includes 檢查登入者是否在允許清單內
+  if (ALLOWED_EMAILS.includes(userEmail)) {
+    localStorage.setItem("user_google_email", userEmail);
+    showApp();
+  } else {
+    document.getElementById('loginErr').innerText = `❌ 存取被拒：${userEmail} 沒有存取權限。`;
+  }
+}
+
+// 自動登入檢查也同步更新
+if (ALLOWED_EMAILS.includes(localStorage.getItem("user_google_email"))) {
+  showApp();
+}
 
   let allLogs = [];
 
-  // --- 密碼驗證邏輯 ---
-  function checkPassword() {
-    const input = document.getElementById('passInput').value;
-    const err = document.getElementById('loginErr');
-    
-    if (input === MY_PASSWORD) {
-      localStorage.setItem("app_authenticated", "true");
+  // 將 Client ID 動態綁定至 HTML 標籤
+  document.getElementById('g_id_onload').setAttribute('data-client_id', GOOGLE_CLIENT_ID);
+
+  // 解析 JWT Token 的小工具
+  function parseJwt (token) {
+    var base64Url = token.split('.')[1];
+    var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  }
+
+  // Google 登入成功後的回呼函式
+  function handleCredentialResponse(response) {
+    const responsePayload = parseJwt(response.credential);
+    const userEmail = responsePayload.email;
+
+    // 檢查登入的 Email 是否符合權限
+    if (userEmail === MY_ALLOWED_EMAIL) {
+      localStorage.setItem("user_google_email", userEmail);
       showApp();
     } else {
-      err.innerText = "❌ 密碼錯誤，請重新輸入";
+      document.getElementById('loginErr').innerText = `❌ 存取被拒：${userEmail} 沒有存取權限。`;
     }
   }
 
@@ -147,12 +192,12 @@
     document.getElementById('mainApp').style.display = 'block';
   }
 
-  // 開啟網頁時檢查是否已登入過
-  if (localStorage.getItem("app_authenticated") === "true") {
+  // 如果瀏覽器已經登入過且符合 Email，自動進入
+  if (localStorage.getItem("user_google_email") === MY_ALLOWED_EMAIL) {
     showApp();
   }
 
-  // --- Category 對應顏色 Class ---
+  // --- Category 樣式 ---
   function getCategoryClass(type) {
     if (type.includes('Idea')) return 'cat-idea';
     if (type.includes('To-do')) return 'cat-todo';
@@ -213,7 +258,7 @@
     }
   }
 
-  // --- 3. 渲染列表 (帶色彩與編輯按鈕) ---
+  // --- 3. 渲染列表 ---
   function renderLogs(logs) {
     const logList = document.getElementById('logList');
     if (logs.length === 0) {
@@ -235,7 +280,7 @@
     `).join('');
   }
 
-  // --- 4. 開啟編輯模式 ---
+  // --- 4. 編輯功能 ---
   function enableEdit(rowIndex) {
     const contentDiv = document.getElementById(`content-${rowIndex}`);
     const currentText = allLogs.find(l => l.rowIndex === rowIndex).content;
@@ -253,7 +298,6 @@
     document.getElementById(`content-${rowIndex}`).innerText = originalText;
   }
 
-  // --- 5. 儲存修改至 Google Sheet ---
   async function saveEdit(rowIndex) {
     const newText = document.getElementById(`editInput-${rowIndex}`).value.trim();
     if (!newText) return;
@@ -269,15 +313,15 @@
         body: JSON.stringify({ rowIndex: rowIndex, type: item.type, content: newText })
       });
 
-      item.content = newText; // 更新本地快照
+      item.content = newText;
       contentDiv.innerText = newText;
     } catch (err) {
-      alert("修改失敗，請檢查網路");
+      alert("修改失敗");
       contentDiv.innerText = item.content;
     }
   }
 
-  // --- 6. 篩選邏輯與分頁切換 ---
+  // --- 5. 篩選與分頁 ---
   function filterLogs() {
     const keyword = document.getElementById('searchInput').value.toLowerCase();
     const selectedType = document.getElementById('typeFilter').value;
