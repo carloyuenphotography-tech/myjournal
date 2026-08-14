@@ -2,120 +2,166 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <!-- 1. 禁用縮放，讓體驗更像原生 App -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Rapid Logging</title>
-
-  <!-- 2. 開啟 iOS Web App 全螢幕模式（隱藏 Safari 網址列與工具列） -->
+  
+  <!-- PWA & iOS 設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  
-  <!-- 3. 設定 iOS 頂部狀態列樣式（default: 白色, black: 黑色, black-translucent: 透明半浸入） -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  
-  <!-- 4. 設定 App 在主畫面顯示名稱 -->
   <meta name="apple-mobile-web-app-title" content="RapidLog">
-
-  <!-- 5. 設定 iPhone 桌面 App 圖示 (Apple Touch Icon) -->
-  <!-- ⚠️ 提示：你可以將下方網址替換為你喜歡的 180x180 圖片網址 -->
   <link rel="apple-touch-icon" href="https://img.icons8.com/emoji/180/lightning-bolt-emoji.png">
 
-  <!-- 原本的 <style> 樣式放在這下面... -->
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Rapid Logging</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f2f2f7; margin: 0; padding: 16px; display: flex; justify-content: center; }
     .container { width: 100%; max-width: 500px; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     
-    /* 導覽頁籤 */
+    /* 1. 登入鎖樣式 */
+    #loginOverlay { display: flex; flex-direction: column; gap: 12px; text-align: center; padding: 20px 0; }
+    .login-input { padding: 12px; border: 1px solid #e5e5ea; border-radius: 10px; font-size: 1rem; text-align: center; outline: none; }
+    .login-btn { background: #007aff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; }
+
+    /* 主介面 (預設隱藏，驗證通過才顯示) */
+    #mainApp { display: none; }
+
+    /* 2. 導覽頁籤 */
     .nav-tabs { display: flex; border-bottom: 2px solid #e5e5ea; margin-bottom: 16px; }
     .tab-btn { flex: 1; padding: 10px; text-align: center; font-weight: 600; color: #8e8e93; border: none; background: none; cursor: pointer; font-size: 1rem; }
     .tab-btn.active { color: #007aff; border-bottom: 2px solid #007aff; margin-bottom: -2px; }
-
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* 寫入區樣式 */
+    /* 輸入區 */
     textarea { width: 100%; height: 90px; padding: 12px; border: 1px solid #e5e5ea; border-radius: 10px; font-size: 1rem; resize: none; outline: none; background: #f9f9fb; }
     textarea:focus { border-color: #007aff; background: #fff; }
     .tag-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
     .btn { padding: 12px 8px; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
     .btn:active { transform: scale(0.97); opacity: 0.8; }
-    .btn-idea  { background-color: #fff9c4; color: #f57f17; }
-    .btn-todo  { background-color: #e3f2fd; color: #1976d2; }
-    .btn-event { background-color: #e8f5e9; color: #388e3c; }
-    .btn-mood  { background-color: #fce4ec; color: #c2185b; }
-    .btn-note  { background-color: #f3e5f5; color: #7b1fa2; }
+    
+    /* 3. Category 色彩設定 (按鈕與標籤通用) */
+    .cat-idea  { background-color: #fff9c4 !important; color: #f57f17 !important; } /* 💡 靈感 (黃) */
+    .cat-todo  { background-color: #e3f2fd !important; color: #1976d2 !important; } /* ☐ 待辦 (藍) */
+    .cat-event { background-color: #e8f5e9 !important; color: #388e3c !important; } /* 📅 事件 (綠) */
+    .cat-mood  { background-color: #fce4ec !important; color: #c2185b !important; } /* 💭 感受 (粉) */
+    .cat-note  { background-color: #f3e5f5 !important; color: #7b1fa2 !important; } /* 📝 雜記 (紫) */
 
     .toast { margin-top: 12px; font-size: 0.85rem; text-align: center; height: 18px; color: #8e8e93; }
 
-    /* 讀取與篩選區樣式 */
+    /* 歷史查閱與編輯區 */
     .filter-box { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
     .search-input, .select-filter { width: 100%; padding: 10px; border: 1px solid #e5e5ea; border-radius: 8px; font-size: 0.95rem; outline: none; }
     .refresh-btn { background: #e5e5ea; color: #333; border: none; padding: 8px; border-radius: 8px; font-weight: 600; cursor: pointer; }
     
     .log-list { display: flex; flex-direction: column; gap: 10px; max-height: 450px; overflow-y: auto; }
     .log-item { background: #f9f9fb; border: 1px solid #e5e5ea; padding: 12px; border-radius: 10px; }
-    .log-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: #8e8e93; margin-bottom: 6px; }
-    .log-type { font-weight: bold; padding: 2px 6px; border-radius: 4px; background: #e5e5ea; color: #333; }
+    .log-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #8e8e93; margin-bottom: 6px; }
+    .log-type { font-weight: bold; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; }
     .log-content { font-size: 0.95rem; color: #1c1c1e; white-space: pre-wrap; word-break: break-all; }
+    
+    /* 編輯模式按鈕 */
+    .action-btn { background: none; border: none; color: #007aff; font-size: 0.8rem; cursor: pointer; padding: 2px 6px; font-weight: 600; }
+    .edit-textarea { width: 100%; height: 60px; padding: 6px; margin-top: 4px; border: 1px solid #007aff; border-radius: 6px; font-size: 0.9rem; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <!-- 頁籤切換 -->
-  <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('writeTab')">⚡ 快速記錄</button>
-    <button class="tab-btn" onclick="switchTab('readTab')">🔍 歷史查閱</button>
+  <!-- 🔒 1. 密碼驗證關卡 -->
+  <div id="loginOverlay">
+    <h2>🔒 請輸入解鎖密碼</h2>
+    <input type="password" id="passInput" class="login-input" placeholder="密碼">
+    <button class="login-btn" onclick="checkPassword()">進入系統</button>
+    <div id="loginErr" style="color: #ff3b30; font-size: 0.85rem;"></div>
   </div>
 
-  <!-- 分頁一：寫入資料 -->
-  <div id="writeTab" class="tab-content active">
-    <textarea id="logInput" placeholder="寫點什麼..." autofocus></textarea>
-    
-    <div class="tag-grid">
-      <button class="btn btn-idea" onclick="sendLog('💡 Idea')">💡 靈感</button>
-      <button class="btn btn-todo" onclick="sendLog('☐ To-do', '[ ]')">☐ 待辦</button>
-      <button class="btn btn-event" onclick="sendLog('📅 Event')">📅 事件</button>
-      <button class="btn btn-mood" onclick="sendLog('💭 感受')">💭 感受</button>
-      <button class="btn btn-note" onclick="sendLog('📝 雜記')" style="grid-column: span 2;">📝 雜記 / 其他</button>
+  <!-- 📱 2. Web App 主內容區 -->
+  <div id="mainApp">
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('writeTab')">⚡ 快速記錄</button>
+      <button class="tab-btn" onclick="switchTab('readTab')">🔍 歷史查閱</button>
     </div>
 
-    <div id="toast" class="toast">點擊上方分類直接發送</div>
-  </div>
-
-  <!-- 分頁二：讀取與篩選 -->
-  <div id="readTab" class="tab-content">
-    <div class="filter-box">
-      <input type="text" id="searchInput" class="search-input" placeholder="搜尋關鍵字..." oninput="filterLogs()">
-      <div style="display: flex; gap: 8px;">
-        <select id="typeFilter" class="select-filter" onchange="filterLogs()">
-          <option value="ALL">全部類型</option>
-          <option value="💡 Idea">💡 靈感</option>
-          <option value="☐ To-do">☐ 待辦</option>
-          <option value="📅 Event">📅 事件</option>
-          <option value="💭 感受">💭 感受</option>
-          <option value="📝 雜記">📝 雜記</option>
-        </select>
-        <button class="refresh-btn" onclick="fetchLogs()">🔄 重新整理</button>
+    <!-- 分頁一：寫入資料 -->
+    <div id="writeTab" class="tab-content active">
+      <textarea id="logInput" placeholder="寫點什麼..." autofocus></textarea>
+      
+      <div class="tag-grid">
+        <button class="btn cat-idea" onclick="sendLog('💡 Idea')">💡 靈感</button>
+        <button class="btn cat-todo" onclick="sendLog('☐ To-do', '[ ]')">☐ 待辦</button>
+        <button class="btn cat-event" onclick="sendLog('📅 Event')">📅 事件</button>
+        <button class="btn cat-mood" onclick="sendLog('💭 感受')">💭 感受</button>
+        <button class="btn cat-note" onclick="sendLog('📝 雜記')" style="grid-column: span 2;">📝 雜記 / 其他</button>
       </div>
+
+      <div id="toast" class="toast">點擊上方分類直接發送</div>
     </div>
 
-    <div id="logList" class="log-list">
-      <div style="text-align: center; color: #8e8e93; padding: 20px;">載入中...</div>
+    <!-- 分頁二：歷史查閱與編輯 -->
+    <div id="readTab" class="tab-content">
+      <div class="filter-box">
+        <input type="text" id="searchInput" class="search-input" placeholder="搜尋關鍵字..." oninput="filterLogs()">
+        <div style="display: flex; gap: 8px;">
+          <select id="typeFilter" class="select-filter" onchange="filterLogs()">
+            <option value="ALL">全部類型</option>
+            <option value="💡 Idea">💡 靈感</option>
+            <option value="☐ To-do">☐ 待辦</option>
+            <option value="📅 Event">📅 事件</option>
+            <option value="💭 感受">💭 感受</option>
+            <option value="📝 雜記">📝 雜記</option>
+          </select>
+          <button class="refresh-btn" onclick="fetchLogs()">🔄 重新整理</button>
+        </div>
+      </div>
+
+      <div id="logList" class="log-list">
+        <div style="text-align: center; color: #8e8e93; padding: 20px;">載入中...</div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-  // ⚠️ 請替換成你的 Google Apps Script Web App URL
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbxcp61r5UTR7Sjd1aRBWe3H8XEp5Smy27hywXS72P_QcAL8jYG8zGGCiBbM_oKFy0kF/exec";
+  // ⚠️ 1. 請替換為你的 Google Apps Script URL
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxkwB3tjRWDQV0ZBV87e2ExqBduxpSEibkbfkX01WASG-JOY3ycBB6vKUt9Mvm6NTQ/exec";
+  
+  // ⚠️ 2. 設定你的個人密碼（建議修改）
+  const MY_PASSWORD = "Rapid0716"; 
 
-  let allLogs = []; // 儲存所有從 Google Sheet 抓回來的資料
+  let allLogs = [];
 
-  // 1. 寫入功能
+  // --- 密碼驗證邏輯 ---
+  function checkPassword() {
+    const input = document.getElementById('passInput').value;
+    const err = document.getElementById('loginErr');
+    
+    if (input === MY_PASSWORD) {
+      localStorage.setItem("app_authenticated", "true");
+      showApp();
+    } else {
+      err.innerText = "❌ 密碼錯誤，請重新輸入";
+    }
+  }
+
+  function showApp() {
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+  }
+
+  // 開啟網頁時檢查是否已登入過
+  if (localStorage.getItem("app_authenticated") === "true") {
+    showApp();
+  }
+
+  // --- Category 對應顏色 Class ---
+  function getCategoryClass(type) {
+    if (type.includes('Idea')) return 'cat-idea';
+    if (type.includes('To-do')) return 'cat-todo';
+    if (type.includes('Event')) return 'cat-event';
+    if (type.includes('感受')) return 'cat-mood';
+    return 'cat-note';
+  }
+
+  // --- 1. 寫入功能 ---
   async function sendLog(type, status = "") {
     const input = document.getElementById('logInput');
     const toast = document.getElementById('toast');
@@ -142,26 +188,12 @@
       input.value = ""; 
       input.focus();
     } catch (err) {
-      toast.innerText = "❌ 儲存失敗，請檢查網路";
+      toast.innerText = "❌ 儲存失敗";
       toast.style.color = "#ff3b30";
     }
   }
 
-  // 2. 切換分頁
-  function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    
-    document.getElementById(tabId).classList.add('active');
-    event.target.classList.add('active');
-
-    // 如果切換到查閱頁面且尚未抓取資料，則進行載入
-    if (tabId === 'readTab' && allLogs.length === 0) {
-      fetchLogs();
-    }
-  }
-
-  // 3. 從 Google Sheet 抓取資料
+  // --- 2. 讀取功能 ---
   async function fetchLogs() {
     const logList = document.getElementById('logList');
     logList.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 20px;">資料載入中...</div>';
@@ -177,31 +209,75 @@
         logList.innerHTML = '<div style="text-align: center; color: #ff3b30; padding: 20px;">載入失敗</div>';
       }
     } catch (err) {
-      logList.innerHTML = '<div style="text-align: center; color: #ff3b30; padding: 20px;">網路錯誤，無法載入資料</div>';
+      logList.innerHTML = '<div style="text-align: center; color: #ff3b30; padding: 20px;">網路錯誤</div>';
     }
   }
 
-  // 4. 渲染列表到畫面上
+  // --- 3. 渲染列表 (帶色彩與編輯按鈕) ---
   function renderLogs(logs) {
     const logList = document.getElementById('logList');
-    
     if (logs.length === 0) {
       logList.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 20px;">沒有符合的記錄</div>';
       return;
     }
 
     logList.innerHTML = logs.map(item => `
-      <div class="log-item">
+      <div class="log-item" id="item-${item.rowIndex}">
         <div class="log-header">
-          <span class="log-type">${item.type}</span>
-          <span>${item.timestamp}</span>
+          <span class="log-type ${getCategoryClass(item.type)}">${item.type}</span>
+          <div>
+            <span>${item.timestamp}</span>
+            <button class="action-btn" onclick="enableEdit(${item.rowIndex})">✏️ 編輯</button>
+          </div>
         </div>
-        <div class="log-content">${escapeHtml(item.content)}</div>
+        <div class="log-content" id="content-${item.rowIndex}">${escapeHtml(item.content)}</div>
       </div>
     `).join('');
   }
 
-  // 5. 即時篩選邏輯（類型 + 關鍵字）
+  // --- 4. 開啟編輯模式 ---
+  function enableEdit(rowIndex) {
+    const contentDiv = document.getElementById(`content-${rowIndex}`);
+    const currentText = allLogs.find(l => l.rowIndex === rowIndex).content;
+
+    contentDiv.innerHTML = `
+      <textarea id="editInput-${rowIndex}" class="edit-textarea">${escapeHtml(currentText)}</textarea>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
+        <button class="action-btn" onclick="cancelEdit(${rowIndex}, \`${escapeHtml(currentText)}\`)">取消</button>
+        <button class="action-btn" style="color:green;" onclick="saveEdit(${rowIndex})">💾 儲存修改</button>
+      </div>
+    `;
+  }
+
+  function cancelEdit(rowIndex, originalText) {
+    document.getElementById(`content-${rowIndex}`).innerText = originalText;
+  }
+
+  // --- 5. 儲存修改至 Google Sheet ---
+  async function saveEdit(rowIndex) {
+    const newText = document.getElementById(`editInput-${rowIndex}`).value.trim();
+    if (!newText) return;
+
+    const item = allLogs.find(l => l.rowIndex === rowIndex);
+    const contentDiv = document.getElementById(`content-${rowIndex}`);
+    contentDiv.innerText = "儲存中...";
+
+    try {
+      await fetch(GAS_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ rowIndex: rowIndex, type: item.type, content: newText })
+      });
+
+      item.content = newText; // 更新本地快照
+      contentDiv.innerText = newText;
+    } catch (err) {
+      alert("修改失敗，請檢查網路");
+      contentDiv.innerText = item.content;
+    }
+  }
+
+  // --- 6. 篩選邏輯與分頁切換 ---
   function filterLogs() {
     const keyword = document.getElementById('searchInput').value.toLowerCase();
     const selectedType = document.getElementById('typeFilter').value;
@@ -215,14 +291,20 @@
     renderLogs(filtered);
   }
 
-  // 防止 XSS 攻擊的轉義小函式
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+    event.target.classList.add('active');
+
+    if (tabId === 'readTab' && allLogs.length === 0) {
+      fetchLogs();
+    }
+  }
+
   function escapeHtml(text) {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
 </script>
 
