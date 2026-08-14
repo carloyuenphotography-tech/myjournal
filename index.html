@@ -139,19 +139,30 @@
 	  "yuenck@web.wfjlps.edu.hk", 
 	];
 
-// 登入邏輯改為檢查 Email 是否在陣列中
-function handleCredentialResponse(response) {
-  const responsePayload = parseJwt(response.credential);
-  const userEmail = responsePayload.email;
+// Google 登入成功後的回呼函式
+  function handleCredentialResponse(response) {
+    try {
+      const responsePayload = parseJwt(response.credential);
+      // 自動轉小寫並消除前後空白
+      const userEmail = responsePayload.email.toLowerCase().trim();
 
-  // 使用 includes 檢查登入者是否在允許清單內
-  if (ALLOWED_EMAILS.includes(userEmail)) {
-    localStorage.setItem("user_google_email", userEmail);
-    showApp();
-  } else {
-    document.getElementById('loginErr').innerText = `❌ 存取被拒：${userEmail} 沒有存取權限。`;
+      // 設定允許的 Email 清單（全部轉小寫）
+      const allowedList = [
+        "carloyuenphotography@gmail.com" // 👈 確保這裡是你的 Email
+      ];
+
+      // 檢查登入者是否在清單中
+      if (allowedList.includes(userEmail)) {
+        localStorage.setItem("user_google_email", userEmail);
+        showApp();
+      } else {
+        document.getElementById('loginErr').innerText = `❌ 存取被拒：${userEmail} 不在允許清單中。`;
+      }
+    } catch (err) {
+      console.error(err);
+      document.getElementById('loginErr').innerText = "❌ 解析登入資訊失敗：" + err.message;
+    }
   }
-}
 
 // 自動登入檢查也同步更新
 if (ALLOWED_EMAILS.includes(localStorage.getItem("user_google_email"))) {
@@ -173,17 +184,28 @@ if (ALLOWED_EMAILS.includes(localStorage.getItem("user_google_email"))) {
     return JSON.parse(jsonPayload);
   }
 
-  // Google 登入成功後的回呼函式
+// Google 登入成功後的回呼函式
   function handleCredentialResponse(response) {
-    const responsePayload = parseJwt(response.credential);
-    const userEmail = responsePayload.email;
+    try {
+      const responsePayload = parseJwt(response.credential);
+      // 自動轉小寫並消除前後空白
+      const userEmail = responsePayload.email.toLowerCase().trim();
 
-    // 檢查登入的 Email 是否符合權限
-    if (userEmail === MY_ALLOWED_EMAIL) {
-      localStorage.setItem("user_google_email", userEmail);
-      showApp();
-    } else {
-      document.getElementById('loginErr').innerText = `❌ 存取被拒：${userEmail} 沒有存取權限。`;
+      // 設定允許的 Email 清單（全部轉小寫）
+      const allowedList = [
+        "carloyuenphotography@gmail.com" // 👈 確保這裡是你的 Email
+      ];
+
+      // 檢查登入者是否在清單中
+      if (allowedList.includes(userEmail)) {
+        localStorage.setItem("user_google_email", userEmail);
+        showApp();
+      } else {
+        document.getElementById('loginErr').innerText = `❌ 存取被拒：${userEmail} 不在允許清單中。`;
+      }
+    } catch (err) {
+      console.error(err);
+      document.getElementById('loginErr').innerText = "❌ 解析登入資訊失敗：" + err.message;
     }
   }
 
