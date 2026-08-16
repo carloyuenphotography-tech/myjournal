@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google 登入測試</title>
+    <!-- 引入 Google 登入官方 JavaScript 套件 -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        #user-info {
+            margin-top: 20px;
+            text-align: left;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>請登入 Google 帳戶</h2>
+        
+        <!-- Google 官方登入按鈕容器 -->
+        <div id="g_id_onload"
+             data-client_id="rapidlog-505504.apps.googleusercontent.com"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin" data-type="standard"></div>
+
+        <!-- 登入成功後顯示的資訊 -->
+        <div id="user-info">
+            <h3>登入成功！🎉</h3>
+            <p><strong>姓名：</strong> <span id="name"></span></p>
+            <p><strong>Email：</strong> <span id="email"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // 當使用者成功登入 Google 後，會自動執行這個函式
+        function handleCredentialResponse(response) {
+            // response.credential 是一個加密的權杖 (JWT Token)，裡面包含使用者資料
+            const responsePayload = parseJwt(response.credential);
+            
+            console.log("完整使用者資料：", responsePayload);
+
+            // 將資料顯示在網頁上
+            document.getElementById("name").innerText = responsePayload.name;
+            document.getElementById("email").innerText = responsePayload.email;
+            
+            // 隱藏登入按鈕，顯示個人資訊
+            document.querySelector(".g_id_signin").style.display = "none";
+            document.querySelector("h2").style.display = "none";
+            document.getElementById("user-info").style.display = "block";
+        }
+
+        // 解析 Google 回傳的加密字串（解析出姓名、Email等）
+        function parseJwt(token) {
+            var base64Url = token.split('.')[1];
+            var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('0' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+    </script>
+
+</body>
+</html>
