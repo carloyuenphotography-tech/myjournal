@@ -69,9 +69,6 @@
       display: flex;
       justify-content: center;
       min-height: 40px;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
     }
 
     .container {
@@ -520,25 +517,24 @@
   </style>
 </head>
 <body>
-
-  <!-- 🔒 Google 登入驗證遮罩 Modal -->
+<div id="g_id_onload" 
+         data-client_id="972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com" 
+         data-callback="handleCredentialResponse">
+</div>
+  <!-- Google 登入驗證視窗 -->
   <div id="authOverlay" class="auth-overlay">
     <div class="auth-card">
       <div class="auth-title">⚡ 速記清單</div>
       <div class="auth-desc">請登入 Google 帳號以驗證身分</div>
       <div class="google-btn-wrapper">
-        <!-- 採用靜態 data-client_id 綁定，確保初始化穩定 -->
-        <div id="g_id_onload" 
-             data-client_id="972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com" 
+        <div id="g_id_onload"
              data-callback="handleCredentialResponse">
         </div>
         <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large"></div>
-        <div id="loginErr" style="color: #ff3b30; font-size: 0.8rem; margin-top: 4px; white-space: pre-line;"></div>
       </div>
     </div>
   </div>
 
-  <!-- 📱 原始主要介面內容 (登入前隱藏) -->
   <div class="container" id="mainContainer">
     <div id="navbar" class="nav-tabs"></div>
 
@@ -707,6 +703,13 @@
         return;
       }
 
+      // 自動從 CONFIG 帶入 Client ID 到 Google SDK 元素
+      if (CONFIG.GOOGLE_CLIENT_ID) {
+        document.getElementById('g_id_onload').setAttribute('data-client_id', CONFIG.GOOGLE_CLIENT_ID);
+      } else {
+        showStatus('❌ config.js 缺少 GOOGLE_CLIENT_ID', '#ef4444');
+      }
+
       // 檢查 Session 登入狀態
       checkLoginStatus();
     };
@@ -730,21 +733,18 @@
       const payload = parseJwt(response.credential);
       
       if (payload && payload.email) {
-        const userEmail = payload.email.toLowerCase().trim();
-
-        // 檢查白名單 ALLOWED_EMAILS (來自 allowed-emails.js)
+        // 檢查白名單 ALLOWED_EMAILS (如果存在 allowed-emails.js)
         if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
-          const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
-          if (!cleanList.includes(userEmail)) {
-            document.getElementById('loginErr').innerText = `⚠️ 存取被拒：\n${userEmail}\n未獲授權使用此系統。`;
+          if (!ALLOWED_EMAILS.includes(payload.email)) {
+            alert(`⚠️ 存取被拒：帳號 (${payload.email}) 未獲授權使用此系統。`);
             return;
           }
         }
 
-        // 登入成功，儲存資訊至 Session
+        // 登入成功，儲存資訊
         sessionStorage.setItem('google_user', JSON.stringify({
           name: payload.name,
-          email: userEmail,
+          email: payload.email,
           picture: payload.picture
         }));
         sessionStorage.setItem('google_token', response.credential);
@@ -756,13 +756,12 @@
     // 檢查登入與切換畫面
     function checkLoginStatus() {
       const userStr = sessionStorage.getItem('google_user');
-      
       if (userStr) {
         const user = JSON.parse(userStr);
         document.getElementById('userInfo').textContent = `👤 ${user.name || user.email}`;
         document.getElementById('authOverlay').style.display = 'none';
         document.getElementById('mainContainer').style.display = 'block';
-        loadLogsData(); // 驗證通過後才載入 Google Sheet 內容
+        loadLogsData();
       } else {
         document.getElementById('authOverlay').style.display = 'flex';
         document.getElementById('mainContainer').style.display = 'none';
