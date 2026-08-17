@@ -17,9 +17,9 @@ let state = {
     currentCoords: null,
     history: [],
     config: {
-        webhookUrl: "https://script.google.com/macros/s/你的AppsScript網址/exec",
-        spreadsheetId: "你的GoogleSheet試算表ID",
-        gid: "0"
+        webhookUrl: "https://script.google.com/macros/s/AKfycbwI6MuSrzYaFDz5Mt90xBjkC__Zu1WCUx4ihZheqdRlMZkU9ogzAmBSmZRxxQEhH3-O/exec",
+	spreadsheetId: "1T7uT5umFZJLmVV3I4s7JXeNLqweoz7GwmClKzszFCt0",
+	gid: "1093062333"
     }
 };
 
@@ -33,13 +33,19 @@ window.onload = function() {
     updateHistoryFilterOptions();
     updateStats();
     renderHistory();
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && state.isRunning) {
+            updateTimerDisplay();
+        }
+    });
 };
 
 function renderCategoryChips() {
     const container = document.getElementById('category-chips');
     if (!container) return;
     container.innerHTML = presetCategories.map(cat => `
-        <button type="button" onclick="selectPresetCategory('${cat.name}')" class="px-2.5 py-1 rounded-lg border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 text-[11px] font-medium text-slate-700 transition flex items-center space-x-1 bg-white shadow-xs">
+        <button type="button" onclick="selectPresetCategory('${cat.name}')" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 text-xs font-medium text-slate-700 transition flex items-center space-x-1 bg-white shadow-xs">
             <span>${cat.icon}</span>
             <span>${cat.name}</span>
         </button>
@@ -63,13 +69,13 @@ function switchTab(tab) {
     if (tab === 'timer') {
         timerView.classList.remove('hidden');
         historyView.classList.add('hidden');
-        btnTimer.className = "px-2.5 py-1 text-[11px] font-medium rounded-md bg-white text-indigo-700 shadow-xs transition";
-        btnHistory.className = "px-2.5 py-1 text-[11px] font-medium rounded-md text-slate-600 hover:text-slate-900 transition";
+        btnTimer.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg bg-white text-indigo-700 shadow-xs transition";
+        btnHistory.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 transition";
     } else {
         timerView.classList.add('hidden');
         historyView.classList.remove('hidden');
-        btnHistory.className = "px-2.5 py-1 text-[11px] font-medium rounded-md bg-white text-indigo-700 shadow-xs transition";
-        btnTimer.className = "px-2.5 py-1 text-[11px] font-medium rounded-md text-slate-600 hover:text-slate-900 transition";
+        btnHistory.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg bg-white text-indigo-700 shadow-xs transition";
+        btnTimer.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 transition";
         renderHistory();
         updateStats();
     }
@@ -130,15 +136,15 @@ function startTimer() {
     state.currentActivity = activityName;
     state.currentLocation = document.getElementById('location-input').value.trim() || "未記錄地點";
     state.currentNotes = document.getElementById('activity-notes').value.trim();
-    state.startTime = new Date(); // 記錄真實開始時間點
+    state.startTime = new Date();
     state.isRunning = true;
 
     document.getElementById('btn-start').disabled = true;
-    document.getElementById('btn-start').className = "flex-1 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold py-2.5 px-3 rounded-lg transition text-xs";
+    document.getElementById('btn-start').className = "flex-1 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition text-xs sm:text-sm";
     
     const stopBtn = document.getElementById('btn-stop');
     stopBtn.disabled = false;
-    stopBtn.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 px-3 rounded-lg shadow-xs transition transform active:scale-95 text-xs";
+    stopBtn.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 px-4 rounded-xl shadow-xs transition transform active:scale-95 text-xs sm:text-sm";
 
     document.getElementById('active-indicator').classList.remove('hidden');
     document.getElementById('current-active-label').innerText = "計時進行中...";
@@ -152,7 +158,6 @@ function startTimer() {
     document.getElementById('live-location-text').innerText = state.currentLocation;
     document.getElementById('live-start-time').innerText = formatTimeOnly(state.startTime);
 
-    // 每秒透過真實時間差更新顯示，即使畫面背景化後回來也會自動跳到正確秒數
     state.timerInterval = setInterval(() => {
         updateTimerDisplay();
     }, 1000);
@@ -160,14 +165,26 @@ function startTimer() {
     showToast(`開始記錄：「${state.currentActivity}」`);
 }
 
+function confirmStopTimer() {
+    if (!state.isRunning) return;
+    const now = new Date();
+    const diffSecs = Math.floor((now - state.startTime) / 1000);
+    document.getElementById('confirm-stop-desc').innerText = `活動：${state.currentActivity}\n已進行：${formatDuration(diffSecs)}，確定要完成並同步更新至雲端嗎？`;
+    document.getElementById('confirm-stop-modal').classList.remove('hidden');
+}
+
+function closeConfirmStopModal() {
+    document.getElementById('confirm-stop-modal').classList.add('hidden');
+}
+
 function stopTimer() {
+    closeConfirmStopModal();
     if (!state.isRunning) return;
 
     clearInterval(state.timerInterval);
     state.isRunning = false;
 
     const endTime = new Date();
-    // 關鍵：直接用結束時間減去開始時間計算總秒數（即使中途關閉畫面也完全準確）
     const durationSeconds = Math.max(1, Math.floor((endTime - state.startTime) / 1000));
 
     const record = {
@@ -186,11 +203,11 @@ function stopTimer() {
     sendToGoogleSheet(record);
 
     document.getElementById('btn-start').disabled = false;
-    document.getElementById('btn-start').className = "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-3 rounded-lg shadow-xs transition transform active:scale-95 text-xs";
+    document.getElementById('btn-start').className = "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-xs transition transform active:scale-95 text-xs sm:text-sm";
     
     const stopBtn = document.getElementById('btn-stop');
     stopBtn.disabled = true;
-    stopBtn.className = "flex-1 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold py-2.5 px-3 rounded-lg transition text-xs";
+    stopBtn.className = "flex-1 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition text-xs sm:text-sm";
 
     document.getElementById('active-indicator').classList.add('hidden');
     document.getElementById('current-active-label').innerText = "準備開始";
@@ -207,7 +224,7 @@ function stopTimer() {
 
     document.getElementById('live-meta-panel').classList.add('hidden');
 
-    showToast("活動完成，已儲存並同步雲端！");
+    showToast("✨ 記錄完成！時間與資料已更新至雲端 Google Sheet。");
     updateHistoryFilterOptions();
     renderHistory();
 }
@@ -227,6 +244,7 @@ async function sendToGoogleSheet(record) {
     }
 }
 
+// 讀取雲端資料並整合至本機陣列，支援點擊詳情與修改
 async function loadGoogleSheetData() {
     const sheetId = state.config.spreadsheetId;
     const gid = state.config.gid || "0";
@@ -244,38 +262,31 @@ async function loadGoogleSheetData() {
         const json = JSON.parse(text.substring(47).slice(0, -2));
         
         const rows = json.table.rows;
-        const container = document.getElementById('history-list');
-        document.getElementById('history-list-title').innerText = "Google Sheet 雲端資料檢視";
-        document.getElementById('history-count-badge').innerText = `共 ${rows.length} 筆`;
-
         if (rows.length === 0) {
-            container.innerHTML = `<div class="p-4 text-center text-slate-400">雲端試算表目前無資料</div>`;
+            showToast("雲端試算表目前無資料");
             return;
         }
 
-        container.innerHTML = rows.map(r => {
+        // 將雲端資料轉換格式並匯入本機 state.history，使其也能點擊檢視與修改
+        state.history = rows.map((r, index) => {
             const cells = r.c;
-            const act = cells[0] ? cells[0].v : '';
-            const loc = cells[1] ? cells[1].v : '';
-            const note = cells[2] ? cells[2].v : '';
-            const start = cells[3] ? cells[3].v : '';
-            const duration = cells[5] ? cells[5].v : '';
+            return {
+                id: Date.now() + index,
+                activity: cells[0] ? cells[0].v : '未命名活動',
+                location: cells[1] ? cells[1].v : '未記錄地點',
+                notes: cells[2] ? cells[2].v : '',
+                startTime: cells[3] ? cells[3].v : new Date().toISOString(),
+                endTime: cells[4] ? cells[4].v : new Date().toISOString(),
+                durationSeconds: cells[5] ? Number(cells[5].v) : 0,
+                coords: null
+            };
+        });
 
-            return `
-                <div class="p-3 hover:bg-slate-50 transition flex flex-col space-y-1">
-                    <div class="flex items-center justify-between">
-                        <span class="font-semibold text-slate-800">${act}</span>
-                        <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded-full">${formatDuration(Number(duration))}</span>
-                    </div>
-                    <div class="text-slate-500 text-[10px] flex flex-wrap gap-x-2">
-                        <span>開始: ${start.substring(11, 19)}</span>
-                        <span class="text-indigo-600">地點: ${loc}</span>
-                    </div>
-                    ${note ? `<div class="text-slate-600 bg-slate-100 p-1 rounded text-[10px]">備忘: ${note}</div>` : ''}
-                </div>
-            `;
-        }).join('');
-        showToast("成功載入雲端資料！");
+        saveHistoryToStorage();
+        updateHistoryFilterOptions();
+        updateStats();
+        renderHistory();
+        showToast("成功從雲端載入資料，現在可點擊進行詳情與修改！");
     } catch (err) {
         console.error(err);
         showToast("讀取失敗，請確認 ID 正確且已發佈到網路");
@@ -290,6 +301,10 @@ function openEditModal(id) {
     document.getElementById('edit-activity').value = record.activity;
     document.getElementById('edit-location').value = record.location;
     document.getElementById('edit-notes').value = record.notes || "";
+    
+    const startObj = new Date(record.startTime);
+    document.getElementById('edit-time-info').innerText = `開始時間：${isNaN(startObj) ? record.startTime : startObj.toLocaleString()}`;
+    document.getElementById('edit-duration-info').innerText = `持續時間：${formatDuration(record.durationSeconds)}`;
     
     document.getElementById('edit-modal').classList.remove('hidden');
 }
@@ -313,7 +328,7 @@ function saveEditedRecord() {
     closeEditModal();
     renderHistory();
     updateStats();
-    showToast("已成功修改記錄，並同步至雲端！");
+    showToast("✨ 已成功更新記錄與修改內容！");
 }
 
 function updateTimerDisplay() {
@@ -348,7 +363,7 @@ function saveHistoryToStorage() {
 function updateStats() {
     const totalCount = state.history.length;
     document.getElementById('stat-total-count').innerText = totalCount;
-    const totalSecs = state.history.reduce((acc, curr) => acc + curr.durationSeconds, 0);
+    const totalSecs = state.history.reduce((acc, curr) => acc + Number(curr.durationSeconds || 0), 0);
     document.getElementById('stat-total-time').innerText = `${Math.round(totalSecs / 60)} 分`;
 
     if (totalCount > 0) {
@@ -371,7 +386,7 @@ function updateHistoryFilterOptions() {
 
 function renderHistory() {
     const titleElem = document.getElementById('history-list-title');
-    if (titleElem) titleElem.innerText = "本機歷史足跡 (點擊編輯)";
+    if (titleElem) titleElem.innerText = "本機歷史足跡 (點擊閱讀詳情與修改)";
     
     const container = document.getElementById('history-list');
     if (!container) return;
@@ -382,7 +397,7 @@ function renderHistory() {
     document.getElementById('history-count-badge').innerText = `共 ${filtered.length} 筆`;
 
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">尚無本機記錄資料</div>`;
+        container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs sm:text-sm">尚無本機記錄資料</div>`;
         return;
     }
 
@@ -392,21 +407,23 @@ function renderHistory() {
         const dateStr = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
         
         return `
-            <div class="p-3 hover:bg-slate-50 transition flex items-center justify-between gap-2 cursor-pointer" onclick="openEditModal(${item.id})">
-                <div class="space-y-0.5 truncate">
-                    <div class="flex items-center space-x-1.5">
-                        <span class="font-semibold text-slate-800">${item.activity}</span>
-                        <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-medium rounded-full">${formatDuration(item.durationSeconds)}</span>
+            <div class="p-3.5 sm:p-4 hover:bg-slate-50 transition flex items-center justify-between gap-2">
+                <!-- 點擊左側文字區域才開啟詳情對話框 -->
+                <div class="space-y-1 truncate flex-grow cursor-pointer" onclick="openEditModal(${item.id})">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-semibold text-slate-800 text-sm sm:text-base">${item.activity}</span>
+                        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full">${formatDuration(item.durationSeconds)}</span>
                     </div>
-                    <div class="text-[10px] text-slate-500 flex flex-wrap gap-x-2">
+                    <div class="text-xs text-slate-500 flex flex-wrap gap-x-3">
                         <span>${dateStr} ${formatTimeOnly(start)} - ${formatTimeOnly(end)}</span>
                         <span class="text-rose-500 truncate">📍 ${item.location}</span>
                     </div>
-                    ${item.notes ? `<p class="text-[10px] text-slate-600 bg-slate-100 p-1 rounded">備忘: ${item.notes}</p>` : ''}
+                    ${item.notes ? `<p class="text-xs text-slate-600 bg-slate-100 p-1.5 rounded truncate">備忘: ${item.notes}</p>` : ''}
                 </div>
-                <div class="flex items-center space-x-1 shrink-0" onclick="event.stopPropagation()">
-                    <button onclick="openEditModal(${item.id})" class="px-2 py-1 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 text-[11px] rounded-md transition">編輯</button>
-                    <button onclick="deleteRecord(${item.id})" class="p-1.5 text-slate-300 hover:text-rose-600 transition" title="刪除">🗑️</button>
+                <!-- 右側按鈕獨立開來，確保點擊「刪除」或「詳情」時不會混淆 -->
+                <div class="flex items-center space-x-1 shrink-0">
+                    <button type="button" onclick="openEditModal(${item.id})" class="px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 text-xs rounded-xl transition">詳情</button>
+                    <button type="button" onclick="deleteRecord(${item.id})" class="p-2 text-slate-400 hover:text-rose-600 transition bg-slate-50 hover:bg-rose-50 rounded-xl" title="刪除">🗑️</button>
                 </div>
             </div>
         `;
@@ -414,26 +431,57 @@ function renderHistory() {
 }
 
 function deleteRecord(id) {
-    state.history = state.history.filter(item => item.id !== id);
-    saveHistoryToStorage();
-    updateHistoryFilterOptions();
-    updateStats();
-    renderHistory();
-    showToast("已刪除該筆記錄");
+    const targetId = Number(id);
+    const recordToDelete = state.history.find(item => Number(item.id) === targetId);
+    
+    if (!recordToDelete) return;
+
+    if (confirm("確定要刪除這筆記錄嗎？這將會同步從本機及 Google Sheet 中移除。")) {
+        // 1. 從本機陣列移除
+        state.history = state.history.filter(item => Number(item.id) !== targetId);
+        saveHistoryToStorage();
+        updateHistoryFilterOptions();
+        updateStats();
+        renderHistory();
+
+        // 2. 同步發送刪除請求至 Google Sheet
+        sendDeleteToGoogleSheet(recordToDelete);
+        
+        showToast("已從本機與雲端刪除記錄");
+    }
+}
+
+// 新增雲端刪除專用的發送函數
+async function sendDeleteToGoogleSheet(record) {
+    const url = state.config.webhookUrl;
+    if (!url || url.includes("你的AppsScript網址")) return;
+    try {
+        await fetch(url, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: "delete",
+                startTime: record.startTime
+            })
+        });
+    } catch (e) {
+        console.error("雲端同步刪除失敗", e);
+    }
 }
 
 function clearAllHistory() {
     if (state.history.length === 0) {
-        showToast("目前沒有本機記錄");
+        showToast("目前沒有記錄");
         return;
     }
-    if (confirm("確定要清除所有本機記錄嗎？")) {
+    if (confirm("確定要清除所有記錄嗎？")) {
         state.history = [];
         saveHistoryToStorage();
         updateHistoryFilterOptions();
         updateStats();
         renderHistory();
-        showToast("已清空本機記錄");
+        showToast("已清空記錄");
     }
 }
 
@@ -443,5 +491,5 @@ function showToast(message) {
     document.getElementById('toast-msg').innerText = message;
     toast.classList.remove('translate-y-20', 'opacity-0');
     if (toastTimeout) clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+    toastTimeout = setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3500);
 }

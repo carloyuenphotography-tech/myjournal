@@ -1,0 +1,8 @@
+{
+  "name": "足跡計時器",
+  "short_name": "足跡器",
+  "start_url": "tracker.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5"
+}
