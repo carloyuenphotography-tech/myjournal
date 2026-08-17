@@ -18,9 +18,12 @@ let state = {
     currentCoords: null,
     history: [],
     config: {
-        webhookUrl: "",
-        spreadsheetId: "",
-        gid: "0"
+        // ==========================================
+        // 在此直接填入你的設定，以後完全不用重新輸入
+        // ==========================================
+        webhookUrl: "https://script.google.com/macros/s/AKfycbzpQeIpGXP8og8IAqDsM5yW5A-zi1f0a_evDLqRbekSnkRFfGb7MbW1SIVdhUlS-Rts/exec",
+        spreadsheetId: "1T7uT5umFZJLmVV3I4s7JXeNLqweoz7GwmClKzszFCt0",
+        gid: "1093062333"
     }
 };
 
@@ -30,29 +33,11 @@ window.onload = function() {
         try { state.history = JSON.parse(savedHistory); } catch(e) { state.history = []; }
     }
 
-    const savedCfg = localStorage.getItem('activity_tracker_config');
-    if (savedCfg) {
-        try {
-            state.config = JSON.parse(savedCfg);
-            document.getElementById('cfg-webhook').value = state.config.webhookUrl || "";
-            document.getElementById('cfg-sheet-id').value = state.config.spreadsheetId || "";
-            document.getElementById('cfg-gid').value = state.config.gid || "0";
-        } catch(e) {}
-    }
-
     renderCategoryChips();
     updateHistoryFilterOptions();
     updateStats();
     renderHistory();
 };
-
-function saveSheetConfig() {
-    state.config.webhookUrl = document.getElementById('cfg-webhook').value.trim();
-    state.config.spreadsheetId = document.getElementById('cfg-sheet-id').value.trim();
-    state.config.gid = document.getElementById('cfg-gid').value.trim() || "0";
-    localStorage.setItem('activity_tracker_config', JSON.stringify(state.config));
-    showToast("雲端設定已儲存！");
-}
 
 function renderCategoryChips() {
     const container = document.getElementById('category-chips');
@@ -231,7 +216,7 @@ function stopTimer() {
 
 async function sendToGoogleSheet(record) {
     const url = state.config.webhookUrl;
-    if (!url) return;
+    if (!url || url.includes("你的AppsScript網址")) return;
     try {
         await fetch(url, {
             method: 'POST',
@@ -247,8 +232,8 @@ async function sendToGoogleSheet(record) {
 async function loadGoogleSheetData() {
     const sheetId = state.config.spreadsheetId;
     const gid = state.config.gid || "0";
-    if (!sheetId) {
-        showToast("請先輸入並儲存試算表 ID (Spreadsheet ID)");
+    if (!sheetId || sheetId.includes("你的GoogleSheet試算表ID")) {
+        showToast("請先在 tracker.js 內填入正確的 Spreadsheet ID");
         return;
     }
 
@@ -299,7 +284,6 @@ async function loadGoogleSheetData() {
     }
 }
 
-// 開啟編輯對話框
 function openEditModal(id) {
     const record = state.history.find(item => item.id === id);
     if (!record) return;
@@ -326,14 +310,12 @@ function saveEditedRecord() {
     record.notes = document.getElementById('edit-notes').value.trim();
 
     saveHistoryToStorage();
-    
-    // 關鍵：修改後同時同步至 Google Sheet
     sendToGoogleSheet(record);
 
     closeEditModal();
     renderHistory();
     updateStats();
-    showToast("已成功修改，並同步至雲端 Google Sheet！");
+    showToast("已成功修改記錄，並同步至雲端！");
 }
 
 function updateTimerDisplay() {
