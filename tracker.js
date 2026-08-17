@@ -17,7 +17,7 @@ let state = {
     currentCoords: null,
     history: [],
     config: {
-        webhookUrl: "https://script.google.com/macros/s/AKfycbwI6MuSrzYaFDz5Mt90xBjkC__Zu1WCUx4ihZheqdRlMZkU9ogzAmBSmZRxxQEhH3-O/exec",
+        webhookUrl: "https://script.google.com/macros/s/AKfycbwElm39rImTWUrUdSF4UwL99Gpf9tFVLd-igvZbIaE6A5-s-KV_f4FmKys1yE2nkVr7/exec",
 	spreadsheetId: "1T7uT5umFZJLmVV3I4s7JXeNLqweoz7GwmClKzszFCt0",
 	gid: "1093062333"
     }
@@ -117,7 +117,7 @@ function fetchGPSLocation() {
             }
         },
         (error) => {
-            locationInput.placeholder = "起點/地點（可自動抓取或自訂）";
+            locationInput.placeholder = "起點/地點（自動抓取或自訂）";
             showToast("無法獲取精確GPS位置");
         },
         { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true }
@@ -177,7 +177,7 @@ function closeConfirmStopModal() {
     document.getElementById('confirm-stop-modal').classList.add('hidden');
 }
 
-function stopTimer() {
+async function stopTimer() {
     closeConfirmStopModal();
     if (!state.isRunning) return;
 
@@ -187,12 +187,40 @@ function stopTimer() {
     const endTime = new Date();
     const durationSeconds = Math.max(1, Math.floor((endTime - state.startTime) / 1000));
 
+    // 結束時自動抓取最新 GPS 位置與地點
+    let finalLocation = state.currentLocation;
+    let finalCoords = state.currentCoords;
+
+    if (navigator.geolocation) {
+        try {
+            const position = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 4000, maximumAge: 0, enableHighAccuracy: true });
+            });
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            finalCoords = { lat, lon };
+
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
+                headers: { 'Accept-Language': 'zh-HK,zh' }
+            });
+            const data = await res.json();
+            if (data && data.display_name) {
+                const addr = data.address;
+                const placeName = addr.suburb || addr.neighbourhood || addr.city_district || addr.city || "";
+                const road = addr.road || "";
+                finalLocation = road ? `${road}${placeName ? ', ' + placeName : ''}` : data.display_name.split(',')[0];
+            }
+        } catch (e) {
+            console.log("結束時自動抓取 GPS 略過，保留原地點");
+        }
+    }
+
     const record = {
         id: Date.now(),
         activity: state.currentActivity,
-        location: state.currentLocation,
+        location: finalLocation,
         notes: state.currentNotes,
-        coords: state.currentCoords,
+        coords: finalCoords,
         startTime: state.startTime.toISOString(),
         endTime: endTime.toISOString(),
         durationSeconds: durationSeconds
@@ -224,7 +252,7 @@ function stopTimer() {
 
     document.getElementById('live-meta-panel').classList.add('hidden');
 
-    showToast("✨ 記錄完成！時間與資料已更新至雲端 Google Sheet。");
+    showToast("✨ 記錄完成！已自動更新結算地點與雲端資料。");
     updateHistoryFilterOptions();
     renderHistory();
 }
@@ -244,7 +272,6 @@ async function sendToGoogleSheet(record) {
     }
 }
 
-// 讀取雲端資料並整合至本機陣列，支援點擊詳情與修改
 async function loadGoogleSheetData() {
     const sheetId = state.config.spreadsheetId;
     const gid = state.config.gid || "0";
@@ -267,7 +294,6 @@ async function loadGoogleSheetData() {
             return;
         }
 
-        // 將雲端資料轉換格式並匯入本機 state.history，使其也能點擊檢視與修改
         state.history = rows.map((r, index) => {
             const cells = r.c;
             return {
@@ -286,7 +312,7 @@ async function loadGoogleSheetData() {
         updateHistoryFilterOptions();
         updateStats();
         renderHistory();
-        showToast("成功從雲端載入資料，現在可點擊進行詳情與修改！");
+        showToast("成功從雲端載入資料！");
     } catch (err) {
         console.error(err);
         showToast("讀取失敗，請確認 ID 正確且已發佈到網路");
@@ -294,7 +320,7 @@ async function loadGoogleSheetData() {
 }
 
 function openEditModal(id) {
-    const record = state.history.find(item => item.id === id);
+    const record = state.history.find(item => Number(item.id) === Number(id));
     if (!record) return;
 
     document.getElementById('edit-id').value = record.id;
@@ -315,7 +341,7 @@ function closeEditModal() {
 
 function saveEditedRecord() {
     const id = Number(document.getElementById('edit-id').value);
-    const record = state.history.find(item => item.id === id);
+    const record = state.history.find(item => Number(item.id) === id);
     if (!record) return;
 
     record.activity = document.getElementById('edit-activity').value.trim();
@@ -329,6 +355,42 @@ function saveEditedRecord() {
     renderHistory();
     updateStats();
     showToast("✨ 已成功更新記錄與修改內容！");
+}
+
+function deleteRecord(id) {
+    const targetId = Number(id);
+    const recordToDelete = state.history.find(item => Number(item.id) === targetId);
+    
+    if (!recordToDelete) return;
+
+    if (confirm("確定要刪除這筆記錄嗎？這將會同步從本機及 Google Sheet 中移除。")) {
+        state.history = state.history.filter(item => Number(item.id) !== targetId);
+        saveHistoryToStorage();
+        updateHistoryFilterOptions();
+        updateStats();
+        renderHistory();
+
+        sendDeleteToGoogleSheet(recordToDelete);
+        showToast("已從本機與雲端刪除記錄");
+    }
+}
+
+async function sendDeleteToGoogleSheet(record) {
+    const url = state.config.webhookUrl;
+    if (!url || url.includes("你的AppsScript網址")) return;
+    try {
+        await fetch(url, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: "delete",
+                startTime: record.startTime
+            })
+        });
+    } catch (e) {
+        console.error("雲端同步刪除失敗", e);
+    }
 }
 
 function updateTimerDisplay() {
@@ -397,30 +459,34 @@ function renderHistory() {
     document.getElementById('history-count-badge').innerText = `共 ${filtered.length} 筆`;
 
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs sm:text-sm">尚無本機記錄資料</div>`;
+        container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs sm:text-sm">尚無記錄資料</div>`;
         return;
     }
 
     container.innerHTML = filtered.map(item => {
-        const start = new Date(item.startTime);
-        const end = new Date(item.endTime);
-        const dateStr = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
+        let startTimeStr = item.startTime;
+        let timeDisplay = startTimeStr;
+        try {
+            const d = new Date(startTimeStr);
+            if (!isNaN(d)) {
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                timeDisplay = `${dateStr} ${d.toTimeString().split(' ')[0].substring(0, 5)}`;
+            }
+        } catch(e) {}
         
         return `
             <div class="p-3.5 sm:p-4 hover:bg-slate-50 transition flex items-center justify-between gap-2">
-                <!-- 點擊左側文字區域才開啟詳情對話框 -->
                 <div class="space-y-1 truncate flex-grow cursor-pointer" onclick="openEditModal(${item.id})">
                     <div class="flex items-center space-x-2">
                         <span class="font-semibold text-slate-800 text-sm sm:text-base">${item.activity}</span>
                         <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full">${formatDuration(item.durationSeconds)}</span>
                     </div>
                     <div class="text-xs text-slate-500 flex flex-wrap gap-x-3">
-                        <span>${dateStr} ${formatTimeOnly(start)} - ${formatTimeOnly(end)}</span>
+                        <span>開始: ${timeDisplay}</span>
                         <span class="text-rose-500 truncate">📍 ${item.location}</span>
                     </div>
                     ${item.notes ? `<p class="text-xs text-slate-600 bg-slate-100 p-1.5 rounded truncate">備忘: ${item.notes}</p>` : ''}
                 </div>
-                <!-- 右側按鈕獨立開來，確保點擊「刪除」或「詳情」時不會混淆 -->
                 <div class="flex items-center space-x-1 shrink-0">
                     <button type="button" onclick="openEditModal(${item.id})" class="px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 text-xs rounded-xl transition">詳情</button>
                     <button type="button" onclick="deleteRecord(${item.id})" class="p-2 text-slate-400 hover:text-rose-600 transition bg-slate-50 hover:bg-rose-50 rounded-xl" title="刪除">🗑️</button>
@@ -428,61 +494,6 @@ function renderHistory() {
             </div>
         `;
     }).join('');
-}
-
-function deleteRecord(id) {
-    const targetId = Number(id);
-    const recordToDelete = state.history.find(item => Number(item.id) === targetId);
-    
-    if (!recordToDelete) return;
-
-    if (confirm("確定要刪除這筆記錄嗎？這將會同步從本機及 Google Sheet 中移除。")) {
-        // 1. 從本機陣列移除
-        state.history = state.history.filter(item => Number(item.id) !== targetId);
-        saveHistoryToStorage();
-        updateHistoryFilterOptions();
-        updateStats();
-        renderHistory();
-
-        // 2. 同步發送刪除請求至 Google Sheet
-        sendDeleteToGoogleSheet(recordToDelete);
-        
-        showToast("已從本機與雲端刪除記錄");
-    }
-}
-
-// 新增雲端刪除專用的發送函數
-async function sendDeleteToGoogleSheet(record) {
-    const url = state.config.webhookUrl;
-    if (!url || url.includes("你的AppsScript網址")) return;
-    try {
-        await fetch(url, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: "delete",
-                startTime: record.startTime
-            })
-        });
-    } catch (e) {
-        console.error("雲端同步刪除失敗", e);
-    }
-}
-
-function clearAllHistory() {
-    if (state.history.length === 0) {
-        showToast("目前沒有記錄");
-        return;
-    }
-    if (confirm("確定要清除所有記錄嗎？")) {
-        state.history = [];
-        saveHistoryToStorage();
-        updateHistoryFilterOptions();
-        updateStats();
-        renderHistory();
-        showToast("已清空記錄");
-    }
 }
 
 let toastTimeout = null;
