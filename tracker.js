@@ -10,7 +10,6 @@ const presetCategories = [
 let state = {
     isRunning: false,
     startTime: null,
-    elapsedSeconds: 0,
     timerInterval: null,
     currentActivity: "",
     currentLocation: "",
@@ -18,12 +17,9 @@ let state = {
     currentCoords: null,
     history: [],
     config: {
-        // ==========================================
-        // 在此直接填入你的設定，以後完全不用重新輸入
-        // ==========================================
-        webhookUrl: "https://script.google.com/macros/s/AKfycbzpQeIpGXP8og8IAqDsM5yW5A-zi1f0a_evDLqRbekSnkRFfGb7MbW1SIVdhUlS-Rts/exec",
-        spreadsheetId: "1T7uT5umFZJLmVV3I4s7JXeNLqweoz7GwmClKzszFCt0",
-        gid: "1093062333"
+        webhookUrl: "https://script.google.com/macros/s/你的AppsScript網址/exec",
+        spreadsheetId: "你的GoogleSheet試算表ID",
+        gid: "0"
     }
 };
 
@@ -43,7 +39,7 @@ function renderCategoryChips() {
     const container = document.getElementById('category-chips');
     if (!container) return;
     container.innerHTML = presetCategories.map(cat => `
-        <button type="button" onclick="selectPresetCategory('${cat.name}')" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 text-xs font-medium text-slate-700 transition flex items-center space-x-1 bg-white shadow-xs">
+        <button type="button" onclick="selectPresetCategory('${cat.name}')" class="px-2.5 py-1 rounded-lg border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 text-[11px] font-medium text-slate-700 transition flex items-center space-x-1 bg-white shadow-xs">
             <span>${cat.icon}</span>
             <span>${cat.name}</span>
         </button>
@@ -67,13 +63,13 @@ function switchTab(tab) {
     if (tab === 'timer') {
         timerView.classList.remove('hidden');
         historyView.classList.add('hidden');
-        btnTimer.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg bg-white text-indigo-700 shadow-xs transition";
-        btnHistory.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 transition";
+        btnTimer.className = "px-2.5 py-1 text-[11px] font-medium rounded-md bg-white text-indigo-700 shadow-xs transition";
+        btnHistory.className = "px-2.5 py-1 text-[11px] font-medium rounded-md text-slate-600 hover:text-slate-900 transition";
     } else {
         timerView.classList.add('hidden');
         historyView.classList.remove('hidden');
-        btnHistory.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg bg-white text-indigo-700 shadow-xs transition";
-        btnTimer.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 transition";
+        btnHistory.className = "px-2.5 py-1 text-[11px] font-medium rounded-md bg-white text-indigo-700 shadow-xs transition";
+        btnTimer.className = "px-2.5 py-1 text-[11px] font-medium rounded-md text-slate-600 hover:text-slate-900 transition";
         renderHistory();
         updateStats();
     }
@@ -134,16 +130,15 @@ function startTimer() {
     state.currentActivity = activityName;
     state.currentLocation = document.getElementById('location-input').value.trim() || "未記錄地點";
     state.currentNotes = document.getElementById('activity-notes').value.trim();
-    state.startTime = new Date();
+    state.startTime = new Date(); // 記錄真實開始時間點
     state.isRunning = true;
-    state.elapsedSeconds = 0;
 
     document.getElementById('btn-start').disabled = true;
-    document.getElementById('btn-start').className = "flex-1 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold py-3 px-5 rounded-xl transition flex items-center justify-center space-x-2 text-sm sm:text-base";
+    document.getElementById('btn-start').className = "flex-1 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold py-2.5 px-3 rounded-lg transition text-xs";
     
     const stopBtn = document.getElementById('btn-stop');
     stopBtn.disabled = false;
-    stopBtn.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 px-5 rounded-xl shadow-md shadow-rose-200 transition transform active:scale-95 flex items-center justify-center space-x-2 text-sm sm:text-base";
+    stopBtn.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 px-3 rounded-lg shadow-xs transition transform active:scale-95 text-xs";
 
     document.getElementById('active-indicator').classList.remove('hidden');
     document.getElementById('current-active-label').innerText = "計時進行中...";
@@ -155,10 +150,10 @@ function startTimer() {
     document.getElementById('live-meta-panel').classList.remove('hidden');
     document.getElementById('live-activity-name').innerText = state.currentActivity;
     document.getElementById('live-location-text').innerText = state.currentLocation;
-    document.getElementById('live-start-time').innerText = `開始於 ${formatTimeOnly(state.startTime)}`;
+    document.getElementById('live-start-time').innerText = formatTimeOnly(state.startTime);
 
+    // 每秒透過真實時間差更新顯示，即使畫面背景化後回來也會自動跳到正確秒數
     state.timerInterval = setInterval(() => {
-        state.elapsedSeconds++;
         updateTimerDisplay();
     }, 1000);
 
@@ -172,6 +167,9 @@ function stopTimer() {
     state.isRunning = false;
 
     const endTime = new Date();
+    // 關鍵：直接用結束時間減去開始時間計算總秒數（即使中途關閉畫面也完全準確）
+    const durationSeconds = Math.max(1, Math.floor((endTime - state.startTime) / 1000));
+
     const record = {
         id: Date.now(),
         activity: state.currentActivity,
@@ -180,7 +178,7 @@ function stopTimer() {
         coords: state.currentCoords,
         startTime: state.startTime.toISOString(),
         endTime: endTime.toISOString(),
-        durationSeconds: state.elapsedSeconds
+        durationSeconds: durationSeconds
     };
 
     state.history.unshift(record);
@@ -188,11 +186,11 @@ function stopTimer() {
     sendToGoogleSheet(record);
 
     document.getElementById('btn-start').disabled = false;
-    document.getElementById('btn-start').className = "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-5 rounded-xl shadow-md shadow-indigo-200 transition transform active:scale-95 flex items-center justify-center space-x-2 text-sm sm:text-base";
+    document.getElementById('btn-start').className = "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-3 rounded-lg shadow-xs transition transform active:scale-95 text-xs";
     
     const stopBtn = document.getElementById('btn-stop');
     stopBtn.disabled = true;
-    stopBtn.className = "flex-1 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold py-3 px-5 rounded-xl transition flex items-center justify-center space-x-2 text-sm sm:text-base";
+    stopBtn.className = "flex-1 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold py-2.5 px-3 rounded-lg transition text-xs";
 
     document.getElementById('active-indicator').classList.add('hidden');
     document.getElementById('current-active-label').innerText = "準備開始";
@@ -251,7 +249,7 @@ async function loadGoogleSheetData() {
         document.getElementById('history-count-badge').innerText = `共 ${rows.length} 筆`;
 
         if (rows.length === 0) {
-            container.innerHTML = `<div class="p-6 text-center text-slate-400">雲端試算表目前無資料</div>`;
+            container.innerHTML = `<div class="p-4 text-center text-slate-400">雲端試算表目前無資料</div>`;
             return;
         }
 
@@ -264,16 +262,16 @@ async function loadGoogleSheetData() {
             const duration = cells[5] ? cells[5].v : '';
 
             return `
-                <div class="p-3.5 hover:bg-slate-50 transition flex flex-col space-y-1">
+                <div class="p-3 hover:bg-slate-50 transition flex flex-col space-y-1">
                     <div class="flex items-center justify-between">
                         <span class="font-semibold text-slate-800">${act}</span>
-                        <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded-full">${duration} 秒</span>
+                        <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded-full">${formatDuration(Number(duration))}</span>
                     </div>
-                    <div class="text-slate-500 text-[11px] flex flex-wrap gap-x-3">
-                        <span>起訖: ${start}</span>
+                    <div class="text-slate-500 text-[10px] flex flex-wrap gap-x-2">
+                        <span>開始: ${start.substring(11, 19)}</span>
                         <span class="text-indigo-600">地點: ${loc}</span>
                     </div>
-                    ${note ? `<div class="text-slate-600 bg-slate-100 p-1.5 rounded text-[11px]">${note}</div>` : ''}
+                    ${note ? `<div class="text-slate-600 bg-slate-100 p-1 rounded text-[10px]">備忘: ${note}</div>` : ''}
                 </div>
             `;
         }).join('');
@@ -319,9 +317,14 @@ function saveEditedRecord() {
 }
 
 function updateTimerDisplay() {
-    const hrs = Math.floor(state.elapsedSeconds / 3600);
-    const mins = Math.floor((state.elapsedSeconds % 3600) / 60);
-    const secs = state.elapsedSeconds % 60;
+    if (!state.isRunning || !state.startTime) return;
+    const now = new Date();
+    const diffSeconds = Math.floor((now - state.startTime) / 1000);
+    
+    const hrs = Math.floor(diffSeconds / 3600);
+    const mins = Math.floor((diffSeconds % 3600) / 60);
+    const secs = diffSeconds % 60;
+    
     document.getElementById('timer-display').innerText = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
@@ -362,13 +365,13 @@ function updateHistoryFilterOptions() {
     if (!select) return;
     const categories = [...new Set(state.history.map(item => item.activity))];
     const currentVal = select.value;
-    select.innerHTML = `<option value="">所有活動類別</option>` + categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    select.innerHTML = `<option value="">所有類別</option>` + categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
     select.value = currentVal;
 }
 
 function renderHistory() {
     const titleElem = document.getElementById('history-list-title');
-    if (titleElem) titleElem.innerText = "本機歷史足跡記錄 (點擊編輯內容)";
+    if (titleElem) titleElem.innerText = "本機歷史足跡 (點擊編輯)";
     
     const container = document.getElementById('history-list');
     if (!container) return;
@@ -379,7 +382,7 @@ function renderHistory() {
     document.getElementById('history-count-badge').innerText = `共 ${filtered.length} 筆`;
 
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">尚無本機記錄資料</div>`;
+        container.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">尚無本機記錄資料</div>`;
         return;
     }
 
@@ -389,21 +392,21 @@ function renderHistory() {
         const dateStr = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
         
         return `
-            <div class="p-3.5 hover:bg-slate-50 transition flex items-center justify-between gap-2 cursor-pointer" onclick="openEditModal(${item.id})">
-                <div class="space-y-1 truncate">
-                    <div class="flex items-center space-x-2">
+            <div class="p-3 hover:bg-slate-50 transition flex items-center justify-between gap-2 cursor-pointer" onclick="openEditModal(${item.id})">
+                <div class="space-y-0.5 truncate">
+                    <div class="flex items-center space-x-1.5">
                         <span class="font-semibold text-slate-800">${item.activity}</span>
-                        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-medium rounded-full">${formatDuration(item.durationSeconds)}</span>
+                        <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-medium rounded-full">${formatDuration(item.durationSeconds)}</span>
                     </div>
-                    <div class="text-[11px] text-slate-500 flex flex-wrap gap-x-3">
+                    <div class="text-[10px] text-slate-500 flex flex-wrap gap-x-2">
                         <span>${dateStr} ${formatTimeOnly(start)} - ${formatTimeOnly(end)}</span>
                         <span class="text-rose-500 truncate">📍 ${item.location}</span>
                     </div>
-                    ${item.notes ? `<p class="text-[11px] text-slate-600 bg-slate-100 p-1.5 rounded">備忘: ${item.notes}</p>` : ''}
+                    ${item.notes ? `<p class="text-[10px] text-slate-600 bg-slate-100 p-1 rounded">備忘: ${item.notes}</p>` : ''}
                 </div>
                 <div class="flex items-center space-x-1 shrink-0" onclick="event.stopPropagation()">
-                    <button onclick="openEditModal(${item.id})" class="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 text-xs rounded-lg transition">編輯</button>
-                    <button onclick="deleteRecord(${item.id})" class="p-2 text-slate-300 hover:text-rose-600 transition" title="刪除">🗑️</button>
+                    <button onclick="openEditModal(${item.id})" class="px-2 py-1 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 text-[11px] rounded-md transition">編輯</button>
+                    <button onclick="deleteRecord(${item.id})" class="p-1.5 text-slate-300 hover:text-rose-600 transition" title="刪除">🗑️</button>
                 </div>
             </div>
         `;
