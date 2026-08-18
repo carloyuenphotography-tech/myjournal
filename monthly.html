@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>📅 Monthly Future Log</title>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
-  <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
   
   <style>
     :root { --primary-color: #0d9488; --bg-color: #f8fafc; --border-color: #cbd5e1; }
@@ -56,7 +56,7 @@
     .hashtag-pill { display: inline-block; background: #ccfbf1; color: #0f766e; padding: 1px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin: 0 2px; }
     .hashtag-pill:hover { background: #0d9488; color: #ffffff; }
 
-    /* 🏷️ Signifier 細小圓角底色標籤 (已無符號前綴) */
+    /* 🏷️ Signifier 細小圓角底色標籤 */
     .signifier-pill {
       display: inline-block;
       background-color: #f1f5f9;
@@ -162,6 +162,13 @@
       word-break: break-word;
       overflow-y: auto;
     }
+
+    /* 手機版專屬：隱藏過去月份與顯示切換按鈕 */
+    @media (max-width: 768px) {
+      .mobile-only-toggle { display: block !important; }
+      .month-board.past-month { display: none; }
+      .month-board.past-month.show-on-mobile { display: flex; }
+    }
   </style>
 </head>
 <body>
@@ -218,6 +225,13 @@
 
     <div id="loading">⏳ 正在載入 Monthly Log...</div>
     
+    <!-- 手機版專用的展開按鈕 -->
+    <div id="mobilePastToggle" class="mobile-only-toggle" style="display:none; text-align:center; margin-bottom: 12px;">
+      <button onclick="togglePastMonths()" style="padding: 6px 14px; border-radius: 20px; background: #e2e8f0; border: 1px solid var(--border-color); font-weight: bold; color: #475569; cursor: pointer;">
+        👀 顯示上個月紀錄
+      </button>
+    </div>
+
     <div id="monthBoardContainer" class="month-board-grid"></div>
   </div>
 
@@ -288,6 +302,9 @@
     </div>
   </div>
 
+  <!-- 先載入邏輯檔案，再載入 Google 驗證，解決載入衝突 -->
   <script src="monthly.js"></script>
+  <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
+
 </body>
 </html>

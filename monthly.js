@@ -131,7 +131,7 @@ function onStatusFilterChange(val) {
   renderMonthBoards();
 }
 
-// 從 Google Sheets CSV 讀取資料 (清理 Signifier 前綴符號)
+// 從 Google Sheets CSV 讀取資料
 function loadData() {
   if (!SHEET_ID) {
     document.getElementById('loading').textContent = '❌ config.js 中缺少 Sheet ID 設定';
@@ -145,7 +145,6 @@ function loadData() {
       logs = results.data.map((item, index) => {
         const v = Object.values(item);
         
-        // 移除前綴符號 (如 •, ◦, - 等)
         let rawSignifier = item.Signifier || v[4] || 'Task';
         let cleanSignifier = rawSignifier.replace(/^[•◦\-\s]+/, '').trim();
         if (!cleanSignifier) cleanSignifier = 'Task';
@@ -198,7 +197,7 @@ function clearFilter() {
   renderMonthBoards();
 }
 
-// 渲染 12 個月看板 (全月事項自動置頂 + 圓角 Signifier)
+// 渲染 12 個月看板
 function renderMonthBoards() {
   const container = document.getElementById('monthBoardContainer');
   if (!container) return;
@@ -237,9 +236,11 @@ function renderMonthBoards() {
     
     const monthKey = `${y}-${m}`;
     const monthLabel = `${y}年 ${monthNumber}月`;
+    
     const isCurrentMonth = (y === realCurrentYear && monthNumber === realCurrentMonth);
+    // 判斷是否為過去月份
+    const isPastMonth = (y < realCurrentYear) || (y === realCurrentYear && monthNumber < realCurrentMonth);
 
-    // 篩選當月資料，並進行排序：全月事項 (長度7: YYYY-MM) 排在最上方，之後按日期序排序
     const monthItems = filteredLogs
       .filter(r => r.date.startsWith(monthKey))
       .sort((a, b) => {
@@ -251,7 +252,8 @@ function renderMonthBoards() {
       });
 
     const board = document.createElement('div');
-    board.className = `month-board ${isCurrentMonth ? 'current-month' : ''}`;
+    // 套用對應的 CSS 類別，加入 past-month 來幫助手機版隱藏
+    board.className = `month-board ${isCurrentMonth ? 'current-month' : ''} ${isPastMonth ? 'past-month' : ''}`;
     
     let headerHtml = `
       <div class="month-header">
@@ -269,7 +271,6 @@ function renderMonthBoards() {
         const isDone = (item.status === '已完成' || item.status === 'Done');
         const safeId = String(item.id).replace(/'/g, "\\'");
         
-        // 全月事項在卡片上顯示為 「📌 全月」
         const displayDate = (item.date.length === 7) ? '📌 全月' : item.date;
 
         bodyHtml += `
@@ -441,4 +442,12 @@ function handleSubmit(e) {
   if (API_URL) {
     fetch(`${API_URL}?${params.toString()}`, { mode: 'no-cors' });
   }
+}
+
+// 手機版：切換顯示/隱藏過去的月份
+function togglePastMonths() {
+  const pastBoards = document.querySelectorAll('.past-month');
+  pastBoards.forEach(el => {
+    el.classList.toggle('show-on-mobile');
+  });
 }
