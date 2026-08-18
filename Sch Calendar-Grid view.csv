@@ -1,0 +1,366 @@
+﻿Date,Week,Weekday,Cycle Day,Sch Holiday/Special Sch Day,No Cycle Day,Special Activity,Manual sort
+1/9/2026,1,星期二,,,,School Year Begins & Commencement Assembly,a0
+2/9/2026,1,星期三,,,,Commencement Week,a1
+3/9/2026,1,星期四,,,,Commencement Week,a2
+4/9/2026,1,星期五,,School Holiday,,2027-28 P1 Admission 1st interview,a3
+5/9/2026,1,星期六,,,,2027-28 P1 Admission 1st interview,a4
+6/9/2026,2,星期日,,,,,a5
+7/9/2026,2,星期一,,,,Commencement Week,a6
+8/9/2026,2,星期二,A,,,,a7
+9/9/2026,2,星期三,B,,,Student Photos for 2 days,a8
+10/9/2026,2,星期四,C,,,"Student Photos for 2 days, 興趣體驗班(P.M.)",a9
+11/9/2026,2,星期五,,School Holiday,,,aA
+12/9/2026,2,星期六,,,,,aB
+13/9/2026,3,星期日,,,,,aC
+14/9/2026,3,星期一,D,,,,aD
+15/9/2026,3,星期二,E,,,,aE
+16/9/2026,3,星期三,F,,,,aF
+17/9/2026,3,星期四,A,,,,aG
+18/9/2026,3,星期五,B,,,,aH
+19/9/2026,3,星期六,,,,2027-28 P1 Admission 2nd interview,aI
+20/9/2026,4,星期日,,,,,aJ
+21/9/2026,4,星期一,C,,,,aK
+22/9/2026,4,星期二,D,,,,aL
+23/9/2026,4,星期三,E,,,,aM
+24/9/2026,4,星期四,F,,,,aN
+25/9/2026,4,星期五,A,,,,aO
+26/9/2026,4,星期六,,The day following the Mid-Autumn Festival,,,aP
+27/9/2026,5,星期日,,,,,aQ
+28/9/2026,5,星期一,B,,,Curriculum Night,aR
+29/9/2026,5,星期二,C,,,,aS
+30/9/2026,5,星期三,D,,,Curriculum Night,aT
+1/10/2026,5,星期四,,National Day,,,aU
+2/10/2026,5,星期五,E,,,PTA Mid-Autumn Night,aV
+3/10/2026,5,星期六,,,,,aW
+4/10/2026,6,星期日,,,,,aX
+5/10/2026,6,星期一,F,,,25th Anniversary Kickoff,aY
+6/10/2026,6,星期二,A,,,,aZ
+7/10/2026,6,星期三,B,,,,aa
+8/10/2026,6,星期四,C,,,,ab
+9/10/2026,6,星期五,D,,,,ac
+10/10/2026,6,星期六,,,,,ad
+11/10/2026,7,星期日,,,,,ae
+12/10/2026,7,星期一,E,,,,af
+13/10/2026,7,星期二,F,,,,ag
+14/10/2026,7,星期三,A,,,,ah
+15/10/2026,7,星期四,B,,,,ai
+16/10/2026,7,星期五,C,,,,aj
+17/10/2026,7,星期六,,,,,ak
+18/10/2026,8,星期日,,,,,al
+19/10/2026,8,星期一,,The day following Chung Yeung Festival,,,am
+20/10/2026,8,星期二,D,,,,an
+21/10/2026,8,星期三,E,,,,ao
+22/10/2026,8,星期四,F,,,,ap
+23/10/2026,8,星期五,,,Picnic,,aq
+24/10/2026,8,星期六,,,,,ar
+25/10/2026,9,星期日,,,,,as
+26/10/2026,9,星期一,A,,,,at
+27/10/2026,9,星期二,B,,,,au
+28/10/2026,9,星期三,C,,,,av
+29/10/2026,9,星期四,D,,,,aw
+30/10/2026,9,星期五,E,,,P1-P6 Learning Feedback Day 1 & Secondary School Exhibition,ax
+31/10/2026,9,星期六,,,,P1-P6 Learning Feedback Day 1 & Secondary School Exhibition,ay
+1/11/2026,10,星期日,,,,,az
+2/11/2026,10,星期一,F,,,,b00
+3/11/2026,10,星期二,A,,,,b01
+4/11/2026,10,星期三,B,,,,b02
+5/11/2026,10,星期四,C,,,,b03
+6/11/2026,10,星期五,D,,,Flu Vaccine (1st dose),b04
+7/11/2026,10,星期六,,,,DSS Expo,b05
+8/11/2026,11,星期日,,,,,b06
+9/11/2026,11,星期一,E,,,,b07
+10/11/2026,11,星期二,F,,,,b08
+11/11/2026,11,星期三,A,,,,b09
+12/11/2026,11,星期四,B,,,,b0A
+13/11/2026,11,星期五,C,,,,b0B
+14/11/2026,11,星期六,,,,,b0C
+15/11/2026,12,星期日,,,,,b0D
+16/11/2026,12,星期一,D,,,,b0E
+17/11/2026,12,星期二,,,Staff Development Day,,b0F
+18/11/2026,12,星期三,E,,,,b0G
+19/11/2026,12,星期四,F,,,,b0H
+20/11/2026,12,星期五,A,,,No meeting,b0I
+21/11/2026,12,星期六,,,,,b0J
+22/11/2026,13,星期日,,,,,b0K
+23/11/2026,13,星期一,B,,,,b0L
+24/11/2026,13,星期二,C,,,,b0M
+25/11/2026,13,星期三,D,,,,b0N
+26/11/2026,13,星期四,E,,,,b0O
+27/11/2026,13,星期五,F,,,,b0P
+28/11/2026,13,星期六,,,,,b0Q
+29/11/2026,14,星期日,,,,,b0R
+30/11/2026,14,星期一,A,,,,b0S
+1/12/2026,14,星期二,B,,,,b0T
+2/12/2026,14,星期三,C,,,,b0U
+3/12/2026,14,星期四,D,,,,b0V
+4/12/2026,14,星期五,E,,,P6 SSPA Info Seminar,b0W
+5/12/2026,14,星期六,,,,,b0X
+6/12/2026,15,星期日,,,,,b0Y
+7/12/2026,15,星期一,F,,,,b0Z
+8/12/2026,15,星期二,A,,,,b0a
+9/12/2026,15,星期三,B,,,,b0b
+10/12/2026,15,星期四,C,,,,b0c
+11/12/2026,15,星期五,D,,,Parent-Teacher Conference,b0d
+12/12/2026,15,星期六,,,,,b0e
+13/12/2026,16,星期日,,,,,b0f
+14/12/2026,16,星期一,E,,,,b0g
+15/12/2026,16,星期二,F,,,,b0h
+16/12/2026,16,星期三,A,,,,b0i
+17/12/2026,16,星期四,B,,,,b0j
+18/12/2026,16,星期五,C,,,,b0k
+19/12/2026,16,星期六,,,,,b0l
+20/12/2026,17,星期日,,,,,b0m
+21/12/2026,17,星期一,,,Christmas Celebration,,b0n
+22/12/2026,17,星期二,,Christmas & New Year Holidays,,,b0o
+23/12/2026,17,星期三,,Christmas & New Year Holidays,,,b0p
+24/12/2026,17,星期四,,Christmas & New Year Holidays,,,b0q
+25/12/2026,17,星期五,,Christmas & New Year Holidays,,,b0r
+26/12/2026,17,星期六,,Christmas & New Year Holidays,,,b0s
+27/12/2026,18,星期日,,Christmas & New Year Holidays,,,b0t
+28/12/2026,18,星期一,,Christmas & New Year Holidays,,,b0u
+29/12/2026,18,星期二,,Christmas & New Year Holidays,,,b0v
+30/12/2026,18,星期三,,Christmas & New Year Holidays,,,b0w
+31/12/2026,18,星期四,,Christmas & New Year Holidays,,,b0x
+1/1/2027,18,星期五,,The first day of January,,,b0y
+2/1/2027,18,星期六,,Christmas & New Year Holidays,,,b0z
+3/1/2027,19,星期日,,,,,b10
+4/1/2027,19,星期一,D,,,,b11
+5/1/2027,19,星期二,E,,,,b12
+6/1/2027,19,星期三,F,,,,b13
+7/1/2027,19,星期四,A,,,,b14
+8/1/2027,19,星期五,B,,,,b15
+9/1/2027,19,星期六,,,,,b16
+10/1/2027,20,星期日,,,,,b17
+11/1/2027,20,星期一,C,,,,b18
+12/1/2027,20,星期二,D,,,,b19
+13/1/2027,20,星期三,,,P2-P5 First Term Examination,,b1A
+14/1/2027,20,星期四,,,P2-P5 First Term Examination,,b1B
+15/1/2027,20,星期五,,,P2-P5 First Term Examination,,b1C
+16/1/2027,20,星期六,,,,,b1D
+17/1/2027,21,星期日,,,,,b1E
+18/1/2027,21,星期一,,,P2-P5 First Term Examination,,b1F
+19/1/2027,21,星期二,,,P2-P5 First Term Examination,,b1G
+20/1/2027,21,星期三,E,,,,b1H
+21/1/2027,21,星期四,F,,,,b1I
+22/1/2027,21,星期五,A,,,,b1J
+23/1/2027,21,星期六,,,,,b1K
+24/1/2027,22,星期日,,,,,b1L
+25/1/2027,22,星期一,B,,,Second Term Begins,b1M
+26/1/2027,22,星期二,C,,,P1-P5 Learning Feedback Day 2,b1N
+27/1/2027,22,星期三,D,,,P1-P5 Learning Feedback Day 2,b1O
+28/1/2027,22,星期四,E,,,,b1P
+29/1/2027,22,星期五,,,Lunar New Year Celebration,PTA Poon Choi,b1Q
+30/1/2027,22,星期六,,,,,b1R
+31/1/2027,23,星期日,,,,,b1S
+1/2/2027,23,星期一,,Lunar New Year Holidays,,,b1T
+2/2/2027,23,星期二,,Lunar New Year Holidays,,,b1U
+3/2/2027,23,星期三,,Lunar New Year Holidays,,,b1V
+4/2/2027,23,星期四,,Lunar New Year Holidays,,,b1W
+5/2/2027,23,星期五,,Lunar New Year Holidays,,,b1X
+6/2/2027,23,星期六,,Lunar New Year Holidays,,,b1Y
+7/2/2027,24,星期日,,Lunar New Year Holidays,,,b1Z
+8/2/2027,24,星期一,,Lunar New Year Holidays,,,b1a
+9/2/2027,24,星期二,,Lunar New Year Holidays,,,b1b
+10/2/2027,24,星期三,,Lunar New Year Holidays,,,b1c
+11/2/2027,24,星期四,F,,,,b1d
+12/2/2027,24,星期五,,,Sports Day,,b1e
+13/2/2027,24,星期六,,,,,b1f
+14/2/2027,25,星期日,,,,,b1g
+15/2/2027,25,星期一,A,,,,b1h
+16/2/2027,25,星期二,B,,,,b1i
+17/2/2027,25,星期三,C,,,,b1j
+18/2/2027,25,星期四,D,,,,b1k
+19/2/2027,25,星期五,E,,,,b1l
+20/2/2027,25,星期六,,,,,b1m
+21/2/2027,26,星期日,,,,,b1n
+22/2/2027,26,星期一,F,,,,b1o
+23/2/2027,26,星期二,A,,,,b1p
+24/2/2027,26,星期三,B,,,,b1q
+25/2/2027,26,星期四,C,,,,b1r
+26/2/2027,26,星期五,D,,,,b1s
+27/2/2027,26,星期六,,,,,b1t
+28/2/2027,27,星期日,,,,,b1u
+1/3/2027,27,星期一,E,,,,b1v
+2/3/2027,27,星期二,F,,,,b1w
+3/3/2027,27,星期三,A,,,,b1x
+4/3/2027,27,星期四,B,,,,b1y
+5/3/2027,27,星期五,,,Staff Development Day,,b1z
+6/3/2027,27,星期六,,,,,b20
+7/3/2027,28,星期日,,,,,b21
+8/3/2027,28,星期一,C,,,LOE Kick-off ceremony,b22
+9/3/2027,28,星期二,D,,,,b23
+10/3/2027,28,星期三,E,,,,b24
+11/3/2027,28,星期四,F,,,,b25
+12/3/2027,28,星期五,A,,,No meeting,b26
+13/3/2027,28,星期六,,,,,b27
+14/3/2027,29,星期日,,,,,b28
+15/3/2027,29,星期一,B,,,,b29
+16/3/2027,29,星期二,C,,,,b2A
+17/3/2027,29,星期三,D,,,,b2B
+18/3/2027,29,星期四,E,,,,b2C
+19/3/2027,29,星期五,F,,,,b2D
+20/3/2027,29,星期六,,,,,b2E
+21/3/2027,30,星期日,,,,,b2F
+22/3/2027,30,星期一,A,,,,b2G
+23/3/2027,30,星期二,,,"P.1-5 LWL Week, P.6 LWL Week",,b2H
+24/3/2027,30,星期三,,,"P.1-5 LWL Week, P.6 LWL Week",,b2I
+25/3/2027,30,星期四,,,"P.1-5 LWL Week, P.6 LWL Week",,b2J
+26/3/2027,30,星期五,,Easter Holidays,P.6 LWL Week,,b2K
+27/3/2027,30,星期六,,Easter Holidays,,,b2L
+28/3/2027,31,星期日,,Easter Holidays,,,b2M
+29/3/2027,31,星期一,,Easter Holidays,,,b2N
+30/3/2027,31,星期二,,Easter Holidays,,,b2O
+31/3/2027,31,星期三,,Easter Holidays,,,b2P
+1/4/2027,31,星期四,,Easter Holidays,,,b2Q
+2/4/2027,31,星期五,,Easter Holidays,,,b2R
+3/4/2027,31,星期六,,Easter Holidays,,,b2S
+4/4/2027,32,星期日,,Easter Holidays,,,b2T
+5/4/2027,32,星期一,,Ching Ming Festival,,,b2U
+6/4/2027,32,星期二,B,,,,b2V
+7/4/2027,32,星期三,C,,,,b2W
+8/4/2027,32,星期四,D,,,,b2X
+9/4/2027,32,星期五,E,,,,b2Y
+10/4/2027,32,星期六,,,,,b2Z
+11/4/2027,33,星期日,,,,,b2a
+12/4/2027,33,星期一,F,,,,b2b
+13/4/2027,33,星期二,A,,,,b2c
+14/4/2027,33,星期三,B,,,,b2d
+15/4/2027,33,星期四,C,,,,b2e
+16/4/2027,33,星期五,,,Swimming Gala,,b2f
+17/4/2027,33,星期六,,,,,b2g
+18/4/2027,34,星期日,,,,,b2h
+19/4/2027,34,星期一,D,,,,b2i
+20/4/2027,34,星期二,E,,,,b2j
+21/4/2027,34,星期三,F,,,,b2k
+22/4/2027,34,星期四,A,,,,b2l
+23/4/2027,34,星期五,,,Open Day (Learning Outcome Exhibition) Preparation Day,,b2m
+24/4/2027,34,星期六,,,Open Day (Learning Outcome Exhibition),,b2n
+25/4/2027,35,星期日,,,,,b2o
+26/4/2027,35,星期一,,School Holiday,,,b2p
+27/4/2027,35,星期二,B,,,,b2q
+28/4/2027,35,星期三,C,,,,b2r
+29/4/2027,35,星期四,D,,,,b2s
+30/4/2027,35,星期五,E,,,,b2t
+1/5/2027,35,星期六,,Labour Day,,,b2u
+2/5/2027,36,星期日,,,,,b2v
+3/5/2027,36,星期一,F,,,,b2w
+4/5/2027,36,星期二,A,,,P3 TSA Oral & AV Assessment,b2x
+5/5/2027,36,星期三,B,,,P3 TSA Oral & AV Assessment,b2y
+6/5/2027,36,星期四,C,,,,b2z
+7/5/2027,36,星期五,D,,,,b30
+8/5/2027,36,星期六,,,,,b31
+9/5/2027,37,星期日,,,,,b32
+10/5/2027,37,星期一,E,,,,b33
+11/5/2027,37,星期二,F,,,P6 TSA Oral & AV Assessment,b34
+12/5/2027,37,星期三,A,,,P6 TSA Oral & AV Assessment,b35
+13/5/2027,37,星期四,,The Buddha's Birthday,,,b36
+14/5/2027,37,星期五,B,,,,b37
+15/5/2027,37,星期六,,,,2028-2029 P.1 Admission Seminar,b38
+16/5/2027,38,星期日,,,,,b39
+17/5/2027,38,星期一,C,,,,b3A
+18/5/2027,38,星期二,D,,,,b3B
+19/5/2027,38,星期三,E,,,,b3C
+20/5/2027,38,星期四,F,,,,b3D
+21/5/2027,38,星期五,A,,,P5 SSPA Seminar,b3E
+22/5/2027,38,星期六,,,,,b3F
+23/5/2027,39,星期日,,,,,b3G
+24/5/2027,39,星期一,B,,,,b3H
+25/5/2027,39,星期二,C,,,,b3I
+26/5/2027,39,星期三,D,,,,b3J
+27/5/2027,39,星期四,E,,,,b3K
+28/5/2027,39,星期五,F,,,,b3L
+29/5/2027,39,星期六,,,,,b3M
+30/5/2027,40,星期日,,,,,b3N
+31/5/2027,40,星期一,A,,,,b3O
+1/6/2027,40,星期二,B,,,,b3P
+2/6/2027,40,星期三,,,P2-6 Year-end Examination,,b3Q
+3/6/2027,40,星期四,,,P2-6 Year-end Examination,,b3R
+4/6/2027,40,星期五,,,P2-6 Year-end Examination,,b3S
+5/6/2027,40,星期六,,,,,b3T
+6/6/2027,41,星期日,,,,,b3U
+7/6/2027,41,星期一,,,P2-6 Year-end Examination,,b3V
+8/6/2027,41,星期二,,,P2-6 Year-end Examination,,b3W
+9/6/2027,41,星期三,,Tuen Ng Festival,P2-6 Year-end Examination,,b3X
+10/6/2027,41,星期四,C,,,,b3Y
+11/6/2027,41,星期五,D,,,Swimming Gala (2nd choice),b3Z
+12/6/2027,41,星期六,,,,,b3a
+13/6/2027,42,星期日,,,,,b3b
+14/6/2027,42,星期一,,,P3&P6 TSA,,b3c
+15/6/2027,42,星期二,,,P3&P6 TSA,,b3d
+16/6/2027,42,星期三,E,,,,b3e
+17/6/2027,42,星期四,F,,,,b3f
+18/6/2027,42,星期五,A,,,P.6 Camp,b3g
+19/6/2027,42,星期六,,,,,b3h
+20/6/2027,43,星期日,,,,,b3i
+21/6/2027,43,星期一,,,Post-assessment Activities,Book Character Day,b3j
+22/6/2027,43,星期二,,,Post-assessment Activities,,b3k
+23/6/2027,43,星期三,,,Post-assessment Activities,25th Anniversary Musical Performance(TBC),b3l
+24/6/2027,43,星期四,,,Post-assessment Activities,25th Anniversary Musical Performance(TBC),b3m
+25/6/2027,43,星期五,,,Post-assessment Activities,25th Anniversary Musical Performance(TBC),b3n
+26/6/2027,43,星期六,,,,25th Anniversary Musical Performance(TBC),b3o
+27/6/2027,44,星期日,,,,,b3p
+28/6/2027,44,星期一,,,Post-assessment Activities,,b3q
+29/6/2027,44,星期二,,,Post-assessment Activities,,b3r
+30/6/2027,44,星期三,,,Post-assessment Activities,,b3s
+1/7/2027,44,星期四,,HKSAR Establishment Day,,,b3t
+2/7/2027,44,星期五,,,Post-assessment Activities,,b3u
+3/7/2027,44,星期六,,,,Graduation Ceremony (tentative),b3v
+4/7/2027,45,星期日,,,,,b3w
+5/7/2027,45,星期一,,,Post-assessment Activities,,b3x
+6/7/2027,45,星期二,,,Post-assessment Activities,SSPA Results,b3y
+7/7/2027,45,星期三,,,Post-assessment Activities,,b3z
+8/7/2027,45,星期四,,,Post-assessment Activities,,b40
+9/7/2027,45,星期五,,,Post-assessment Activities,P1-P5 Year-end Ceremony,b41
+10/7/2027,45,星期六,,,,"Year-end Meet up, Preparation for 2027-2028 and 2027-2028 P.1 Parent's Talk ",b42
+11/7/2027,46,星期日,,,,,b43
+12/7/2027,46,星期一,,,Staff Development Day + Celebration Lunch,,b44
+13/7/2027,46,星期二,,Summer Vacation,,,b45
+14/7/2027,46,星期三,,Summer Vacation,,,b46
+15/7/2027,46,星期四,,Summer Vacation,,,b47
+16/7/2027,46,星期五,,Summer Vacation,,,b48
+17/7/2027,46,星期六,,Summer Vacation,,,b49
+18/7/2027,47,星期日,,Summer Vacation,,,b4A
+19/7/2027,47,星期一,,Summer Vacation,,,b4B
+20/7/2027,47,星期二,,Summer Vacation,,,b4C
+21/7/2027,47,星期三,,Summer Vacation,,,b4D
+22/7/2027,47,星期四,,Summer Vacation,,,b4E
+23/7/2027,47,星期五,,Summer Vacation,,,b4F
+24/7/2027,47,星期六,,Summer Vacation,,,b4G
+25/7/2027,48,星期日,,Summer Vacation,,,b4H
+26/7/2027,48,星期一,,Summer Vacation,,,b4I
+27/7/2027,48,星期二,,Summer Vacation,,,b4J
+28/7/2027,48,星期三,,Summer Vacation,,,b4K
+29/7/2027,48,星期四,,Summer Vacation,,,b4L
+30/7/2027,48,星期五,,Summer Vacation,,,b4M
+31/7/2027,48,星期六,,Summer Vacation,,,b4N
+1/8/2027,49,星期日,,Summer Vacation,,,b4O
+2/8/2027,49,星期一,,Summer Vacation,,,b4P
+3/8/2027,49,星期二,,Summer Vacation,,,b4Q
+4/8/2027,49,星期三,,Summer Vacation,,,b4R
+5/8/2027,49,星期四,,Summer Vacation,,,b4S
+6/8/2027,49,星期五,,Summer Vacation,,,b4T
+7/8/2027,49,星期六,,Summer Vacation,,,b4U
+8/8/2027,50,星期日,,Summer Vacation,,,b4V
+9/8/2027,50,星期一,,Summer Vacation,,,b4W
+10/8/2027,50,星期二,,Summer Vacation,,,b4X
+11/8/2027,50,星期三,,Summer Vacation,,,b4Y
+12/8/2027,50,星期四,,Summer Vacation,,,b4Z
+13/8/2027,50,星期五,,Summer Vacation,,,b4a
+14/8/2027,50,星期六,,Summer Vacation,,,b4b
+15/8/2027,51,星期日,,Summer Vacation,,,b4c
+16/8/2027,51,星期一,,Summer Vacation,,,b4d
+17/8/2027,51,星期二,,Summer Vacation,,,b4e
+18/8/2027,51,星期三,,Summer Vacation,,,b4f
+19/8/2027,51,星期四,,Summer Vacation,,,b4g
+20/8/2027,51,星期五,,Summer Vacation,,,b4h
+21/8/2027,51,星期六,,Summer Vacation,,,b4i
+22/8/2027,52,星期日,,Summer Vacation,,,b4j
+23/8/2027,52,星期一,,Summer Vacation,,,b4k
+24/8/2027,52,星期二,,Summer Vacation,,,b4l
+25/8/2027,52,星期三,,Summer Vacation,,,b4m
+26/8/2027,52,星期四,,Summer Vacation,,,b4n
+27/8/2027,52,星期五,,Summer Vacation,,,b4o
+28/8/2027,52,星期六,,Summer Vacation,,,b4p
+29/8/2027,53,星期日,,Summer Vacation,,,b4q
+30/8/2027,53,星期一,,Summer Vacation,,,b4r
+31/8/2027,53,星期二,,Summer Vacation,,,b4s
