@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>📋 Procedures & Playbooks - 專案標準程序與反思</title>
   
-  <!-- 載入 PapaParse 與 SortableJS 支援拖曳排序 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   
-  <!-- 載入共用設定檔與白名單 -->
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
   
@@ -29,7 +27,6 @@
       padding: 12px; 
     }
     
-    /* 🔒 Google 登入驗證遮罩 */
     .auth-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -73,66 +70,70 @@
     .hashtag-pill { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin: 0 2px; }
     .hashtag-pill:hover { background: var(--primary-color); color: #ffffff; }
 
-    /* 📋 專案看板網格排版 */
+    /* 📋 桌面版 3 欄式專案看板格狀排版 */
     .project-board-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin-top: 16px;
     }
+    @media (max-width: 1024px) {
+      .project-board-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .project-board-grid { grid-template-columns: 1fr; }
+    }
+
     .project-board {
       background: #ffffff;
       border: 1px solid var(--border-color);
       border-radius: 10px;
       display: flex;
       flex-direction: column;
-      height: 500px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.02);
       overflow: hidden;
     }
     .project-header {
-      background: var(--primary-color);
-      color: #ffffff;
       padding: 10px 14px;
       font-weight: bold;
       font-size: 1.05rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-shrink: 0;
+      cursor: pointer;
+      user-select: none;
     }
     .project-header .item-count {
       font-size: 0.8rem;
-      background: rgba(255,255,255,0.2);
+      background: rgba(0, 0, 0, 0.1);
       padding: 2px 8px;
       border-radius: 12px;
     }
+    
     .project-body {
       padding: 10px;
-      flex: 1;
+      max-height: 400px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       background: #f8fafc;
     }
 
     .mini-procedure-card {
       background: #fff;
       border: 1px solid var(--border-color);
-      border-left: 4px solid var(--primary-color);
       border-radius: 6px;
       padding: 10px;
       cursor: grab;
       box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-      flex-shrink: 0;
     }
     .mini-procedure-card:active { cursor: grabbing; }
-    .mini-procedure-card:hover { border-color: var(--primary-color); }
-    
-    /* Modal 視窗 */
+
+    /* Modal 視窗共用 */
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; }
     .modal-box { background:#fff; width:100%; max-width:480px; border-radius:12px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+    
     .form-group { margin-bottom: 10px; }
     .form-group label { display: block; font-weight: bold; font-size: 0.8rem; color: #334155; margin-bottom: 3px; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; box-sizing: border-box; }
@@ -153,7 +154,6 @@
 </head>
 <body>
 
-  <!-- Google 登入驗證遮罩 -->
   <div id="authOverlay" class="auth-overlay">
     <div class="auth-card">
       <div class="auth-title">📋 Procedures & Playbooks</div>
@@ -178,7 +178,7 @@
 
     <div class="controls">
       <div class="filter-group">
-        <button onclick="openModal()" style="background:var(--primary-color); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">➕ 新增專案步驟 / 注意事項</button>
+        <button onclick="openModal()" style="background:var(--primary-color); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">➕ 新增專案步驟</button>
         
         <div>
           <label style="font-size:0.82rem; color:#64748b; font-weight:bold;">📂 專案/事件：</label>
@@ -199,14 +199,14 @@
     <div id="projectBoardContainer" class="project-board-grid"></div>
   </div>
 
-  <!-- 檢視 Modal -->
+  <!-- 檢視單一細項 Modal -->
   <div id="previewModal" class="modal-overlay">
     <div class="modal-box">
       <h3 style="margin-top:0; color:var(--primary-color);">👁️ 步驟詳細檢視</h3>
       <input type="hidden" id="previewRowId">
       <div class="form-group"><label>專案名稱 (Project)：</label><div id="previewProject" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; font-weight:bold;"></div></div>
       <div class="form-group"><label>注意事項 / 步驟：</label><div id="previewContent" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem;"></div></div>
-      <div class="form-group"><label>反思 / 避坑心得 (Remarks)：</label><div id="previewRemarks" class="preview-remarks-box"></div></div>
+      <div class="form-group"><label>反思與優化心得 (Remarks)：</label><div id="previewRemarks" class="preview-remarks-box"></div></div>
       
       <div style="display:flex; justify-content:space-between; margin-top:16px;">
         <button type="button" onclick="deleteItem()" style="padding:6px 12px; border-radius:6px; border:1px solid #fca5a5; background:#fee2e2; color:#ef4444; font-weight:bold; cursor:pointer;">🗑️ 刪除</button>
@@ -218,7 +218,7 @@
     </div>
   </div>
 
-  <!-- 新增/修改 Modal -->
+  <!-- 新增/修改單筆細項 Modal -->
   <div id="modal" class="modal-overlay">
     <div class="modal-box">
       <h3 id="modalTitle" style="margin-top:0; color:var(--primary-color);">📝 新增專案步驟</h3>
@@ -248,7 +248,6 @@
     </div>
   </div>
 
-  <!-- 載入獨立 JS -->
   <script src="procedures.js"></script>
 </body>
 </html>

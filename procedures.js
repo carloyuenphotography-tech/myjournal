@@ -1,6 +1,7 @@
 let allProcedures = [];
 let activeTagFilter = null;
 let activeProjectFilter = 'ALL';
+let openProjectsState = {}; 
 
 let API_URL = '';
 let GID = '';
@@ -22,7 +23,6 @@ function initGoogleSignIn() {
 window.addEventListener('DOMContentLoaded', () => {
   loadNavbar();
   if (typeof CONFIG !== 'undefined') {
-    // 您可以在 config.js 擴充 PROCEDURES_SHEET_ID 與 GIDS.PROCEDURES，若無則共用 DAILY 或 FT 設定
     SHEET_ID = CONFIG.PROCEDURES_SHEET_ID || CONFIG.DAILY_SHEET_ID || '';
     GID = (CONFIG.GIDS && CONFIG.GIDS.PROCEDURES) ? CONFIG.GIDS.PROCEDURES : '0';
     API_URL = CONFIG.API_URLS?.PROCEDURES || CONFIG.API_URLS?.DAILY || '';
@@ -141,6 +141,28 @@ function loadData() {
     }
   });
 }
+// 🎨 自動產生極度柔和、淡雅的粉嫩色彩組合 (Soft Pastel Colors)
+function getPastelColor(str) {
+  const pastelColors = [
+    { bg: '#fdf2f8', text: '#9d174d', border: '#fbcfe8' }, // 極淡粉紅
+    { bg: '#faf5ff', text: '#7e22ce', border: '#e9d5ff' }, // 極淡粉紫
+    { bg: '#fff7ed', text: '#9a3412', border: '#fed7aa' }, // 極淡粉橘
+    { bg: '#fefce8', text: '#854d0e', border: '#fe-f08a' }, // 極淡粉黃 (修正邊框)
+    { bg: '#f0fdf4', text: '#166534', border: '#bbf7d0' }, // 極淡粉綠
+    { bg: '#f0fdfa', text: '#115e59', border: '#99f6e4' }, // 極淡粉青
+    { bg: '#f0f9ff', text: '#0369a1', border: '#bae6fd' }, // 極淡粉藍
+    { bg: '#f5f3ff', text: '#4338ca', border: '#c7d2fe' }  // 極淡粉靛
+  ];
+  // 修正黃色的邊框色彩代碼
+  pastelColors[3].border = '#fde047';
+
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % pastelColors.length;
+  return pastelColors[index];
+}
 
 function formatTextWithTags(text) {
   if (!text) return '';
@@ -182,7 +204,7 @@ function updateProjectDropdown() {
   select.value = activeProjectFilter;
 }
 
-// 渲染專案看板
+// 渲染專案看板（套用專屬粉色主題）
 function renderProjectBoards() {
   const container = document.getElementById('projectBoardContainer');
   if (!container) return;
@@ -198,7 +220,6 @@ function renderProjectBoards() {
     filteredLogs = filteredLogs.filter(r => r.project === activeProjectFilter);
   }
 
-  // 取得所有不重複的專案名稱
   const projects = Array.from(new Set(filteredLogs.map(r => r.project)));
 
   if (projects.length === 0) {
@@ -209,23 +230,31 @@ function renderProjectBoards() {
   projects.forEach(projectName => {
     const projectItems = filteredLogs.filter(r => r.project === projectName);
     const boardKey = `proj_${projectName.replace(/\s+/g, '_')}`;
+    const isOpen = !!openProjectsState[projectName];
+    const theme = getPastelColor(projectName); // 取得該專案的專屬粉色主題
 
     const board = document.createElement('div');
     board.className = `project-board`;
+    board.style.border = `1px solid ${theme.border}`;
     
-let headerHtml = `
-      <div class="project-header">
-        <span>📁 ${projectName}</span>
-        <button onclick="openModalForProject('${projectName.replace(/'/g, "\\'")}')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; padding:2px 8px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.9rem;" title="在此專案下新增項目">＋</button>
+    let headerHtml = `
+      <div class="project-header" onclick="toggleProject('${projectName.replace(/'/g, "\\'")}')" style="background-color: ${theme.bg}; color: ${theme.text};">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>${isOpen ? '▼' : '▶'}</span>
+          <span>📁 ${projectName}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="item-count" style="background: rgba(0,0,0,0.06);">${projectItems.length}</span>
+          <button onclick="event.stopPropagation(); openModalForProject('${projectName.replace(/'/g, "\\'")}')" style="background: rgba(0,0,0,0.1); border:none; color:${theme.text}; padding:2px 8px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.9rem;" title="在此專案下新增項目">＋</button>
+        </div>
       </div>
     `;
 
-    let bodyHtml = `<div class="project-body" id="board_body_${boardKey}">`;
+    let bodyHtml = `<div class="project-body" id="board_body_${boardKey}" style="display: ${isOpen ? 'flex' : 'none'};">`;
     
     if (projectItems.length === 0) {
-      bodyHtml += `<div style="text-align:center; color:#94a3b8; font-size:0.85rem; margin-top:20px;">無步驟記錄</div>`;
+      bodyHtml += `<div style="text-align:center; color:#94a3b8; font-size:0.85rem; margin-top:10px;">無步驟記錄</div>`;
     } else {
-      // 讀取 localStorage 記憶次序
       const savedOrder = JSON.parse(localStorage.getItem(`procedure_order_${boardKey}`) || '[]');
       if (savedOrder.length > 0) {
         projectItems.sort((a, b) => {
@@ -237,15 +266,14 @@ let headerHtml = `
         });
       }
 
-      // 帶入 index 產生動態排序數字
       projectItems.forEach((item, index) => {
         const safeId = String(item.id).replace(/'/g, "\\'");
         const formattedRemarks = item.remarks ? formatTextWithTags(item.remarks.replace(/\n/g, '<br>')) : '';
 
         bodyHtml += `
-          <div class="mini-procedure-card" data-id="${item.id}" onclick="openPreviewModal('${safeId}')">
-            <div style="font-size:0.9rem; font-weight:bold; margin-bottom:6px; line-height:1.4; display:flex; gap:6px;">
-              <span style="color:#0284c7; flex-shrink:0;">${index + 1}.</span>
+          <div class="mini-procedure-card" data-id="${item.id}" onclick="openPreviewModal('${safeId}')" style="border-left: 4px solid ${theme.border};">
+            <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px; line-height:1.4; display:flex; gap:6px;">
+              <span style="color:${theme.text}; flex-shrink:0;">${index + 1}.</span>
               <span>${formatTextWithTags(item.content)}</span>
             </div>
             ${formattedRemarks ? `<div style="font-size:0.78rem; color:#475569; line-height:1.3; margin-left:18px;">💬 ${formattedRemarks}</div>` : ''}
@@ -258,22 +286,34 @@ let headerHtml = `
     board.innerHTML = headerHtml + bodyHtml;
     container.appendChild(board);
 
-    // 啟用 SortableJS 拖曳排序並儲存至 localStorage，並即時更新畫面上顯示的數字
     const bodyEl = document.getElementById(`board_body_${boardKey}`);
-    if (bodyEl && typeof Sortable !== 'undefined' && projectItems.length > 0) {
+    if (bodyEl && typeof Sortable !== 'undefined' && projectItems.length > 0 && isOpen) {
       Sortable.create(bodyEl, {
         animation: 150,
         onEnd: function () {
           const cards = bodyEl.querySelectorAll('.mini-procedure-card');
           const newOrder = Array.from(cards).map(card => card.getAttribute('data-id'));
           localStorage.setItem(`procedure_order_${boardKey}`, JSON.stringify(newOrder));
-          
-          // 拖曳結束後即時重新整理數字編號，確保數字跟隨當前排序
           renderProjectBoards();
         }
       });
     }
   });
+}
+
+function toggleProject(projectName) {
+  openProjectsState[projectName] = !openProjectsState[projectName];
+  renderProjectBoards();
+}
+
+function openModalForProject(projectName) {
+  openProjectsState[projectName] = true;
+  document.getElementById('modalTitle').innerHTML = `📝 新增步驟至：${projectName}`;
+  document.getElementById('editRowId').value = '';
+  document.getElementById('addForm').reset();
+  
+  document.getElementById('newProject').value = projectName;
+  document.getElementById('modal').style.display = 'flex';
 }
 
 function openPreviewModal(id) {
@@ -305,7 +345,7 @@ function deleteItem() {
   if (API_URL) {
     const secret = CONFIG.SECRET_KEY || '';
     const params = new URLSearchParams({
-      action: 'deleteProcedure', // 可依據您的 GAS 後端微調
+      action: 'deleteProcedure',
       key: secret,
       id: itemId
     });
@@ -331,6 +371,7 @@ function openEditMode() {
 
 function openModal() {
   document.getElementById('modalTitle').innerHTML = '📝 新增專案步驟';
+  document.getElementById('editRowId').value = '...';
   document.getElementById('editRowId').value = '';
   document.getElementById('addForm').reset();
   document.getElementById('modal').style.display = 'flex';
@@ -352,6 +393,8 @@ function handleSubmit(e) {
   const remarksVal = document.getElementById('newRemarks').value.trim();
 
   if (!contentVal || !projVal) return;
+
+  openProjectsState[projVal] = true;
 
   if (isEdit) {
     const target = allProcedures.find(r => String(r.id) === String(itemId));
@@ -384,16 +427,4 @@ function handleSubmit(e) {
     });
     fetch(`${API_URL}?${params.toString()}`, { mode: 'no-cors' });
   }
-}
-// 點擊專案標題的 ＋ 按鈕時觸發，自動帶入專案名稱
-function openModalForProject(projectName) {
-  document.getElementById('modalTitle').innerHTML = `📝 新增步驟至：${projectName}`;
-  document.getElementById('editRowId').value = '';
-  document.getElementById('addForm').reset();
-  
-  // 自動填入該專案名稱並將輸入框唯讀（或可修改）
-  const projectInput = document.getElementById('newProject');
-  projectInput.value = projectName;
-  
-  document.getElementById('modal').style.display = 'flex';
 }
