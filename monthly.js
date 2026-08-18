@@ -90,7 +90,6 @@ function loadNavbar() {
     });
 }
 
-// 動態切換日期/月份選擇器類型
 function toggleDateInputType(isMonth) {
   const dateInput = document.getElementById('newDate');
   const now = new Date();
@@ -107,7 +106,6 @@ function toggleDateInputType(isMonth) {
   }
 }
 
-// 動態產生分類下拉選項
 function updateCategoryDropdown() {
   const select = document.getElementById('categoryFilter');
   if (!select) return;
@@ -131,7 +129,6 @@ function onStatusFilterChange(val) {
   renderMonthBoards();
 }
 
-// 從 Google Sheets CSV 讀取資料
 function loadData() {
   if (!SHEET_ID) {
     document.getElementById('loading').textContent = '❌ config.js 中缺少 Sheet ID 設定';
@@ -197,7 +194,7 @@ function clearFilter() {
   renderMonthBoards();
 }
 
-// 渲染 12 個月看板
+// 渲染月度看板（包含上個月、12個月、以及一年以後的遠期項目）
 function renderMonthBoards() {
   const container = document.getElementById('monthBoardContainer');
   if (!container) return;
@@ -223,11 +220,20 @@ function renderMonthBoards() {
 
   const now = new Date();
   let startYear = now.getFullYear();
-  let startMonth = now.getMonth() - 1; 
+  let startMonth = now.getMonth(); // 從本月開始計算 12 個月
 
   const realCurrentYear = now.getFullYear();
   const realCurrentMonth = now.getMonth() + 1; 
 
+  // 1. 渲染上個月 (可收起框子)
+  const prevDate = new Date(startYear, startMonth - 1, 1);
+  const prevY = prevDate.getFullYear();
+  const prevM = String(prevDate.getMonth() + 1).padStart(2, '0');
+  const prevKey = `${prevY}-${prevM}`;
+  const prevItems = filteredLogs.filter(r => r.date && r.date.startsWith(prevKey)).sort((a, b) => a.date.localeCompare(b.date));
+  createCollapsibleBoardElement(`📁 上個月：${prevY}年${Number(prevM)}月`, prevItems, container, 'prev-month', true, true);
+
+  // 2. 渲染未來 12 個月看板
   for (let i = 0; i < 12; i++) {
     const d = new Date(startYear, startMonth + i, 1);
     const y = d.getFullYear();
@@ -238,11 +244,9 @@ function renderMonthBoards() {
     const monthLabel = `${y}年 ${monthNumber}月`;
     
     const isCurrentMonth = (y === realCurrentYear && monthNumber === realCurrentMonth);
-    // 判斷是否為過去月份
-    const isPastMonth = (y < realCurrentYear) || (y === realCurrentYear && monthNumber < realCurrentMonth);
 
     const monthItems = filteredLogs
-      .filter(r => r.date.startsWith(monthKey))
+      .filter(r => r.date && r.date.startsWith(monthKey))
       .sort((a, b) => {
         const aIsMonth = a.date.length === 7;
         const bIsMonth = b.date.length === 7;
@@ -252,8 +256,7 @@ function renderMonthBoards() {
       });
 
     const board = document.createElement('div');
-    // 套用對應的 CSS 類別，加入 past-month 來幫助手機版隱藏
-    board.className = `month-board ${isCurrentMonth ? 'current-month' : ''} ${isPastMonth ? 'past-month' : ''}`;
+    board.className = `month-board ${isCurrentMonth ? 'current-month' : ''}`;
     
     let headerHtml = `
       <div class="month-header">
@@ -270,7 +273,6 @@ function renderMonthBoards() {
       monthItems.forEach(item => {
         const isDone = (item.status === '已完成' || item.status === 'Done');
         const safeId = String(item.id).replace(/'/g, "\\'");
-        
         const displayDate = (item.date.length === 7) ? '📌 全月' : item.date;
 
         bodyHtml += `
@@ -296,6 +298,72 @@ function renderMonthBoards() {
     
     board.innerHTML = headerHtml + bodyHtml;
     container.appendChild(board);
+  }
+
+  // 3. 渲染一年以後的遠期項目 (可收起框子)
+  const futureLimitDate = new Date(startYear, startMonth + 12, 1);
+  const futureLimitStr = `${futureLimitDate.getFullYear()}-${String(futureLimitDate.getMonth() + 1).padStart(2, '0')}`;
+  
+  const distantFutureItems = filteredLogs.filter(r => r.date && r.date >= futureLimitStr).sort((a, b) => a.date.localeCompare(b.date));
+  createCollapsibleBoardElement(`🔭 一年以後的遠期項目`, distantFutureItems, container, 'distant-future', false, false);
+}
+
+// 建立可收起框子的輔助函數
+function createCollapsibleBoardElement(title, items, container, boardKey, defaultCollapsed = true, isPastMonth = false) {
+  const board = document.createElement('div');
+  board.className = `month-board collapsible-board ${isPastMonth ? 'past-month' : ''}`;
+  
+  let headerHtml = `
+    <div class="month-header collapsible-header" onclick="toggleCollapsibleBoard('${boardKey}')" style="cursor:pointer; background:#475569;">
+      <span>${title} <span id="arrow_${boardKey}">${defaultCollapsed ? '▶' : '▼'}</span></span>
+      <span class="item-count">${items.length} 項</span>
+    </div>
+  `;
+
+  let bodyHtml = `<div class="month-body collapsible-body" id="board_body_${boardKey}" style="display: ${defaultCollapsed ? 'none' : 'flex'};">`;
+  
+  if (items.length === 0) {
+    bodyHtml += `<div style="text-align:center; color:#94a3b8; font-size:0.85rem; margin-top:20px;">無事項記錄</div>`;
+  } else {
+    items.forEach(item => {
+      const isDone = (item.status === '已完成' || item.status === 'Done');
+      const safeId = String(item.id).replace(/'/g, "\\'");
+      const displayDate = (item.date.length === 7) ? '📌 全月' : item.date;
+
+      bodyHtml += `
+        <div class="mini-log-card ${isDone ? 'done' : ''}" onclick="openPreviewModal('${safeId}')">
+          <div style="font-size:0.75rem; color:#64748b; display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="font-weight:${item.date.length === 7 ? 'bold' : 'normal'}; color:${item.date.length === 7 ? '#d97706' : '#64748b'};">${displayDate}</span>
+            <span style="color:#0d9488; font-weight:bold;">${item.category}</span>
+          </div>
+          <div style="font-size:0.9rem; font-weight:bold; margin-bottom:8px; line-height:1.4; display:flex; align-items:center;">
+            <span class="signifier-pill">${item.signifier || 'Task'}</span>
+            <span>${formatTextWithTags(item.task)}</span>
+          </div>
+          <div style="display:flex; justify-content:flex-end; border-top: 1px dashed var(--border-color); padding-top:6px;">
+            <button class="status-btn ${isDone ? 'done' : 'todo'}" onclick="event.stopPropagation(); toggleStatus('${safeId}', '${item.status}')">
+              ${isDone ? '✅ 已完成' : '⏳ 待辦'}
+            </button>
+          </div>
+        </div>
+      `;
+    });
+  }
+  bodyHtml += `</div>`;
+  
+  board.innerHTML = headerHtml + bodyHtml;
+  container.appendChild(board);
+}
+
+function toggleCollapsibleBoard(boardKey) {
+  const body = document.getElementById(`board_body_${boardKey}`);
+  const arrow = document.getElementById(`arrow_${boardKey}`);
+  if (body.style.display === 'none' || body.style.display === '') {
+    body.style.display = 'flex';
+    arrow.textContent = '▼';
+  } else {
+    body.style.display = 'none';
+    arrow.textContent = '▶';
   }
 }
 
@@ -444,7 +512,6 @@ function handleSubmit(e) {
   }
 }
 
-// 手機版：切換顯示/隱藏過去的月份
 function togglePastMonths() {
   const pastBoards = document.querySelectorAll('.past-month');
   pastBoards.forEach(el => {
