@@ -24,11 +24,11 @@ const CONFIG = {
   },
 
   API_URLS: {
-    DAILY: 'https://script.google.com/macros/s/AKfycbzTPPb9pvb41mU2D-nz2e2wn3QeBU36t92YkW_24EX95dFwuMJjVRJKrjNJ5aTdFbbH/exec',
+    DAILY: 'https://script.google.com/macros/s/AKfycbwfZp2dJaEO4QEHx8dYbZifmMBZHCgnmVQElu7sNSGMa7st8V3IKYQeYB3oeNCLup7T/exec',
     IDEAS: 'https://script.google.com/macros/s/AKfycby2i-JNjupBPLaWuASqnUmezJRwUdQNBT2Gzsi27r1TW9kcdb-DaMwnsrYZqdv2VBhU/exec',
     HABIT: 'https://script.google.com/macros/s/AKfycbz72-QL780wO-NVLsszPusQN3WGqCCeb-vn0yZEI8I6dgGwFaawpJtbUATozrE631rE/exec',
     FT: 'https://script.google.com/macros/s/AKfycbwnpWBweDBZoEvHukGHitf0yq3ycBLfF_YpYTCsPhgz-H5snw9rfgEdgGIv7sbMETyVYA/exec',
     PROJECTS: 'https://script.google.com/macros/s/AKfycby2i-JNjupBPLaWuASqnUmezJRwUdQNBT2Gzsi27r1TW9kcdb-DaMwnsrYZqdv2VBhU/exec', 
-    MONTHLY: 'https://script.google.com/macros/s/AKfycbzTPPb9pvb41mU2D-nz2e2wn3QeBU36t92YkW_24EX95dFwuMJjVRJKrjNJ5aTdFbbH/exec'
+    MONTHLY: 'https://script.google.com/macros/s/AKfycbwfZp2dJaEO4QEHx8dYbZifmMBZHCgnmVQElu7sNSGMa7st8V3IKYQeYB3oeNCLup7T/exec'
   }
 };
