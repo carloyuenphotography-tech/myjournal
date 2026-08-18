@@ -231,15 +231,20 @@
     .badge.event, .badge.Event { background: #fef3c7; color: #92400e; }
     .badge.note, .badge.Note, .badge.筆記 { background: #f1f5f9; color: #475569; }
 
+    /* 🏷️ Hashtag 特別高亮膠囊樣式（與寫作大綱工具風格統一） */
     .hashtag {
-      background-color: #eff6ff;
-      color: #2563eb;
+      display: inline-block;
+      background: #fce7f3;
+      color: #9d174d;
       font-size: 0.75rem;
       font-weight: 600;
       padding: 1px 6px;
-      border-radius: 4px;
-      display: inline-block;
+      border-radius: 12px;
       margin-left: 2px;
+    }
+    .hashtag:hover {
+      background: #db2777;
+      color: #ffffff;
     }
 
     .calendar-controls {
@@ -626,6 +631,7 @@
       });
     }
 
+    // 🏷️ 自動將文字中的 #hashtag 轉換為粉紅膠囊高亮樣式
     function formatHashtags(text) {
       if (!text) return '';
       return text.replace(/#([\w\u4e00-\u9fa5]+)/g, '<span class="hashtag">#$1</span>');
@@ -648,7 +654,6 @@
         return r.parsedDate === targetDate && !isDone;
       });
 
-      // 從 localStorage 讀取該日期的自訂次序
       const savedOrder = JSON.parse(localStorage.getItem(`daily_order_${selectedDailyDate}`) || '[]');
       if (savedOrder.length > 0) {
         logs.sort((a, b) => {
@@ -678,6 +683,7 @@
         div.className = 'daily-card';
         div.setAttribute('data-id', item.id);
         
+        // 替換備註中的 hashtag 樣式
         const formattedRemark = formatHashtags(remarks ? remarks.replace(/\n/g, '<br>') : '');
 
         div.innerHTML = `
@@ -688,7 +694,6 @@
         container.appendChild(div);
       });
 
-      // 啟用 SortableJS 並儲存次序至 localStorage
       if (typeof Sortable !== 'undefined') {
         Sortable.create(container, {
           animation: 150,

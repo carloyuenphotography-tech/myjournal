@@ -70,7 +70,18 @@
     .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .filter-select { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; outline: none; background-color: #ffffff; color: #334155; }
 
-    .hashtag-pill { display: inline-block; background: #fce7f3; color: #9d174d; padding: 1px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin: 0 2px; }
+    /* 🏷️ Hashtag 專屬高亮樣式 */
+    .hashtag-pill { 
+      display: inline-block; 
+      background: #fce7f3; 
+      color: #9d174d; 
+      padding: 1px 6px; 
+      border-radius: 12px; 
+      font-size: 0.75rem; 
+      font-weight: 600; 
+      cursor: pointer; 
+      margin: 0 2px; 
+    }
     .hashtag-pill:hover { background: #db2777; color: #ffffff; }
 
     /* 3 欄式章節看板格狀排版 */
@@ -135,23 +146,32 @@
 
     /* Modal 視窗共用 */
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; }
-    .modal-box { background:#fff; width:100%; max-width:520px; border-radius:12px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
+    .modal-box { background:#fff; width:100%; max-width:560px; border-radius:12px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
     
     .form-group { margin-bottom: 10px; }
     .form-group label { display: block; font-weight: bold; font-size: 0.8rem; color: #334155; margin-bottom: 3px; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; box-sizing: border-box; }
-    .form-group textarea.large-textarea { min-height: 100px; resize: vertical; }
+    .form-group textarea.large-textarea { min-height: 120px; resize: vertical; }
 
-    .preview-box {
+    .preview-box-small {
       background: #f8fafc;
       border: 1px solid var(--border-color);
       border-radius: 6px;
-      padding: 8px 10px;
-      min-height: 60px; 
+      padding: 5px 10px;
       font-size: 0.85rem;
+      color: #0f172a;
+    }
+    .preview-box-large {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px;
+      min-height: 150px; 
+      font-size: 0.95rem;
       color: #0f172a;
       white-space: pre-wrap;
       word-break: break-word;
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -184,9 +204,18 @@
         <button onclick="openModal()" style="background:var(--primary-color); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">➕ 新增風景/章節段落</button>
         
         <div>
-          <label style="font-size:0.82rem; color:#64748b; font-weight:bold;">📂 章節篩選：</label>
+          <label style="font-size:0.82rem; color:#64748b; font-weight:bold;">📊 看板分組：</label>
+          <select id="groupSelect" class="filter-select" onchange="onGroupChange(this.value)">
+            <option value="chapter">依 章節 (Chapter)</option>
+            <option value="landscape">依 天氣現象/風景</option>
+            <option value="category">依 分類 (Category)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:0.82rem; color:#64748b; font-weight:bold;">📂 篩選：</label>
           <select id="chapterFilter" class="filter-select" onchange="onChapterFilterChange(this.value)">
-            <option value="ALL">全部章節</option>
+            <option value="ALL">全部</option>
           </select>
         </div>
       </div>
@@ -207,10 +236,14 @@
     <div class="modal-box">
       <h3 style="margin-top:0; color:var(--primary-color);">👁️ 內容詳情預覽</h3>
       <input type="hidden" id="previewRowId">
-      <div class="form-group"><label>章節：</label><div id="previewChapter" class="preview-box"></div></div>
-      <div class="form-group"><label>天氣現象 / 風景：</label><div id="previewLandscape" class="preview-box" style="font-weight:bold;"></div></div>
-      <div class="form-group"><label>內容大綱：</label><div id="previewOutline" class="preview-box"></div></div>
-      <div class="form-group"><label>相片與描述：</label><div id="previewPhoto" class="preview-box"></div></div>
+      
+      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <div class="form-group" style="flex: 1; margin-bottom: 0;"><label>章節：</label><div id="previewChapter" class="preview-box-small"></div></div>
+        <div class="form-group" style="flex: 2; margin-bottom: 0;"><label>天氣現象 / 風景：</label><div id="previewLandscape" class="preview-box-small" style="font-weight:bold;"></div></div>
+      </div>
+
+      <div class="form-group"><label>📋 內容大綱（主要內容）：</label><div id="previewOutline" class="preview-box-large"></div></div>
+      <div class="form-group"><label>📷 相片與描述：</label><div id="previewPhoto" class="preview-box-small"></div></div>
       
       <div style="display:flex; justify-content:space-between; margin-top:16px;">
         <button type="button" onclick="deleteItem()" style="padding:6px 12px; border-radius:6px; border:1px solid #fca5a5; background:#fee2e2; color:#ef4444; font-weight:bold; cursor:pointer;">🗑️ 刪除</button>
@@ -257,6 +290,7 @@
     </div>
   </div>
 
+  <!-- 引入共用的邏輯 JS 檔案 -->
   <script src="book-writer.js"></script>
 </body>
 </html>
