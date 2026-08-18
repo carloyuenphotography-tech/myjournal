@@ -147,11 +147,25 @@
 
     .daily-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column; /* 手機與電腦統一改為上下結構，整齊不擠壓 */
+      align-items: flex-start;
+      gap: 8px;
       border-bottom: 1px dashed #a7f3d0;
       padding-bottom: 8px;
       margin-bottom: 10px;
+    }
+
+    .daily-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .daily-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .daily-title {
@@ -414,11 +428,13 @@
 
     <div class="daily-box">
       <div class="daily-header">
-        <div class="daily-title">📌 當日工作與筆記</div>
-        <div class="daily-ctrl">
-          <span id="dailyDateDisplay" style="font-size: 0.85rem; color: #166534; font-weight: bold; margin-right: 2px;"></span>
-          <button class="btn-date-nav" onclick="changeDailyDate(-1)">◀</button>
-          <button class="btn-date-nav" onclick="changeDailyDate(1)">▶</button>
+        <div class="daily-header-top">
+          <div class="daily-title">📌 當日工作與筆記</div>
+          <div class="daily-ctrl">
+            <span id="dailyDateDisplay" style="font-size: 0.85rem; color: #166534; font-weight: bold; margin-right: 2px;"></span>
+            <button class="btn-date-nav" onclick="changeDailyDate(-1)">◀</button>
+            <button class="btn-date-nav" onclick="changeDailyDate(1)">▶</button>
+          </div>
         </div>
       </div>
       <div id="todayDailyList" class="daily-list">
