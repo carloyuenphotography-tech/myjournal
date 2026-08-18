@@ -406,11 +406,19 @@ function renderBacklog() {
     container.appendChild(createLogElement(item, false));
   });
 }
-
 function createLogElement(item, showDateTag) {
   const isDone = isItemDone(item.status);
+  
+  // 🔍 檢查是否包含重要 hashtag 或 emoji (如 #important, #urgent, #重要, 🔥, ⚠️)
+  const combinedText = (item.content || '') + ' ' + (item.remarks || '');
+  const isImportant = combinedText.includes('#important') || 
+                      combinedText.includes('#urgent') || 
+                      combinedText.includes('#重要') || 
+                      combinedText.includes('🔥') || 
+                      combinedText.includes('⚠️');
+
   const div = document.createElement('div');
-  div.className = `log-item ${isDone ? 'done' : ''}`;
+  div.className = `log-item ${isDone ? 'done' : ''} ${isImportant ? 'important-log' : ''}`;
   div.setAttribute('data-id', item.id);
 
   let badgeClass = 'task';
