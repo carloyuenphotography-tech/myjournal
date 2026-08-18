@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📋 Procedures & Playbooks - 專案標準程序與反思</title>
+  
+  <!-- 載入 PapaParse 與 SortableJS 支援拖曳排序 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  
+  <!-- 載入共用設定檔與白名單 -->
+  <script src="config.js"></script>
+  <script src="allowed-emails.js"></script>
+  
+  <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
+  
+  <style>
+    :root { 
+      --primary-color: #0284c7; 
+      --bg-color: #f8fafc; 
+      --border-color: #cbd5e1; 
+    }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      background: var(--bg-color); 
+      color: #1e293b; 
+      margin: 0; 
+      padding: 12px; 
+    }
+    
+    /* 🔒 Google 登入驗證遮罩 */
+    .auth-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .auth-card {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      padding: 28px 20px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+    .auth-title { font-size: 1.25rem; font-weight: bold; color: #0f172a; margin-bottom: 8px; }
+    .auth-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 20px; }
+    .google-btn-wrapper { display: flex; justify-content: center; min-height: 40px; margin-bottom: 12px; }
+
+    .container { max-width: 1300px; margin: 0 auto; background: #fff; padding: 16px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: none; }
+    
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; overflow-x: auto; white-space: nowrap; }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-btn { padding: 8px 14px; font-size: 0.88rem; border-radius: 6px; text-decoration: none; background: #e2e8f0; color: #475569; font-weight: bold; }
+    .nav-btn.active { background: var(--primary-color); color: #fff; }
+
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
+    .page-title { font-size: 1.15rem; font-weight: bold; color: var(--primary-color); }
+    .user-profile { font-size: 0.8rem; color: #475569; display: flex; align-items: center; gap: 8px; }
+    .logout-btn { background: #f1f5f9; border: 1px solid var(--border-color); padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+
+    .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .filter-select { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; outline: none; background-color: #ffffff; color: #334155; }
+
+    .hashtag-pill { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin: 0 2px; }
+    .hashtag-pill:hover { background: var(--primary-color); color: #ffffff; }
+
+    /* 📋 專案看板網格排版 */
+    .project-board-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .project-board {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      height: 500px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      overflow: hidden;
+    }
+    .project-header {
+      background: var(--primary-color);
+      color: #ffffff;
+      padding: 10px 14px;
+      font-weight: bold;
+      font-size: 1.05rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .project-header .item-count {
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.2);
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+    .project-body {
+      padding: 10px;
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #f8fafc;
+    }
+
+    .mini-procedure-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--primary-color);
+      border-radius: 6px;
+      padding: 10px;
+      cursor: grab;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      flex-shrink: 0;
+    }
+    .mini-procedure-card:active { cursor: grabbing; }
+    .mini-procedure-card:hover { border-color: var(--primary-color); }
+    
+    /* Modal 視窗 */
+    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; }
+    .modal-box { background:#fff; width:100%; max-width:480px; border-radius:12px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-weight: bold; font-size: 0.8rem; color: #334155; margin-bottom: 3px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; box-sizing: border-box; }
+    .form-group textarea.large-textarea { min-height: 80px; resize: vertical; }
+
+    .preview-remarks-box {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 10px;
+      min-height: 80px; 
+      font-size: 0.85rem;
+      color: #0f172a;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Google 登入驗證遮罩 -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-title">📋 Procedures & Playbooks</div>
+      <div class="auth-desc">請登入 Google 帳號以驗證身分</div>
+      <div class="google-btn-wrapper">
+        <div id="googleSignInContainer"></div>
+      </div>
+      <div id="loginErr" style="color: #ff3b30; font-size: 0.8rem; margin-top: 4px; white-space: pre-line;"></div>
+    </div>
+  </div>
+
+  <div class="container" id="mainContainer">
+    <div id="navbar" class="nav-tabs"></div>
+
+    <div class="header-bar">
+      <div class="page-title">📋 Procedures & Playbooks - 專案標準程序與反思</div>
+      <div class="user-profile">
+        <span id="userInfo"></span>
+        <button class="logout-btn" onclick="logout()">登出</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="filter-group">
+        <button onclick="openModal()" style="background:var(--primary-color); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">➕ 新增專案步驟 / 注意事項</button>
+        
+        <div>
+          <label style="font-size:0.82rem; color:#64748b; font-weight:bold;">📂 專案/事件：</label>
+          <select id="projectFilter" class="filter-select" onchange="onProjectFilterChange(this.value)">
+            <option value="ALL">全部專案</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:6px; align-items:center;">
+        <span id="tagFilterIndicator" style="font-size:0.8rem; color:var(--primary-color); display:none;">標籤篩選：<b id="activeTagText"></b></span>
+        <button onclick="clearFilter()" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); cursor:pointer;">重置過濾</button>
+      </div>
+    </div>
+
+    <div id="loading" style="font-size:0.9rem; font-weight:bold; color:var(--primary-color);">⏳ 正在載入 Procedures 資料...</div>
+    
+    <div id="projectBoardContainer" class="project-board-grid"></div>
+  </div>
+
+  <!-- 檢視 Modal -->
+  <div id="previewModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 style="margin-top:0; color:var(--primary-color);">👁️ 步驟詳細檢視</h3>
+      <input type="hidden" id="previewRowId">
+      <div class="form-group"><label>專案名稱 (Project)：</label><div id="previewProject" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; font-weight:bold;"></div></div>
+      <div class="form-group"><label>注意事項 / 步驟：</label><div id="previewContent" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem;"></div></div>
+      <div class="form-group"><label>反思 / 避坑心得 (Remarks)：</label><div id="previewRemarks" class="preview-remarks-box"></div></div>
+      
+      <div style="display:flex; justify-content:space-between; margin-top:16px;">
+        <button type="button" onclick="deleteItem()" style="padding:6px 12px; border-radius:6px; border:1px solid #fca5a5; background:#fee2e2; color:#ef4444; font-weight:bold; cursor:pointer;">🗑️ 刪除</button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" onclick="closePreviewModal()" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border-color); background:#f1f5f9; cursor:pointer;">關閉</button>
+          <button type="button" onclick="openEditMode()" style="padding:6px 16px; border-radius:6px; border:none; background:var(--primary-color); color:#fff; font-weight:bold; cursor:pointer;">✏️ 修改</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增/修改 Modal -->
+  <div id="modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 id="modalTitle" style="margin-top:0; color:var(--primary-color);">📝 新增專案步驟</h3>
+      <form id="addForm" onsubmit="handleSubmit(event)">
+        <input type="hidden" id="editRowId">
+        
+        <div class="form-group">
+          <label>📂 專案 / 事件名稱 (Project Name)</label>
+          <input type="text" id="newProject" placeholder="例: 年度晚宴活動 / 網站改版" required>
+        </div>
+
+        <div class="form-group">
+          <label>📋 注意事項 / 步驟內容 (支援 #標籤)</label>
+          <input type="text" id="newContent" placeholder="例: 必須提前兩周確認場地合約 #SOP" required>
+        </div>
+
+        <div class="form-group">
+          <label>💬 反思與優化心得 (Remarks)</label>
+          <textarea id="newRemarks" class="large-textarea" placeholder="記錄這次經驗的優化方向、避坑指南..."></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:15px;">
+          <button type="button" onclick="closeModal()" style="padding:8px 14px; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">取消</button>
+          <button type="submit" style="background:var(--primary-color); color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer;">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 載入獨立 JS -->
+  <script src="procedures.js"></script>
+</body>
+</html>
