@@ -231,7 +231,7 @@ function renderMonthBoards() {
   const prevM = String(prevDate.getMonth() + 1).padStart(2, '0');
   const prevKey = `${prevY}-${prevM}`;
   const prevItems = filteredLogs.filter(r => r.date && r.date.startsWith(prevKey)).sort((a, b) => a.date.localeCompare(b.date));
-  createCollapsibleBoardElement(`📁 上個月：${prevY}年${Number(prevM)}月`, prevItems, container, 'prev-month', true, true);
+  createCollapsibleBoardElement(`📁 上個月：${prevY}年${Number(prevM)}月`, prevItems, container, 'prev-month', false, true);
 
   // 2. 渲染未來 12 個月看板
   for (let i = 0; i < 12; i++) {
