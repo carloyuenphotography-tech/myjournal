@@ -11,7 +11,6 @@ function getTodayString() {
 
 let currentDateStr = getTodayString();
 
-// ✅ 新增的 Google 登入初始化函數
 function initGoogleSignIn() {
   if (typeof CONFIG !== 'undefined' && CONFIG.GOOGLE_CLIENT_ID) {
     google.accounts.id.initialize({
@@ -25,8 +24,7 @@ function initGoogleSignIn() {
   }
 }
 
-// 網頁載入完成時執行
-window.onload = () => {
+window.addEventListener('DOMContentLoaded', () => {
   loadNavbar();
   document.getElementById('currentDate').value = currentDateStr;
 
@@ -35,11 +33,28 @@ window.onload = () => {
     return;
   }
 
-  // 檢查 Session 登入狀態
+  const savedEmail = sessionStorage.getItem("user_google_email") || (sessionStorage.getItem("google_user") ? JSON.parse(sessionStorage.getItem("google_user")).email : null);
+      
+  if (savedEmail && typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
+    const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
+    if (cleanList.includes(savedEmail.toLowerCase().trim())) {
+      initializeApp();
+      return;
+    }
+  }
+  
   checkLoginStatus();
-};
+});
 
-// 解析 Google JWT Token
+function initializeApp() {
+  if (window.google && window.google.accounts && window.google.accounts.id) {
+    window.google.accounts.id.cancel();
+  }
+  document.getElementById('authOverlay').style.display = 'none';
+  document.getElementById('mainContainer').style.display = 'block';
+  loadLogsData();
+}
+
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1];
@@ -53,40 +68,33 @@ function parseJwt(token) {
   }
 }
 
-// Google 登入完成回呼 (Callback)
 function handleCredentialResponse(response) {
   const payload = parseJwt(response.credential);
-  
   if (payload && payload.email) {
-    // 檢查白名單 ALLOWED_EMAILS
+    const userEmail = payload.email.toLowerCase().trim();
     if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
-      if (!ALLOWED_EMAILS.includes(payload.email)) {
-        alert(`⚠️ 存取被拒：帳號 (${payload.email}) 未獲授權使用此系統。`);
+      const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
+      if (!cleanList.includes(userEmail)) {
+        alert(`⚠️ 存取被拒：帳號 (${userEmail}) 未獲授權使用此系統。`);
         return;
       }
     }
 
-    // 登入成功，儲存資訊
+    sessionStorage.setItem("user_google_email", userEmail);
     sessionStorage.setItem('google_user', JSON.stringify({
       name: payload.name,
-      email: payload.email,
+      email: userEmail,
       picture: payload.picture
     }));
     sessionStorage.setItem('google_token', response.credential);
-    
-    checkLoginStatus();
+    initializeApp();
   }
 }
 
-// 檢查登入與切換畫面
 function checkLoginStatus() {
   const userStr = sessionStorage.getItem('google_user');
   if (userStr) {
-    const user = JSON.parse(userStr);
-    document.getElementById('userInfo').textContent = `👤 ${user.name || user.email}`;
-    document.getElementById('authOverlay').style.display = 'none';
-    document.getElementById('mainContainer').style.display = 'block';
-    loadLogsData();
+    initializeApp();
   } else {
     document.getElementById('authOverlay').style.display = 'flex';
     document.getElementById('mainContainer').style.display = 'none';
@@ -95,14 +103,17 @@ function checkLoginStatus() {
 
 function logout() {
   sessionStorage.removeItem('google_user');
+  sessionStorage.removeItem('user_google_email');
   sessionStorage.removeItem('google_token');
   location.reload();
 }
 
 function showStatus(text, color = '#6366f1') {
   const msg = document.getElementById('statusMessage');
-  msg.style.color = color;
-  msg.textContent = text;
+  if (msg) {
+    msg.style.color = color;
+    msg.textContent = text;
+  }
 }
 
 function loadNavbar() {
@@ -211,7 +222,6 @@ function renderHashtagBar() {
   }
 
   wrapperBox.style.display = 'block';
-
   if (selectedTag === 'all') {
     indicator.textContent = '';
   } else {
@@ -222,7 +232,6 @@ function renderHashtagBar() {
   uniqueTags.forEach(t => {
     html += `<button class="tag-btn ${selectedTag === t ? 'active' : ''}" onclick="filterByTag('${t}')">#${t} (${tagMap[t]})</button>`;
   });
-
   tagContainer.innerHTML = html;
 }
 
@@ -287,12 +296,24 @@ function renderDailyLogs() {
   container.innerHTML = '';
 
   const showCompleted = document.getElementById('showCompleted').checked;
-  const currentLogs = allLogs.filter(item => {
+  let currentLogs = allLogs.filter(item => {
     if (item.date !== currentDateStr) return false;
     if (!showCompleted && isItemDone(item.status)) return false;
     if (!passesTagFilter(item)) return false;
     return true;
   });
+
+  // 從 localStorage 讀取該日期的自訂次序
+  const savedOrder = JSON.parse(localStorage.getItem(`daily_order_${currentDateStr}`) || '[]');
+  if (savedOrder.length > 0) {
+    currentLogs.sort((a, b) => {
+      let indexA = savedOrder.indexOf(a.id);
+      let indexB = savedOrder.indexOf(b.id);
+      if (indexA === -1) indexA = 9999;
+      if (indexB === -1) indexB = 9999;
+      return indexA - indexB;
+    });
+  }
 
   if (currentLogs.length === 0) {
     container.innerHTML = '<div style="color:#64748b; font-size:0.82rem; text-align:center; padding:6px;">當日無任何紀錄項目</div>';
@@ -302,6 +323,22 @@ function renderDailyLogs() {
   currentLogs.forEach(item => {
     container.appendChild(createLogElement(item, false));
   });
+
+  // 啟用 SortableJS 並儲存次序至 localStorage
+  if (typeof Sortable !== 'undefined') {
+    Sortable.create(container, {
+      animation: 150,
+      onEnd: function (evt) {
+        const movedItem = currentLogs[evt.oldIndex];
+        currentLogs.splice(evt.oldIndex, 1);
+        currentLogs.splice(evt.newIndex, 0, movedItem);
+
+        // 儲存新次序的 ID 陣列
+        const newOrderIds = currentLogs.map(item => item.id);
+        localStorage.setItem(`daily_order_${currentDateStr}`, JSON.stringify(newOrderIds));
+      }
+    });
+  }
 }
 
 function renderOverdue() {
@@ -374,6 +411,7 @@ function createLogElement(item, showDateTag) {
   const isDone = isItemDone(item.status);
   const div = document.createElement('div');
   div.className = `log-item ${isDone ? 'done' : ''}`;
+  div.setAttribute('data-id', item.id);
 
   let badgeClass = 'task';
   if (item.type === '事件' || item.type === 'Event') badgeClass = 'event';
@@ -394,8 +432,8 @@ function createLogElement(item, showDateTag) {
     <div class="action-btns-stacked">
       <button class="btn-icon-only" onclick="openModal('${item.id}')" title="編輯">✏️</button>
       <button class="btn-icon-only ${isDone ? 'done' : 'todo'}" onclick="toggleStatus('${item.id}')">
-${isDone ? '✓' : '⏳'}
-</button>
+        ${isDone ? '✓' : '⏳'}
+      </button>
     </div>
   `;
   return div;
@@ -407,7 +445,6 @@ function openModal(id) {
 
   document.getElementById('modalTargetId').value = target.id;
   document.getElementById('modalOldContent').value = target.content;
-  
   document.getElementById('modalDate').value = target.date || '';
   document.getElementById('modalType').value = target.type;
   document.getElementById('modalContent').value = target.content;
@@ -423,7 +460,6 @@ function closeModal() {
 function saveModalEdit() {
   const id = document.getElementById('modalTargetId').value;
   const oldContent = document.getElementById('modalOldContent').value;
-
   const newDate = document.getElementById('modalDate').value;
   const newType = document.getElementById('modalType').value;
   const newContent = document.getElementById('modalContent').value.trim();

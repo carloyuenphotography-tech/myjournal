@@ -11,6 +11,8 @@
   <script src="config.js"></script>
   <!-- 載入允許登入的 Email 白名單 -->
   <script src="allowed-emails.js"></script>
+  <!-- 引入 SortableJS 支援拖曳排序 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   <!-- 引入 Google 官方 Identity SDK[cite: 1] -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -195,7 +197,9 @@
       flex-direction: column;
       gap: 6px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      cursor: grab;
     }
+    .daily-card:active { cursor: grabbing; }
 
     .daily-card-title {
       font-size: 0.92rem;
@@ -489,7 +493,6 @@
     });
 
     function initializeApp() {
-      // 取消 Google 自動彈窗
       if (window.google && window.google.accounts && window.google.accounts.id) {
         window.google.accounts.id.cancel();
       }
@@ -639,11 +642,23 @@
 
       const targetDate = normalizeDateStr(selectedDailyDate);
       
-      const logs = dailyRows.filter(r => {
+      let logs = dailyRows.filter(r => {
         const status = r.parsedStatus;
         const isDone = (status === 'Done' || status === '完成' || status === '已完成');
         return r.parsedDate === targetDate && !isDone;
       });
+
+      // 從 localStorage 讀取該日期的自訂次序
+      const savedOrder = JSON.parse(localStorage.getItem(`daily_order_${selectedDailyDate}`) || '[]');
+      if (savedOrder.length > 0) {
+        logs.sort((a, b) => {
+          let indexA = savedOrder.indexOf(a.id);
+          let indexB = savedOrder.indexOf(b.id);
+          if (indexA === -1) indexA = 9999;
+          if (indexB === -1) indexB = 9999;
+          return indexA - indexB;
+        });
+      }
 
       if (logs.length === 0) {
         container.innerHTML = `<div style="color:#64748b; font-size:0.85rem; padding: 6px 0;">當日無未完成事項。</div>`;
@@ -661,6 +676,7 @@
 
         const div = document.createElement('div');
         div.className = 'daily-card';
+        div.setAttribute('data-id', item.id);
         
         const formattedRemark = formatHashtags(remarks ? remarks.replace(/\n/g, '<br>') : '');
 
@@ -671,6 +687,21 @@
         `;
         container.appendChild(div);
       });
+
+      // 啟用 SortableJS 並儲存次序至 localStorage
+      if (typeof Sortable !== 'undefined') {
+        Sortable.create(container, {
+          animation: 150,
+          onEnd: function (evt) {
+            const movedItem = logs[evt.oldIndex];
+            logs.splice(evt.oldIndex, 1);
+            logs.splice(evt.newIndex, 0, movedItem);
+
+            const newOrderIds = logs.map(item => item.id);
+            localStorage.setItem(`daily_order_${selectedDailyDate}`, JSON.stringify(newOrderIds));
+          }
+        });
+      }
     }
 
     function changeDailyDate(days) {

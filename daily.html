@@ -10,6 +10,9 @@
   <script src="allowed-emails.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   
+  <!-- ✅ 引入 SortableJS 用於支援手動拖曳排序 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  
   <!-- ✅ 修正的 Google 登入載入方式 -->
   <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
   
@@ -308,7 +311,9 @@
       justify-content: space-between;
       gap: 8px;
       width: 100%;
+      cursor: grab; /* 提示可拖曳 */
     }
+    .log-item:active { cursor: grabbing; }
     .log-item.done { opacity: 0.55; }
     
     .log-main { 
@@ -521,7 +526,7 @@
 </head>
 <body>
 
-  <!-- ✅ 修正的 Google 登入驗證視窗 -->
+  <!-- Google 登入驗證視窗 -->
   <div id="authOverlay" class="auth-overlay">
     <div class="auth-card">
       <div class="auth-title">⚡ 速記清單</div>
@@ -677,7 +682,7 @@
     </div>
   </div>
 
-  <!-- ✅ 載入外部 JS 檔案 -->
+  <!-- 載入外部 JS 檔案 -->
   <script src="daily.js"></script>
 
 </body>
