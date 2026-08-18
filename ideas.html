@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💡 靈感庫 - Ideas</title>
+  <!-- Google Identity Services SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="config.js"></script>
+  <script src="allowed-emails.js"></script>
+  <style>
+    :root { --primary-color: #0d9488; --bg-color: #f8fafc; --border-color: #e2e8f0; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: #1e293b; padding: 8px; margin: 0; }
+    
+    /* 🔒 Google 登入驗證遮罩 Modal */
+    .auth-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .auth-card {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      padding: 28px 20px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+    .auth-title { font-size: 1.25rem; font-weight: bold; color: #0f172a; margin-bottom: 8px; }
+    .auth-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 20px; }
+    .google-btn-wrapper {
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .container { width: 100%; max-width: 1150px; margin: 0 auto; background: #ffffff; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: none; }
+    
+    .nav-tabs { display: flex; gap: 6px; margin-bottom: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; overflow-x: auto; white-space: nowrap; }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-btn { padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; text-decoration: none; background: #e2e8f0; color: #475569; font-weight: bold; }
+    .nav-btn.active { background: var(--primary-color); color: #ffffff; }
+
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; font-size: 0.8rem; color: #475569; }
+    .user-profile { display: flex; align-items: center; gap: 8px; }
+    .logout-btn { background: #f1f5f9; border: 1px solid var(--border-color); padding: 3px 7px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+
+    .input-card { background: #f0fdf4; border: 1px solid #99f6e4; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+    .quick-pills { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+    .pill-btn { padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border-color); background: #fff; font-size: 0.8rem; font-weight: bold; cursor: pointer; color: #475569; }
+    .pill-btn.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+    .input-group { display: flex; gap: 6px; }
+    .input-group input { flex: 1; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.88rem; }
+    .add-btn { background: var(--primary-color); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+
+    .top-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .filter-bar { display: flex; align-items: center; justify-content: space-between; background: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; flex: 1; }
+    .clear-filter-btn { background: #e2e8f0; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
+    
+    .archive-toggle-btn { background: #f1f5f9; border: 1px solid var(--border-color); color: #475569; padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; cursor: pointer; }
+    .archive-toggle-btn.active { background: #334155; color: #fff; border-color: #334155; }
+
+    /* 典藏專區容器 */
+    .archive-container { background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 12px; margin-bottom: 16px; display: none; }
+    .archive-header { font-size: 0.9rem; font-weight: bold; color: #334155; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+
+    .ideas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .category-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    .category-title { font-size: 0.9rem; font-weight: bold; color: var(--primary-color); border-bottom: 1px dashed var(--border-color); padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .idea-list { display: flex; flex-direction: column; gap: 6px; min-height: 40px; }
+    
+    .idea-item { 
+      background: #f8fafc; 
+      border: 1px solid #e2e8f0; 
+      padding: 6px 8px; 
+      border-radius: 6px; 
+      font-size: 0.85rem; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      line-height: 1.35;
+      cursor: grab;
+      user-select: none;
+    }
+    .idea-item:active { cursor: grabbing; }
+    .idea-item.dragging { opacity: 0.4; background: #f1f5f9; border: 2px dashed var(--primary-color); }
+    .idea-item.archived-item { background: #f1f5f9; border-color: #cbd5e1; }
+    
+    .drag-handle { color: #94a3b8; font-size: 1rem; padding-right: 6px; cursor: grab; }
+    .idea-main { flex: 1; min-width: 0; padding-right: 6px; word-break: break-word; cursor: pointer; }
+    .idea-main:hover .content-text { color: var(--primary-color); }
+    .idea-remarks { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+    .idea-link { color: #0284c7; text-decoration: none; font-weight: 500; }
+    .idea-link:hover { text-decoration: underline; }
+    
+    .hashtag-pill { display: inline-block; background: #ccfbf1; color: #0f766e; padding: 1px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin: 0 2px; }
+    .hashtag-pill:hover { background: #0d9488; color: #ffffff; }
+
+    .action-btns { display: flex; gap: 4px; flex-shrink: 0; }
+    .btn-action { background: #fff; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; font-size: 0.78rem; padding: 2px 6px; }
+    #statusMessage { font-size: 0.8rem; font-weight: bold; color: var(--primary-color); margin-bottom: 8px; }
+
+    /* Modal 彈出視窗 */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.4); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 12px; }
+    .modal-card { background: #ffffff; border-radius: 12px; width: 100%; max-width: 420px; padding: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+    .modal-title { font-size: 0.95rem; font-weight: bold; margin-bottom: 12px; color: #1e293b; }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-weight: bold; font-size: 0.8rem; color: #334155; margin-bottom: 3px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 7px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; }
+    .form-group textarea.large-textarea { min-height: 120px; resize: vertical; }
+    
+    .preview-remarks-box {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 10px;
+      min-height: 100px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+      color: #0f172a;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.4;
+    }
+
+    .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+    .modal-right-btns { display: flex; gap: 6px; }
+    .modal-btn { padding: 7px 12px; border-radius: 6px; font-weight: bold; font-size: 0.82rem; cursor: pointer; border: none; }
+    .btn-cancel { background: #f1f5f9; color: #475569; }
+    .btn-save { background: var(--primary-color); color: #ffffff; }
+    .btn-delete { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
+    .btn-edit-mode { background: #0284c7; color: #ffffff; }
+    .btn-fetch { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; margin-left: 6px; }
+    .tag-quick-add { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+    .tag-chip { font-size: 0.72rem; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <!-- 🔒 1. Google 登入驗證遮罩 Modal -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-title">💡 靈感庫 - Ideas</div>
+      <div class="auth-desc">請登入 Google 帳號以驗證身分</div>
+      <div class="google-btn-wrapper">
+        <div id="g_id_onload" 
+             data-client_id="972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com" 
+             data-callback="handleCredentialResponse">
+        </div>
+        <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large"></div>
+        <div id="loginErr" style="color: #ff3b30; font-size: 0.8rem; margin-top: 4px; white-space: pre-line;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📱 2. 主畫面內容 -->
+  <div class="container" id="mainContainer">
+    <div id="navbar" class="nav-tabs"></div>
+
+    <div class="header-bar">
+      <div class="user-profile">
+        <span id="userInfo"></span>
+        <button class="logout-btn" onclick="logout()">登出</button>
+      </div>
+    </div>
+
+    <div class="input-card">
+      <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 6px; color: #0d9488;">💡 快速輸入點子（可用 #標籤 子分類）</div>
+      <div class="quick-pills" id="categoryPills">
+        <button class="pill-btn active" onclick="selectCategory('家庭')">🏠 家庭</button>
+        <button class="pill-btn" onclick="selectCategory('個人')">👤 個人</button>
+        <button class="pill-btn" onclick="selectCategory('信仰')">✝️ 信仰</button>
+        <button class="pill-btn" onclick="selectCategory('攝影')">📷 攝影</button>
+        <button class="pill-btn" onclick="selectCategory('工作')">💼 工作</button>
+        <button class="pill-btn" onclick="selectCategory('健康')">💪🏻 健康</button>
+        <button class="pill-btn" onclick="selectCategory('飲食')">🍽️ 飲食</button>
+        <button class="pill-btn" onclick="selectCategory('旅行')">🧳 旅行</button>
+        <button class="pill-btn" onclick="selectCategory('氣象')">☀️ 氣象</button>
+      </div>
+      <form class="input-group" onsubmit="handleAddIdea(event)">
+        <input type="text" id="ideaInput" placeholder="例：採購教材 #數學 #SOW 或貼上網址..." required>
+        <button type="submit" class="add-btn">新增</button>
+      </form>
+    </div>
+
+    <!-- 控制列：標籤過濾與典藏切換 -->
+    <div class="top-controls">
+      <div id="filterBar" class="filter-bar" style="display: none;">
+        <span>🔍 目前正在篩選標籤：<b id="activeFilterTag" style="color: var(--primary-color);"></b></span>
+        <button class="clear-filter-btn" onclick="clearTagFilter()">❌ 清除篩選</button>
+      </div>
+      <button id="archiveToggleBtn" class="archive-toggle-btn" onclick="toggleArchiveView()">📦 查看已典藏靈感 (<span id="archiveCount">0</span>)</button>
+    </div>
+
+    <!-- 📦 典藏專區（預設隱藏） -->
+    <div id="archiveContainer" class="archive-container">
+      <div class="archive-header">
+        <span>📦 已典藏的靈感項目 (Archive)</span>
+        <button class="clear-filter-btn" onclick="toggleArchiveView()">關閉典藏檢視</button>
+      </div>
+      <div id="archiveList" class="ideas-grid"></div>
+    </div>
+
+    <div id="statusMessage">⏳ 載入資料中...</div>
+    <div id="ideasGrid" class="ideas-grid"></div>
+  </div>
+
+  <!-- 🔍 預覽畫面 Modal -->
+  <div id="previewModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-title">👁️ 靈感檢視</div>
+      <input type="hidden" id="previewTargetId">
+      
+      <div class="form-group">
+        <label>類別：</label>
+        <div id="previewCategory" style="padding: 6px 8px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; font-weight: bold;"></div>
+      </div>
+      <div class="form-group">
+        <label>內容想法 / 網址：</label>
+        <div id="previewContent" style="padding: 6px 8px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; word-break: break-word;"></div>
+      </div>
+      <div class="form-group">
+        <label>補充細節 / 備註：</label>
+        <div id="previewRemarks" class="preview-remarks-box"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn btn-cancel" onclick="closePreviewModal()">關閉</button>
+        <button class="modal-btn btn-edit-mode" onclick="switchToEditFromPreview()">✏️ 編輯</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✏️ 編輯 Modal 視窗 -->
+  <div id="editModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-title">✏️ 編輯靈感想法</div>
+      <input type="hidden" id="modalTargetId">
+      
+      <div class="form-group">
+        <label>主題類別：</label>
+        <select id="modalCategory">
+          <option value="家庭">🏠 家庭</option>
+          <option value="個人">👤 個人</option>
+          <option value="信仰">✝️ 信仰</option>
+          <option value="攝影">📷 攝影</option>
+          <option value="工作">💼 工作</option>
+          <option value="健康">💪🏻 健康</option>
+          <option value="飲食">🍽️ 飲食</option>
+          <option value="旅行">🧳 旅行</option>
+          <option value="氣象">☀️ 氣象</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>
+          內容想法 / 網址：
+          <button type="button" class="btn-fetch" onclick="autoFetchTitle()">🔍 自動抓取網址標題</button>
+        </label>
+        <input type="text" id="modalContent" required>
+      </div>
+      <div class="form-group">
+        <label>補充細節 / 備註 [預留多行空間]：</label>
+        <textarea id="modalRemarks" class="large-textarea" placeholder="可輸入說明或 #Hashtag..."></textarea>
+        <div class="tag-quick-add">
+          <span style="font-size: 0.72rem; color: #64748b;">常用標籤：</span>
+          <span class="tag-chip" onclick="appendTag('#緊急')">#緊急</span>
+          <span class="tag-chip" onclick="appendTag('#教學')">#教學</span>
+          <span class="tag-chip" onclick="appendTag('#待採購')">#待採購</span>
+          <span class="tag-chip" onclick="appendTag('#靈感')">#靈感</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn btn-delete" onclick="deleteFromModal()">🗑️ 刪除</button>
+        <div class="modal-right-btns">
+          <button class="modal-btn btn-cancel" onclick="closeModal()">取消</button>
+          <button class="modal-btn btn-save" onclick="saveModalEdit()">儲存更新</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentCategory = '家庭';
+    let ideasData = [];
+    let currentTagFilter = null;
+    let showArchivedView = false;
+
+    window.onload = () => {
+      loadNavbar();
+      checkLoginStatus();
+    };
+
+    function parseJwt(token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+      } catch(e) {
+        return null;
+      }
+    }
+
+    function handleCredentialResponse(response) {
+      const payload = parseJwt(response.credential);
+      if (!payload || !payload.email) {
+        document.getElementById('loginErr').innerText = "❌ 驗證失敗：無法讀取登入資訊";
+        return;
+      }
+
+      const userEmail = payload.email.toLowerCase().trim();
+
+      if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
+        const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
+        if (!cleanList.includes(userEmail)) {
+          document.getElementById('loginErr').innerText = `⚠️ 存取被拒：\n${userEmail}\n未獲授權使用此系統。`;
+          return;
+        }
+      } else {
+        document.getElementById('loginErr').innerText = `⚠️ 系統錯誤：無法讀取白名單清單。`;
+        return;
+      }
+
+      sessionStorage.setItem('google_user', JSON.stringify({
+        name: payload.name,
+        email: userEmail,
+        picture: payload.picture
+      }));
+      sessionStorage.setItem('google_token', response.credential);
+      
+      checkLoginStatus();
+    }
+
+    function checkLoginStatus() {
+      const userStr = sessionStorage.getItem('google_user');
+      
+      if (userStr) {
+        if (window.google && window.google.accounts && window.google.accounts.id) {
+          window.google.accounts.id.cancel();
+        }
+
+        const user = JSON.parse(userStr);
+        document.getElementById('userInfo').textContent = `👤 ${user.name || user.email}`;
+        document.getElementById('authOverlay').style.display = 'none';
+        document.getElementById('mainContainer').style.display = 'block';
+        loadIdeasFromSheet();
+      } else {
+        document.getElementById('authOverlay').style.display = 'flex';
+        document.getElementById('mainContainer').style.display = 'none';
+      }
+    }
+
+    function logout() {
+      sessionStorage.removeItem('google_user');
+      sessionStorage.removeItem('google_token');
+      location.reload();
+    }
+
+    function showStatus(text, color = '#0d9488') {
+      const msg = document.getElementById('statusMessage');
+      if (msg) {
+        msg.style.color = color;
+        msg.textContent = text;
+      }
+    }
+
+    function loadNavbar() {
+      fetch('nav.html')
+        .then(res => res.text())
+        .then(data => {
+          const navContainer = document.getElementById('navbar');
+          if (navContainer) {
+            navContainer.innerHTML = data;
+            const currentPath = window.location.pathname.split('/').pop() || 'ideas.html';
+            navContainer.querySelectorAll('.nav-btn').forEach(link => {
+              if (link.getAttribute('href') === currentPath) link.classList.add('active');
+            });
+          }
+        });
+    }
+
+    function loadIdeasFromSheet() {
+      if (typeof CONFIG === 'undefined' || !CONFIG.IDEAS_SHEET_ID) {
+        showStatus('❌ 找不到 CONFIG.IDEAS_SHEET_ID 設定', '#ef4444');
+        return;
+      }
+
+      const sheetId = CONFIG.IDEAS_SHEET_ID;
+      const gid = (CONFIG.GIDS && CONFIG.GIDS.IDEAS) ? CONFIG.GIDS.IDEAS : '0';
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&t=${new Date().getTime()}`;
+
+      Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          ideasData = parseIdeas(results.data);
+          showStatus('');
+          renderIdeas();
+        },
+        error: () => {
+          showStatus('❌ 讀取失敗，請檢查 IDEAS_SHEET_ID 設定', '#ef4444');
+        }
+      });
+    }
+
+    function parseIdeas(rows) {
+      if (!rows) return [];
+      return rows.map((r, i) => {
+        const v = Object.values(r);
+        return {
+          id: r.ID || r.id || v[0] || `I_${i}`,
+          category: r.Category || r.category || v[1] || '個人',
+          content: r.Content || r.content || v[2] || '',
+          status: r.Status || r.status || v[3] || 'Active', // Active 或 Archived
+          date: r.Date || r.date || v[4] || '',
+          remarks: r.Remarks || r.remarks || v[5] || ''
+        };
+      });
+    }
+
+    function formatContentAndTags(text) {
+      if (!text) return '';
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      let formatted = text.replace(urlRegex, (url) => {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="idea-link">🔗 ${url}</a>`;
+      });
+
+      const tagRegex = /(#[^\s#]+)/g;
+      formatted = formatted.replace(tagRegex, (tag) => {
+        return `<span class="hashtag-pill" onclick="filterByTag('${tag}')">${tag}</span>`;
+      });
+
+      return formatted;
+    }
+
+    function filterByTag(tag) {
+      currentTagFilter = tag;
+      document.getElementById('activeFilterTag').textContent = tag;
+      document.getElementById('filterBar').style.display = 'flex';
+      renderIdeas();
+    }
+
+    function clearTagFilter() {
+      currentTagFilter = null;
+      document.getElementById('filterBar').style.display = 'none';
+      renderIdeas();
+    }
+
+    function selectCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.pill-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.includes(cat));
+      });
+    }
+
+    function toggleArchiveView() {
+      showArchivedView = !showArchivedView;
+      const btn = document.getElementById('archiveToggleBtn');
+      const container = document.getElementById('archiveContainer');
+      
+      if (showArchivedView) {
+        btn.classList.add('active');
+        container.style.display = 'block';
+      } else {
+        btn.classList.remove('active');
+        container.style.display = 'none';
+      }
+      renderIdeas();
+    }
+
+    function renderIdeas() {
+      const grid = document.getElementById('ideasGrid');
+      const archiveListGrid = document.getElementById('archiveList');
+      grid.innerHTML = '';
+      archiveListGrid.innerHTML = '';
+
+      const categories = ['🏠 家庭', '👤 個人', '✝️ 信仰', '📷 攝影', '💼 工作', '💪🏻 健康', '🍽️ 飲食', '🧳 旅行', '☀️ 氣象'];
+
+      // 更新典藏數量計數
+      const archivedCount = ideasData.filter(i => i.status === 'Archived' || i.status === '典藏').length;
+      document.getElementById('archiveCount').textContent = archivedCount;
+
+      // 1. 渲染日常主畫面 (非典藏項目)
+      categories.forEach(catWithEmoji => {
+        const rawCat = catWithEmoji.replace(/^[^\s]+\s/, '');
+        
+        let items = ideasData.filter(i => (i.category === rawCat || i.category === catWithEmoji) && i.status !== 'Archived' && i.status !== '典藏');
+
+        if (currentTagFilter) {
+          items = items.filter(i => 
+            (i.content && i.content.includes(currentTagFilter)) || 
+            (i.remarks && i.remarks.includes(currentTagFilter))
+          );
+        }
+
+        const card = document.createElement('div');
+        card.className = 'category-card';
+        
+        let listHtml = items.map(item => `
+          <div class="idea-item" draggable="true" data-id="${item.id}" ondragstart="drag(event)" ondragover="allowDrop(event)" ondrop="drop(event, '${rawCat}')" ontouchstart="touchStart(event)" ontouchmove="touchMove(event)" ontouchend="touchEnd(event, '${rawCat}')">
+            <div class="drag-handle" title="按住拖曳排序">☰</div>
+            <div class="idea-main" onclick="openPreviewModal('${item.id}')" title="點擊檢視詳情">
+              <div class="content-text">${formatContentAndTags(item.content)}</div>
+              ${item.remarks ? `<div class="idea-remarks">💬 ${formatContentAndTags(item.remarks)}</div>` : ''}
+            </div>
+            <div class="action-btns">
+              <button class="btn-action" onclick="toggleArchive('${item.id}')" title="典藏">📦</button>
+              <button class="btn-action" onclick="openModal('${item.id}')" title="編輯">✏️</button>
+            </div>
+          </div>
+        `).join('');
+
+        if (items.length === 0) {
+          listHtml = `<div style="color: #94a3b8; font-size: 0.8rem; padding: 4px 0;">${currentTagFilter ? '無符合標籤卡片' : '尚無想法'}</div>`;
+        }
+
+        card.innerHTML = `
+          <div class="category-title">
+            <span>${catWithEmoji}</span>
+            <span style="font-size: 0.75rem; color: #64748b;">(${items.length})</span>
+          </div>
+          <div class="idea-list" ondragover="allowDrop(event)" ondrop="dropToEmpty(event, '${rawCat}')">${listHtml}</div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // 2. 渲染典藏專區畫面
+      if (showArchivedView) {
+        categories.forEach(catWithEmoji => {
+          const rawCat = catWithEmoji.replace(/^[^\s]+\s/, '');
+          let archivedItems = ideasData.filter(i => (i.category === rawCat || i.category === catWithEmoji) && (i.status === 'Archived' || i.status === '典藏'));
+
+          if (archivedItems.length > 0) {
+            const card = document.createElement('div');
+            card.className = 'category-card';
+            let listHtml = archivedItems.map(item => `
+              <div class="idea-item archived-item">
+                <div class="idea-main" onclick="openPreviewModal('${item.id}')" title="點擊檢視詳情">
+                  <div class="content-text">${formatContentAndTags(item.content)}</div>
+                  ${item.remarks ? `<div class="idea-remarks">💬 ${formatContentAndTags(item.remarks)}</div>` : ''}
+                </div>
+                <div class="action-btns">
+                  <button class="btn-action" onclick="toggleArchive('${item.id}')" title="取消典藏">📤</button>
+                  <button class="btn-action" onclick="openModal('${item.id}')" title="編輯">✏️</button>
+                </div>
+              </div>
+            `).join('');
+
+            card.innerHTML = `
+              <div class="category-title" style="color: #475569;">
+                <span>${catWithEmoji}</span>
+                <span style="font-size: 0.75rem; color: #64748b;">(${archivedItems.length})</span>
+              </div>
+              <div class="idea-list">${listHtml}</div>
+            `;
+            archiveListGrid.appendChild(card);
+          }
+        });
+
+        if (archivedCount === 0) {
+          archiveListGrid.innerHTML = `<div style="color: #64748b; font-size: 0.85rem; grid-column: 1/-1; text-align:center; padding: 10px;">目前沒有任何已典藏的靈感項目。</div>`;
+        }
+      }
+    }
+
+    /* 切換典藏狀態 */
+    function toggleArchive(id) {
+      const target = ideasData.find(i => i.id === id);
+      if (!target) return;
+
+      const isArchived = (target.status === 'Archived' || target.status === '典藏');
+      target.status = isArchived ? 'Active' : 'Archived';
+
+      renderIdeas();
+      showStatus('⏳ 正在更新典藏狀態...');
+
+      if (typeof CONFIG !== 'undefined' && CONFIG.API_URLS && CONFIG.API_URLS.IDEAS) {
+        const params = new URLSearchParams({
+          action: 'toggleArchive',
+          key: CONFIG.SECRET_KEY || '',
+          id: id,
+          status: target.status
+        });
+        fetch(`${CONFIG.API_URLS.IDEAS}?${params.toString()}`, { mode: 'no-cors' })
+          .then(() => {
+            showStatus('✅ 狀態已更新！', '#0d9488');
+            setTimeout(() => showStatus(''), 2000);
+          })
+          .catch(() => showStatus('❌ 更新失敗', '#ef4444'));
+      }
+    }
+
+    /* 拖曳排序相關邏輯 */
+    let draggedId = null;
+
+    function drag(e) {
+      draggedId = e.currentTarget.dataset.id;
+      e.currentTarget.classList.add('dragging');
+    }
+
+    function allowDrop(e) {
+      e.preventDefault();
+    }
+
+    function drop(e, targetCategory) {
+      e.preventDefault();
+      const targetItem = e.target.closest('.idea-item');
+      if (!targetItem) return;
+      const targetId = targetItem.dataset.id;
+      if (draggedId && draggedId !== targetId) {
+        reorderIdeas(draggedId, targetId, targetCategory);
+      }
+      document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+    }
+
+    function dropToEmpty(e, targetCategory) {
+      e.preventDefault();
+      if (draggedId) {
+        reorderIdeas(draggedId, null, targetCategory);
+      }
+      document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+    }
+
+    function touchStart(e) {
+      const item = e.currentTarget;
+      draggedId = item.dataset.id;
+      item.classList.add('dragging');
+    }
+
+    function touchMove(e) {
+      e.preventDefault();
+    }
+
+    function touchEnd(e) {
+      const item = e.currentTarget;
+      item.classList.remove('dragging');
+      const touchY = e.changedTouches[0].clientY;
+      const elementBelow = document.elementFromPoint(e.changedTouches[0].clientX, touchY);
+      const targetItem = elementBelow ? elementBelow.closest('.idea-item') : null;
+      if (targetItem) {
+        const targetCategory = targetItem.closest('.category-card').querySelector('.category-title span').textContent.replace(/^[^\s]+\s/, '');
+        reorderIdeas(draggedId, targetItem.dataset.id, targetCategory);
+      }
+    }
+
+    function reorderIdeas(sourceId, targetId, category) {
+      const sourceIdx = ideasData.findIndex(i => i.id === sourceId);
+      if (sourceIdx === -1) return;
+      const [movedItem] = ideasData.splice(sourceIdx, 1);
+      movedItem.category = category;
+
+      if (targetId) {
+        const targetIdx = ideasData.findIndex(i => i.id === targetId);
+        if (targetIdx !== -1) {
+          ideasData.splice(targetIdx, 0, movedItem);
+        } else {
+          ideasData.push(movedItem);
+        }
+      } else {
+        ideasData.push(movedItem);
+      }
+
+      renderIdeas();
+      syncOrderToSheet();
+    }
+
+    function syncOrderToSheet() {
+      showStatus('⏳ 正在同步排序至 Google Sheet...');
+      const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.IDEAS : '';
+      if (apiUrl) {
+        const allIds = ideasData.map(i => i.id).join(',');
+        const params = new URLSearchParams({
+          action: 'reorderIdeas',
+          key: CONFIG.SECRET_KEY || '',
+          ids: allIds
+        });
+        fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' })
+          .then(() => {
+            showStatus('✅ 排序已儲存！', '#0d9488');
+            setTimeout(() => showStatus(''), 2000);
+          })
+          .catch(() => showStatus('❌ 排序同步失敗', '#ef4444'));
+      }
+    }
+
+    async function handleAddIdea(e) {
+      e.preventDefault();
+      const input = document.getElementById('ideaInput');
+      let text = input.value.trim();
+      if (!text) return;
+
+      const pureCategory = currentCategory.replace(/^[^\s]+\s/, '').trim();
+      const newId = 'I_' + new Date().getTime();
+      let remarksText = '';
+
+      if (text.startsWith('http://') || text.startsWith('https://')) {
+        showStatus('⏳ 正在擷取網頁標題...');
+        const fetchedTitle = await fetchWebTitle(text);
+        remarksText = text;
+        text = fetchedTitle || text;
+      }
+
+      const newIdea = {
+        id: newId,
+        category: pureCategory,
+        content: text,
+        status: 'Active',
+        remarks: remarksText
+      };
+
+      ideasData.unshift(newIdea);
+      input.value = '';
+      renderIdeas();
+      showStatus('⏳ 正在同步至 Google Sheet...');
+
+      if (typeof CONFIG !== 'undefined' && CONFIG.API_URLS && CONFIG.API_URLS.IDEAS) {
+        const params = new URLSearchParams({
+          action: 'addIdea',
+          id: newId,
+          category: pureCategory,
+          content: text,
+          remarks: remarksText
+        });
+
+        fetch(`${CONFIG.API_URLS.IDEAS}?${params.toString()}`, { method: 'GET', mode: 'no-cors' })
+          .then(() => {
+            showStatus('✅ 已成功寫入！', '#0d9488');
+            setTimeout(() => showStatus(''), 2000);
+          });
+      }
+    }
+
+    async function fetchWebTitle(url) {
+      try {
+        const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
+        const json = await res.json();
+        if (json.status === 'success' && json.data && json.data.title) {
+          return json.data.title;
+        }
+      } catch (e) {
+        console.error('標題擷取失敗:', e);
+      }
+      return null;
+    }
+
+    async function autoFetchTitle() {
+      const contentInput = document.getElementById('modalContent');
+      const remarksInput = document.getElementById('modalRemarks');
+      const urlCandidate = contentInput.value.trim() || remarksInput.value.trim();
+
+      const matchedUrl = urlCandidate.match(/(https?:\/\/[^\s]+)/);
+      if (!matchedUrl) {
+        alert('請先在內容或備註欄輸入包含 https:// 的網址');
+        return;
+      }
+
+      showStatus('⏳ 抓取標題中...');
+      const title = await fetchWebTitle(matchedUrl[0]);
+      if (title) {
+        contentInput.value = title;
+        if (!remarksInput.value) remarksInput.value = matchedUrl[0];
+        showStatus('✅ 標題擷取成功！', '#0d9488');
+      } else {
+        showStatus('❌ 無法抓取該網址標題', '#ef4444');
+      }
+      setTimeout(() => showStatus(''), 2000);
+    }
+
+    function appendTag(tag) {
+      const remarksInput = document.getElementById('modalRemarks');
+      if (!remarksInput.value.includes(tag)) {
+        remarksInput.value = (remarksInput.value + ' ' + tag).trim();
+      }
+    }
+
+    /* 🔍 預覽 Modal 相關邏輯 */
+    function openPreviewModal(id) {
+      const target = ideasData.find(i => i.id === id);
+      if (!target) return;
+
+      document.getElementById('previewTargetId').value = target.id;
+      document.getElementById('previewCategory').textContent = target.category;
+      document.getElementById('previewContent').innerHTML = formatContentAndTags(target.content);
+      document.getElementById('previewRemarks').innerHTML = formatContentAndTags(target.remarks ? target.remarks.replace(/\n/g, '<br>') : '無備註');
+
+      document.getElementById('previewModal').style.display = 'flex';
+    }
+
+    function closePreviewModal() {
+      document.getElementById('previewModal').style.display = 'none';
+    }
+
+    function switchToEditFromPreview() {
+      const id = document.getElementById('previewTargetId').value;
+      closePreviewModal();
+      openModal(id);
+    }
+
+    /* Modal 編輯邏輯 */
+    function openModal(id) {
+      const target = ideasData.find(i => i.id === id);
+      if (!target) return;
+
+      document.getElementById('modalTargetId').value = target.id;
+      document.getElementById('modalCategory').value = target.category;
+      document.getElementById('modalContent').value = target.content;
+      document.getElementById('modalRemarks').value = target.remarks || '';
+
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    function saveModalEdit() {
+      const id = document.getElementById('modalTargetId').value;
+      const newCategory = document.getElementById('modalCategory').value;
+      const newContent = document.getElementById('modalContent').value.trim();
+      const newRemarks = document.getElementById('modalRemarks').value.trim();
+
+      if (!newContent) return;
+
+      const target = ideasData.find(i => i.id === id);
+      if (target) {
+        target.category = newCategory;
+        target.content = newContent;
+        target.remarks = newRemarks;
+      }
+
+      closeModal();
+      renderIdeas();
+      showStatus('⏳ 正在更新 Google Sheet...');
+
+      if (typeof CONFIG !== 'undefined' && CONFIG.API_URLS && CONFIG.API_URLS.IDEAS) {
+        const params = new URLSearchParams({
+          action: 'editIdea',
+          key: CONFIG.SECRET_KEY || '',
+          id: id,
+          category: newCategory,
+          content: newContent,
+          remarks: newRemarks
+        });
+
+        fetch(`${CONFIG.API_URLS.IDEAS}?${params.toString()}`, { method: 'GET', mode: 'no-cors' })
+          .then(() => {
+            showStatus('✅ 已同步更新！', '#0d9488');
+            setTimeout(() => showStatus(''), 2000);
+          });
+      }
+    }
+
+    function deleteFromModal() {
+      const id = document.getElementById('modalTargetId').value;
+      if (!id || !confirm('確定要刪除這筆靈感嗎？')) return;
+
+      ideasData = ideasData.filter(i => i.id !== id);
+
+      closeModal();
+      renderIdeas();
+      showStatus('⏳ 正在從 Google Sheet 刪除...');
+
+      if (typeof CONFIG !== 'undefined' && CONFIG.API_URLS && CONFIG.API_URLS.IDEAS) {
+        const params = new URLSearchParams({
+          action: 'deleteIdea',
+          key: CONFIG.SECRET_KEY || '',
+          id: id
+        });
+
+        fetch(`${CONFIG.API_URLS.IDEAS}?${params.toString()}`, { method: 'GET', mode: 'no-cors' })
+          .then(() => {
+            showStatus('✅ 已刪除！', '#0d9488');
+            setTimeout(() => showStatus(''), 2000);
+          });
+      }
+    }
+  </script>
+</body>
+</html>
