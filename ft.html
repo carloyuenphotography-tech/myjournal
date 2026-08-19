@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏫 班主任事務面板</title>
+
+  <!-- PapaParse 用於讀取與解析 Google Sheet CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    :root { --primary-color: #ea580c; --bg-color: #f8fafc; --border-color: #cbd5e1; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-color); color: #1e293b; margin: 0; padding: 12px; }
+    .container { max-width: 1150px; margin: 0 auto; background: #ffffff; padding: 16px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    
+    /* 導覽列 */
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; overflow-x: auto; }
+    .nav-btn { padding: 8px 14px; font-size: 0.88rem; border-radius: 6px; text-decoration: none; background: #e2e8f0; color: #475569; font-weight: bold; }
+    .nav-btn.active.ft-tab { background: var(--primary-color); color: #fff; }
+
+    /* 統計卡片 */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card { padding: 12px 16px; border-radius: 12px; border-left: 5px solid; }
+    .stat-card.total { background: #fff3ed; border-color: #ea580c; }
+    .stat-card.todo { background: #fef2f2; border-color: #ef4444; }
+    .stat-card.done { background: #f0fdf4; border-color: #22c55e; }
+    .stat-title { font-size: 0.8rem; font-weight: bold; }
+    .stat-number { font-size: 1.5rem; font-weight: 800; margin-top: 4px; }
+
+    /* 卡片與表單 */
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 16px; background: #fff; padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .log-card { background: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; gap: 8px; }
+
+    .status-btn {
+      padding: 5px 12px;
+      font-size: 0.78rem;
+      font-weight: bold;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .status-btn.todo { background-color: #fee2e2; color: #dc2626; }
+    .status-btn.todo:hover { background-color: #fca5a5; }
+    .status-btn.done { background-color: #dcfce7; color: #16a34a; }
+    .status-btn.done:hover { background-color: #86efac; }
+
+    /* Modal 視窗 */
+    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; backdrop-filter: blur(2px); }
+    .modal-box { background:#fff; width:90%; max-width:500px; border-radius:16px; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2); }
+
+    #loading { font-size: 0.88rem; color: #ea580c; font-weight: bold; padding: 12px 0; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- 導覽列容器 (由 nav.html 動態載入) -->
+    <div id="navbar" class="nav-tabs"></div>
+
+    <!-- 統計面板 -->
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-title" style="color: #9a3412;">總跟進事項</div>
+        <div id="ftStatTotal" class="stat-number" style="color: #c2410c;">0</div>
+      </div>
+      <div class="stat-card todo">
+        <div class="stat-title" style="color: #991b1b;">⏳ 未完成 / 待跟進</div>
+        <div id="ftStatTodo" class="stat-number" style="color: #dc2626;">0</div>
+      </div>
+      <div class="stat-card done">
+        <div class="stat-title" style="color: #166534;">✅ 已完成</div>
+        <div id="ftStatDone" class="stat-number" style="color: #15803d;">0</div>
+      </div>
+    </div>
+
+    <!-- 工具列 -->
+    <div class="controls">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <strong style="color: #ea580c;">🏫 班主任事務與學生跟進紀錄</strong>
+        <button onclick="openFTModal()" style="background: #ea580c; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+          ➕ 新增跟進事項
+        </button>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <select id="ftStatusSelect" onchange="renderFTLogs()" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <option value="ALL">全部狀態</option>
+          <option value="未完成" selected>未完成 / 跟進中</option>
+          <option value="已完成">已完成</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="loading">⏳ 正在載入班主任事務紀錄...</div>
+
+    <!-- 內容網格 -->
+    <div id="ftGrid" class="card-grid"></div>
+  </div>
+
+  <!-- 新增事項 Modal -->
+  <div id="ftModal" class="modal-overlay">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:2px solid #ffedd5; padding-bottom:10px;">
+        <h3 style="margin:0; color:#9a3412;">📝 新增班主任跟進事項</h3>
+        <button onclick="closeFTModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <form id="ftAddForm" onsubmit="handleFTSubmit(event)">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size:0.8rem; font-weight:bold;">📅 日期</label>
+            <input type="date" id="newFtDate" required style="width:100%; padding:8px; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:0.8rem; font-weight:bold;">🏫 班別</label>
+            <input type="text" id="newFtClass" placeholder="例: 2A" required style="width:100%; padding:8px; box-sizing:border-box;">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="font-size:0.8rem; font-weight:bold;">🏷️ 類別</label>
+          <input type="text" id="newFtCategory" placeholder="例: 行政回條 / 學生照顧" value="行政回條" style="width:100%; padding:8px; box-sizing:border-box;">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="font-size:0.8rem; font-weight:bold;">📋 跟進事項</label>
+          <input type="text" id="newFtTask" placeholder="例: 追收家長同意書" required style="width:100%; padding:8px; box-sizing:border-box;">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="font-size:0.8rem; font-weight:bold;">👤 目標學生</label>
+          <input type="text" id="newFtStudent" placeholder="例: #3,#15" style="width:100%; padding:8px; box-sizing:border-box;">
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="font-size:0.8rem; font-weight:bold;">📌 狀態</label>
+          <select id="newFtStatus" style="width:100%; padding:8px; box-sizing:border-box;">
+            <option value="未完成">未完成</option>
+            <option value="已完成">已完成</option>
+          </select>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" onclick="closeFTModal()" style="padding:8px 16px;">取消</button>
+          <button type="submit" id="submitBtn" style="padding:8px 20px; background:#ea580c; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const GOOGLE_SHEET_ID = '1ultOcsf8s4bFj7CrqyD_DlN4hOZ8ekK7ip4czQQl5Ms';
+    const GID = '1351247680';
+    const CSV_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}&t=${new Date().getTime()}`;
+    
+    // ⚠️ 請填入你重新部署後的 Web App URL
+    const FT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwnpWBweDBZoEvHukGHitf0yq3ycBLfF_YpYTCsPhgz-H5snw9rfgEdgGIv7sbMETyVYA/exec'; 
+
+    let ftRows = [];
+
+    window.onload = function() {
+      loadNavbar();
+      loadFTData();
+    };
+
+    // 引入並載入 nav.html
+    function loadNavbar() {
+      fetch('nav.html')
+        .then(response => response.text())
+        .then(data => {
+          const navContainer = document.getElementById('navbar');
+          if (navContainer) {
+            navContainer.innerHTML = data;
+            const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+            navContainer.querySelectorAll('.nav-btn').forEach(link => {
+              if (link.getAttribute('href') === currentPath) {
+                link.classList.add('active');
+                if (currentPath === 'ft.html') {
+                  link.classList.add('ft-tab');
+                }
+              }
+            });
+          }
+        })
+        .catch(err => console.error('載入 nav.html 失敗:', err));
+    }
+
+    function loadFTData() {
+      Papa.parse(CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.data) {
+            ftRows = results.data.map((item, index) => ({
+              ...item,
+              _rowIndex: index + 2 // 行號索引，第 1 行是 Header
+            }));
+            renderFTLogs();
+          }
+          document.getElementById('loading').style.display = 'none';
+        },
+        error: (err) => {
+          document.getElementById('loading').textContent = '❌ 載入班主任紀錄失敗，請確認 GID 或公開權限。';
+          console.error(err);
+        }
+      });
+    }
+
+    function renderFTLogs() {
+      const grid = document.getElementById('ftGrid');
+      const statusFilter = document.getElementById('ftStatusSelect').value;
+      grid.innerHTML = '';
+
+      let total = ftRows.length;
+      let todo = 0;
+      let done = 0;
+
+      ftRows.forEach(item => {
+        const status = (item.Status || item['狀態'] || '').trim();
+        if (status === '已完成') done++;
+        else todo++;
+
+        if (statusFilter !== 'ALL') {
+          if (statusFilter === '已完成' && status !== '已完成') return;
+          if (statusFilter === '未完成' && status === '已完成') return;
+        }
+
+        const task = item['Item/task'] || item['跟進事項'] || item['Task'] || '';
+        const student = item['Target student'] || item['目標學生'] || item['Student'] || '全班/無';
+        const date = item.Date || item['日期'] || '';
+        const className = item.Class || item['班別'] || '';
+        const category = item.Category || item['類別'] || '';
+        const isDone = (status === '已完成');
+
+        const card = document.createElement('div');
+        card.className = 'log-card';
+        card.style.borderLeft = isDone ? '4px solid #22c55e' : '4px solid #ef4444';
+        
+        card.innerHTML = `
+          <div>
+            <div style="font-size:0.8rem; color:#64748b; margin-bottom:4px; display:flex; justify-content:space-between;">
+              <span>📅 ${date} | 🏫 ${className}</span>
+              <span style="background:#ffedd5; color:#9a3412; padding:1px 6px; border-radius:4px; font-weight:bold;">${category}</span>
+            </div>
+            <div style="font-weight:bold; font-size:0.95rem; margin-bottom:6px; color:#1e293b;">${task}</div>
+            <div style="font-size:0.85rem; color:#ea580c; font-weight:bold;">👤 學生: ${student}</div>
+          </div>
+          <div style="display:flex; justify-content:flex-end; border-top:1px dashed #e2e8f0; padding-top:8px; margin-top:6px;">
+            <button class="status-btn ${isDone ? 'done' : 'todo'}" onclick="toggleStatus(${item._rowIndex}, '${status}')">
+              ${isDone ? '✅ 已完成 (點擊切換)' : '⏳ 未完成 (點擊完成)'}
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      document.getElementById('ftStatTotal').innerText = total;
+      document.getElementById('ftStatTodo').innerText = todo;
+      document.getElementById('ftStatDone').innerText = done;
+    }
+
+    /* 切換並更新狀態 */
+    function toggleStatus(rowIndex, currentStatus) {
+      const newStatus = (currentStatus === '已完成') ? '未完成' : '已完成';
+
+      // 1. 本地畫面即時更新
+      const target = ftRows.find(r => r._rowIndex === rowIndex);
+      if (target) {
+        target.Status = newStatus;
+        renderFTLogs();
+      }
+
+      // 2. 發送請求至 Google Sheet
+      if (FT_SCRIPT_URL) {
+        const url = `${FT_SCRIPT_URL}?action=toggleStatus&rowIndex=${rowIndex}&newStatus=${encodeURIComponent(newStatus)}`;
+        fetch(url, { mode: 'no-cors' }).catch(err => console.error('狀態更新失敗:', err));
+      }
+    }
+
+    function openFTModal() {
+      document.getElementById('ftModal').style.display = 'flex';
+      document.getElementById('newFtDate').value = new Date().toISOString().split('T')[0];
+    }
+
+    function closeFTModal() {
+      document.getElementById('ftModal').style.display = 'none';
+    }
+
+    /* 新增事項 */
+    function handleFTSubmit(e) {
+      e.preventDefault();
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '儲存中...';
+
+      const date = document.getElementById('newFtDate').value;
+      const className = document.getElementById('newFtClass').value.trim();
+      const category = document.getElementById('newFtCategory').value.trim();
+      const task = document.getElementById('newFtTask').value.trim();
+      const student = document.getElementById('newFtStudent').value.trim();
+      const status = document.getElementById('newFtStatus').value;
+
+      const params = new URLSearchParams({
+        action: 'add',
+        Date: date,
+        Class: className,
+        Category: category,
+        'Item/task': task,
+        'Target student': student,
+        Status: status
+      });
+
+      fetch(`${FT_SCRIPT_URL}?${params.toString()}`, { mode: 'no-cors' })
+        .then(() => {
+          // 本地更新 UI
+          ftRows.unshift({
+            Date: date,
+            Class: className,
+            Category: category,
+            'Item/task': task,
+            'Target student': student,
+            Status: status,
+            _rowIndex: ftRows.length + 2
+          });
+          renderFTLogs();
+          closeFTModal();
+          document.getElementById('ftAddForm').reset();
+        })
+        .catch(err => alert('新增失敗：' + err))
+        .finally(() => {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '儲存';
+        });
+    }
+  </script>
+</body>
+</html>
