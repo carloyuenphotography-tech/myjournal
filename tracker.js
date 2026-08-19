@@ -15,11 +15,12 @@ let state = {
     currentLocation: "",
     currentNotes: "",
     currentCoords: null,
+    waypoints: [], // 暫存中途經過的地點清單
     history: [],
     config: {
         webhookUrl: "https://script.google.com/macros/s/AKfycbwElm39rImTWUrUdSF4UwL99Gpf9tFVLd-igvZbIaE6A5-s-KV_f4FmKys1yE2nkVr7/exec",
-	spreadsheetId: "1T7uT5umFZJLmVV3I4s7JXeNLqweoz7GwmClKzszFCt0",
-	gid: "1093062333"
+        spreadsheetId: "1T7uT5umFZJLmVV3I4s7JXeNLqweoz7GwmClKzszFCt0",
+        gid: "1093062333"
     }
 };
 
@@ -124,6 +125,53 @@ function fetchGPSLocation() {
     );
 }
 
+// 核心新功能：中途隨時點擊記錄當前 GPS 地點
+async function addWayPoint() {
+    if (!state.isRunning) return;
+    if (!navigator.geolocation) {
+        showToast("您的瀏覽器不支援自動定位");
+        return;
+    }
+    showToast("正在記錄中途點 GPS...");
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
+                    headers: { 'Accept-Language': 'zh-HK,zh' }
+                });
+                const data = await res.json();
+                let placeName = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+                if (data && data.display_name) {
+                    const addr = data.address;
+                    const suburb = addr.suburb || addr.neighbourhood || addr.city_district || addr.city || "";
+                    const road = addr.road || "";
+                    placeName = road ? `${road}${suburb ? ', ' + suburb : ''}` : data.display_name.split(',')[0];
+                }
+                
+                // 避免連續按到重複的地點
+                if (state.waypoints.length === 0 || state.waypoints[state.waypoints.length - 1] !== placeName) {
+                    state.waypoints.push(placeName);
+                    document.getElementById('waypoint-list-preview').innerText = `足跡路徑：${state.waypoints.join(' -> ')}`;
+                    showToast(`📍 已成功記錄中途點：${placeName}`);
+                } else {
+                    showToast("與上一站地點相同，未重複記錄");
+                }
+            } catch (err) {
+                const coordStr = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+                state.waypoints.push(coordStr);
+                document.getElementById('waypoint-list-preview').innerText = `足跡路徑：${state.waypoints.join(' -> ')}`;
+                showToast(`📍 已記錄座標點：${coordStr}`);
+            }
+        },
+        (error) => {
+            showToast("無法獲取GPS中途點位置");
+        },
+        { timeout: 8000, maximumAge: 0, enableHighAccuracy: true }
+    );
+}
+
 function startTimer() {
     const nameInput = document.getElementById('activity-name');
     const activityName = nameInput.value.trim();
@@ -138,6 +186,11 @@ function startTimer() {
     state.currentNotes = document.getElementById('activity-notes').value.trim();
     state.startTime = new Date();
     state.isRunning = true;
+    
+    // 初始化起點進入中途點清單
+    state.waypoints = [state.currentLocation];
+    document.getElementById('waypoint-list-preview').innerText = `足跡路徑：${state.waypoints[0]}`;
+    document.getElementById('waypoint-container').classList.remove('hidden');
 
     document.getElementById('btn-start').disabled = true;
     document.getElementById('btn-start').className = "flex-1 bg-slate-200 text-slate-400 cursor-not-allowed font-semibold py-3 px-4 rounded-xl transition text-xs sm:text-sm";
@@ -169,7 +222,7 @@ function confirmStopTimer() {
     if (!state.isRunning) return;
     const now = new Date();
     const diffSecs = Math.floor((now - state.startTime) / 1000);
-    document.getElementById('confirm-stop-desc').innerText = `活動：${state.currentActivity}\n已進行：${formatDuration(diffSecs)}，確定要完成並同步更新至雲端嗎？`;
+    document.getElementById('confirm-stop-desc').innerText = `活動：${state.currentActivity}\n經過點數：${state.waypoints.length} 個\n已進行：${formatDuration(diffSecs)}，確定要完成並同步至雲端嗎？`;
     document.getElementById('confirm-stop-modal').classList.remove('hidden');
 }
 
@@ -187,20 +240,16 @@ async function stopTimer() {
     const endTime = new Date();
     const durationSeconds = Math.max(1, Math.floor((endTime - state.startTime) / 1000));
 
-    // 結束時自動抓取最新 GPS 位置與地點
-    let finalLocation = state.currentLocation;
+    // 結束時自動抓取最後一個終點位置
     let finalCoords = state.currentCoords;
-
     if (navigator.geolocation) {
         try {
             const position = await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 4000, maximumAge: 0, enableHighAccuracy: true });
             });
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            finalCoords = { lat, lon };
-
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
+            finalCoords = { lat: position.coords.latitude, lon: position.coords.longitude };
+            
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${finalCoords.lat}&lon=${finalCoords.lon}&zoom=18&addressdetails=1`, {
                 headers: { 'Accept-Language': 'zh-HK,zh' }
             });
             const data = await res.json();
@@ -208,17 +257,25 @@ async function stopTimer() {
                 const addr = data.address;
                 const placeName = addr.suburb || addr.neighbourhood || addr.city_district || addr.city || "";
                 const road = addr.road || "";
-                finalLocation = road ? `${road}${placeName ? ', ' + placeName : ''}` : data.display_name.split(',')[0];
+                const finalPlace = road ? `${road}${placeName ? ', ' + placeName : ''}` : data.display_name.split(',')[0];
+                
+                // 如果最後一個點跟目前清單不一樣，自動加入終點
+                if (state.waypoints[state.waypoints.length - 1] !== finalPlace) {
+                    state.waypoints.push(finalPlace);
+                }
             }
         } catch (e) {
-            console.log("結束時自動抓取 GPS 略過，保留原地點");
+            console.log("終點定位略過");
         }
     }
+
+    // 將所有中途點用 " -> " 串連成一條完整的足跡字串
+    const finalLocationString = state.waypoints.join(' -> ');
 
     const record = {
         id: Date.now(),
         activity: state.currentActivity,
-        location: finalLocation,
+        location: finalLocationString, // 串連後的完整足跡
         notes: state.currentNotes,
         coords: finalCoords,
         startTime: state.startTime.toISOString(),
@@ -240,6 +297,8 @@ async function stopTimer() {
     document.getElementById('active-indicator').classList.add('hidden');
     document.getElementById('current-active-label').innerText = "準備開始";
     document.getElementById('timer-display').innerText = "00:00:00";
+    document.getElementById('waypoint-container').classList.add('hidden');
+    state.waypoints = [];
 
     const nameInput = document.getElementById('activity-name');
     nameInput.disabled = false;
@@ -252,7 +311,7 @@ async function stopTimer() {
 
     document.getElementById('live-meta-panel').classList.add('hidden');
 
-    showToast("✨ 記錄完成！已自動更新結算地點與雲端資料。");
+    showToast("✨ 記錄完成！多點足跡路線已儲存並同步至雲端。");
     updateHistoryFilterOptions();
     renderHistory();
 }

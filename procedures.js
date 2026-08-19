@@ -2,6 +2,7 @@ let allProcedures = [];
 let activeTagFilter = null;
 let activeProjectFilter = 'ALL';
 let openProjectsState = {}; 
+let isProjectSortMode = false;
 
 let API_URL = '';
 let GID = '';
@@ -141,20 +142,18 @@ function loadData() {
     }
   });
 }
-// 🎨 自動產生極度柔和、淡雅的粉嫩色彩組合 (Soft Pastel Colors)
+
 function getPastelColor(str) {
   const pastelColors = [
-    { bg: '#fdf2f8', text: '#9d174d', border: '#fbcfe8' }, // 極淡粉紅
-    { bg: '#faf5ff', text: '#7e22ce', border: '#e9d5ff' }, // 極淡粉紫
-    { bg: '#fff7ed', text: '#9a3412', border: '#fed7aa' }, // 極淡粉橘
-    { bg: '#fefce8', text: '#854d0e', border: '#fe-f08a' }, // 極淡粉黃 (修正邊框)
-    { bg: '#f0fdf4', text: '#166534', border: '#bbf7d0' }, // 極淡粉綠
-    { bg: '#f0fdfa', text: '#115e59', border: '#99f6e4' }, // 極淡粉青
-    { bg: '#f0f9ff', text: '#0369a1', border: '#bae6fd' }, // 極淡粉藍
-    { bg: '#f5f3ff', text: '#4338ca', border: '#c7d2fe' }  // 極淡粉靛
+    { bg: '#fdf2f8', text: '#9d174d', border: '#fbcfe8' },
+    { bg: '#faf5ff', text: '#7e22ce', border: '#e9d5ff' },
+    { bg: '#fff7ed', text: '#9a3412', border: '#fed7aa' },
+    { bg: '#fefce8', text: '#854d0e', border: '#fde047' },
+    { bg: '#f0fdf4', text: '#166534', border: '#bbf7d0' },
+    { bg: '#f0fdfa', text: '#115e59', border: '#99f6e4' },
+    { bg: '#f0f9ff', text: '#0369a1', border: '#bae6fd' },
+    { bg: '#f5f3ff', text: '#4338ca', border: '#c7d2fe' }
   ];
-  // 修正黃色的邊框色彩代碼
-  pastelColors[3].border = '#fde047';
 
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -204,7 +203,18 @@ function updateProjectDropdown() {
   select.value = activeProjectFilter;
 }
 
-// 渲染專案看板（套用專屬粉色主題）
+function toggleProjectSortMode() {
+  isProjectSortMode = !isProjectSortMode;
+  const btn = document.getElementById('sortToggleBtn');
+  if (btn) {
+    btn.textContent = isProjectSortMode ? '✅ 完成排序' : '⇄ 調整專案順序';
+    btn.style.background = isProjectSortMode ? '#0284c7' : '#e2e8f0';
+    btn.style.color = isProjectSortMode ? '#ffffff' : '#334155';
+  }
+  renderProjectBoards();
+}
+
+// 渲染專案看板
 function renderProjectBoards() {
   const container = document.getElementById('projectBoardContainer');
   if (!container) return;
@@ -220,27 +230,40 @@ function renderProjectBoards() {
     filteredLogs = filteredLogs.filter(r => r.project === activeProjectFilter);
   }
 
-  const projects = Array.from(new Set(filteredLogs.map(r => r.project)));
+  let projects = Array.from(new Set(filteredLogs.map(r => r.project)));
 
   if (projects.length === 0) {
     container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:#94a3b8; padding: 40px;">目前尚無專案程序記錄，點擊上方按鈕新增！</div>`;
     return;
   }
 
+  // 套用儲存的專案順序
+  const savedProjectOrder = JSON.parse(localStorage.getItem('custom_project_order') || '[]');
+  if (savedProjectOrder.length > 0) {
+    projects.sort((a, b) => {
+      let idxA = savedProjectOrder.indexOf(a);
+      let idxB = savedProjectOrder.indexOf(b);
+      if (idxA === -1) idxA = 999;
+      if (idxB === -1) idxB = 999;
+      return idxA - idxB;
+    });
+  }
+
   projects.forEach(projectName => {
     const projectItems = filteredLogs.filter(r => r.project === projectName);
     const boardKey = `proj_${projectName.replace(/\s+/g, '_')}`;
     const isOpen = !!openProjectsState[projectName];
-    const theme = getPastelColor(projectName); // 取得該專案的專屬粉色主題
+    const theme = getPastelColor(projectName);
 
     const board = document.createElement('div');
     board.className = `project-board`;
     board.style.border = `1px solid ${theme.border}`;
+    board.setAttribute('data-project', projectName);
     
     let headerHtml = `
       <div class="project-header" onclick="toggleProject('${projectName.replace(/'/g, "\\'")}')" style="background-color: ${theme.bg}; color: ${theme.text};">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span>${isOpen ? '▼' : '▶'}</span>
+          <span>${isProjectSortMode ? '↕️ ' : (isOpen ? '▼' : '▶')}</span>
           <span>📁 ${projectName}</span>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -271,12 +294,15 @@ function renderProjectBoards() {
         const formattedRemarks = item.remarks ? formatTextWithTags(item.remarks.replace(/\n/g, '<br>')) : '';
 
         bodyHtml += `
-          <div class="mini-procedure-card" data-id="${item.id}" onclick="openPreviewModal('${safeId}')" style="border-left: 4px solid ${theme.border};">
-            <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px; line-height:1.4; display:flex; gap:6px;">
-              <span style="color:${theme.text}; flex-shrink:0;">${index + 1}.</span>
-              <span>${formatTextWithTags(item.content)}</span>
+          <div class="mini-procedure-card" data-id="${item.id}" style="border-left: 4px solid ${theme.border};">
+            <span class="drag-handle" title="拖曳以排序">≡</span>
+            <div style="flex-grow:1; cursor:pointer;" onclick="openPreviewModal('${safeId}')">
+              <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px; line-height:1.4; display:flex; gap:6px;">
+                <span style="color:${theme.text}; flex-shrink:0;">${index + 1}.</span>
+                <span>${formatTextWithTags(item.content)}</span>
+              </div>
+              ${formattedRemarks ? `<div style="font-size:0.78rem; color:#475569; line-height:1.3; margin-left:18px;">💬 ${formattedRemarks}</div>` : ''}
             </div>
-            ${formattedRemarks ? `<div style="font-size:0.78rem; color:#475569; line-height:1.3; margin-left:18px;">💬 ${formattedRemarks}</div>` : ''}
           </div>
         `;
       });
@@ -286,10 +312,12 @@ function renderProjectBoards() {
     board.innerHTML = headerHtml + bodyHtml;
     container.appendChild(board);
 
+    // 小項目 Sortable 初始化：指定拖曳控制柄 `.drag-handle` 解決手機捲動衝突
     const bodyEl = document.getElementById(`board_body_${boardKey}`);
     if (bodyEl && typeof Sortable !== 'undefined' && projectItems.length > 0 && isOpen) {
       Sortable.create(bodyEl, {
         animation: 150,
+        handle: '.drag-handle',
         onEnd: function () {
           const cards = bodyEl.querySelectorAll('.mini-procedure-card');
           const newOrder = Array.from(cards).map(card => card.getAttribute('data-id'));
@@ -299,6 +327,18 @@ function renderProjectBoards() {
       });
     }
   });
+
+  // 專案層級 Sortable 初始化
+  if (isProjectSortMode && typeof Sortable !== 'undefined') {
+    Sortable.create(container, {
+      animation: 150,
+      onEnd: function () {
+        const boards = container.querySelectorAll('.project-board');
+        const newProjectOrder = Array.from(boards).map(b => b.getAttribute('data-project'));
+        localStorage.setItem('custom_project_order', JSON.stringify(newProjectOrder));
+      }
+    });
+  }
 }
 
 function toggleProject(projectName) {
@@ -371,7 +411,6 @@ function openEditMode() {
 
 function openModal() {
   document.getElementById('modalTitle').innerHTML = '📝 新增專案步驟';
-  document.getElementById('editRowId').value = '...';
   document.getElementById('editRowId').value = '';
   document.getElementById('addForm').reset();
   document.getElementById('modal').style.display = 'flex';

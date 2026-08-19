@@ -11,6 +11,7 @@
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
   
+  <!-- Google 官方 Identity SDK 驗證 -->
   <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
   
   <style>
@@ -125,10 +126,23 @@
       border: 1px solid var(--border-color);
       border-radius: 6px;
       padding: 10px;
-      cursor: grab;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }
-    .mini-procedure-card:active { cursor: grabbing; }
+    
+    /* 手機拖曳控制柄圖示風格 */
+    .drag-handle {
+      cursor: grab;
+      color: #94a3b8;
+      font-weight: bold;
+      font-size: 1.1rem;
+      padding: 0 4px;
+      user-select: none;
+      touch-action: none;
+    }
+    .drag-handle:active { cursor: grabbing; }
 
     /* Modal 視窗共用 */
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; }
@@ -179,6 +193,7 @@
     <div class="controls">
       <div class="filter-group">
         <button onclick="openModal()" style="background:var(--primary-color); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">➕ 新增專案步驟</button>
+        <button id="sortToggleBtn" onclick="toggleProjectSortMode()" style="background:#e2e8f0; color:#334155; border:1px solid var(--border-color); padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">⇄ 調整專案順序</button>
         
         <div>
           <label style="font-size:0.82rem; color:#64748b; font-weight:bold;">📂 專案/事件：</label>
