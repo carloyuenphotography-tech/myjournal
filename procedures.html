@@ -77,6 +77,7 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin-top: 16px;
+      align-items: start; /* 讓不同高度的專案框自然依內容伸展，不會被同列強行拉高 */
     }
     @media (max-width: 1024px) {
       .project-board-grid { grid-template-columns: repeat(2, 1fr); }
@@ -111,14 +112,14 @@
       border-radius: 12px;
     }
     
+    /* 變更重點：移除 max-height 與 overflow-y，讓區域能隨項目完整展開 */
     .project-body {
       padding: 10px;
-      max-height: 400px;
-      overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 8px;
       background: #f8fafc;
+      height: auto;
     }
 
     .mini-procedure-card {
