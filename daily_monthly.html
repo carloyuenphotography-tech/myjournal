@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📅 Daily Monthly View - 速記月視圖</title>
+  <!-- 載入 PapaParse 與 Google SDK -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!-- 引入 SortableJS 支援拖曳排序 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  
+  <!-- 載入設定檔與白名單 -->
+  <script src="config.js"></script>
+  <script src="allowed-emails.js"></script>
+  
+  <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
+  
+  <style>
+    :root { 
+      --primary-color: #6366f1; 
+      --bg-color: #f8fafc; 
+      --border-color: #cbd5e1; 
+    }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      background: var(--bg-color); 
+      color: #1e293b; 
+      margin: 0; 
+      padding: 12px; 
+    }
+    
+    /* 🔒 Google 登入驗證遮罩 */
+    .auth-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .auth-card {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      padding: 28px 20px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+    .auth-title { font-size: 1.25rem; font-weight: bold; color: #0f172a; margin-bottom: 8px; }
+    .auth-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 20px; }
+    .google-btn-wrapper { display: flex; justify-content: center; min-height: 40px; margin-bottom: 12px; }
+
+    .container { max-width: 1300px; margin: 0 auto; background: #fff; padding: 16px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: none; }
+    
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; overflow-x: auto; white-space: nowrap; }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-btn { padding: 8px 14px; font-size: 0.88rem; border-radius: 6px; text-decoration: none; background: #e2e8f0; color: #475569; font-weight: bold; }
+    .nav-btn.active { background: var(--primary-color); color: #fff; }
+
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
+    .page-title { font-size: 1.15rem; font-weight: bold; color: var(--primary-color); }
+    .user-profile { font-size: 0.8rem; color: #475569; display: flex; align-items: center; gap: 8px; }
+    .logout-btn { background: #f1f5f9; border: 1px solid var(--border-color); padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+
+    .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .filter-select { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; outline: none; background-color: #ffffff; color: #334155; }
+
+    .month-nav-bar { display: flex; align-items: center; gap: 8px; background: #eff6ff; padding: 6px 12px; border-radius: 8px; border: 1px solid #bfdbfe; margin-bottom: 16px; }
+    .nav-arrow-btn { background: #ffffff; border: 1px solid #93c5fd; padding: 4px 10px; border-radius: 6px; font-weight: bold; color: #1d4ed8; cursor: pointer; }
+    .nav-arrow-btn:hover { background: #dbeafe; }
+
+    .hashtag-pill { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 1px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin: 0 2px; }
+    .hashtag-pill:hover { background: var(--primary-color); color: #ffffff; }
+
+    .type-badge { font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; flex-shrink: 0; }
+    .type-badge.Task { background: #e0e7ff; color: #3730a3; }
+    .type-badge.Event { background: #fef3c7; color: #92400e; }
+    .type-badge.Note, .type-badge.筆記 { background: #f1f5f9; color: #475569; }
+
+    .month-board-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .month-board {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      height: 480px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      overflow: hidden;
+    }
+    .month-header {
+      background: var(--primary-color);
+      color: #ffffff;
+      padding: 10px 14px;
+      font-weight: bold;
+      font-size: 1.05rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .month-header .item-count {
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.2);
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+    .month-body {
+      padding: 10px;
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #f8fafc;
+    }
+
+    .month-board.current-month {
+      border: 2px solid #6366f1;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25);
+    }
+    .month-board.current-month .month-header {
+      background: #4f46e5;
+    }
+
+    .mini-log-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--primary-color);
+      border-radius: 6px;
+      padding: 10px;
+      cursor: grab;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      flex-shrink: 0;
+    }
+    .mini-log-card:active { cursor: grabbing; }
+    .mini-log-card:hover { border-color: var(--primary-color); }
+    .mini-log-card.done { border-left-color: #22c55e; opacity: 0.7; }
+    
+    .status-btn { padding: 2px 6px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; }
+    .status-btn.todo { background: #fee2e2; color: #dc2626; }
+    .status-btn.done { background: #dcfce7; color: #16a34a; }
+    
+    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; }
+    .modal-box { background:#fff; width:100%; max-width:480px; border-radius:12px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-weight: bold; font-size: 0.8rem; color: #334155; margin-bottom: 3px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; box-sizing: border-box; }
+    .form-group textarea.large-textarea { min-height: 80px; resize: vertical; }
+
+    .preview-remarks-box {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 10px;
+      min-height: 80px; 
+      font-size: 0.85rem;
+      color: #0f172a;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-title">⚡ 速記清單 - 月視圖</div>
+      <div class="auth-desc">請登入 Google 帳號以驗證身分</div>
+      <div class="google-btn-wrapper">
+        <div id="googleSignInContainer"></div>
+      </div>
+      <div id="loginErr" style="color: #ff3b30; font-size: 0.8rem; margin-top: 4px; white-space: pre-line;"></div>
+    </div>
+  </div>
+
+  <div class="container" id="mainContainer">
+    <div id="navbar" class="nav-tabs"></div>
+
+    <div class="header-bar">
+      <div class="page-title">⚡ Daily Logs - 月度總覽 (Monthly View)</div>
+      <div class="user-profile">
+        <span id="userInfo"></span>
+        <button class="logout-btn" onclick="logout()">登出</button>
+      </div>
+    </div>
+
+    <div class="month-nav-bar">
+      <button class="nav-arrow-btn" onclick="changeNavMonth(-1)">◀ 上個月</button>
+      <button class="nav-arrow-btn" onclick="resetNavToToday()">今天</button>
+      <button class="nav-arrow-btn" onclick="changeNavMonth(1)">下個月 ▶</button>
+      <span id="navMonthLabel" style="font-weight: bold; color: #1e293b; margin-left: 8px; font-size: 0.95rem;"></span>
+    </div>
+
+    <div class="controls">
+      <div class="filter-group">
+        <button onclick="openModal()" style="background:var(--primary-color); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">➕ 新增 Daily 事項</button>
+        
+        <div>
+          <label style="font-size:0.82rem; color:#64748b; font-weight:bold;">🏷️ 類型：</label>
+          <select id="typeFilter" class="filter-select" onchange="onTypeFilterChange(this.value)">
+            <option value="ALL">全部類型</option>
+            <option value="Task">Task (任務)</option>
+            <option value="Event">Event (事件)</option>
+            <option value="筆記">筆記 (Note)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:0.82rem; color:#64748b; font-weight:bold;">📌 狀態：</label>
+          <select id="statusFilter" class="filter-select" onchange="onStatusFilterChange(this.value)">
+            <option value="ALL">全部狀態</option>
+            <option value="TODO">⏳ 待辦 / 進行中</option>
+            <option value="DONE">✅ 已完成</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:6px; align-items:center;">
+        <span id="tagFilterIndicator" style="font-size:0.8rem; color:var(--primary-color); display:none;">標籤篩選：<b id="activeTagText"></b></span>
+        <button onclick="clearFilter()" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); cursor:pointer;">重置過濾</button>
+      </div>
+    </div>
+
+    <div id="loading" style="font-size:0.9rem; font-weight:bold; color:var(--primary-color);">⏳ 正在載入 Daily Logs 月度資料...</div>
+    
+    <div id="monthBoardContainer" class="month-board-grid"></div>
+  </div>
+
+  <div id="previewModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 style="margin-top:0; color:var(--primary-color);">👁️ 事項詳細檢視</h3>
+      <input type="hidden" id="previewRowId">
+      <div class="form-group"><label>日期：</label><div id="previewDate" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem;"></div></div>
+      <div class="form-group"><label>類型：</label><div id="previewType" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem;"></div></div>
+      <div class="form-group"><label>內容：</label><div id="previewContent" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; font-weight:bold;"></div></div>
+      <div class="form-group"><label>備註 / 詳情：</label><div id="previewRemarks" class="preview-remarks-box"></div></div>
+      
+      <div style="display:flex; justify-content:space-between; margin-top:16px;">
+        <button type="button" onclick="deleteItem()" style="padding:6px 12px; border-radius:6px; border:1px solid #fca5a5; background:#fee2e2; color:#ef4444; font-weight:bold; cursor:pointer;">🗑️ 刪除</button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" onclick="closePreviewModal()" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border-color); background:#f1f5f9; cursor:pointer;">關閉</button>
+          <button type="button" onclick="openEditMode()" style="padding:6px 16px; border-radius:6px; border:none; background:var(--primary-color); color:#fff; font-weight:bold; cursor:pointer;">✏️ 修改</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 id="modalTitle" style="margin-top:0; color:var(--primary-color);">📝 新增 Daily 事項</h3>
+      <form id="addForm" onsubmit="handleSubmit(event)">
+        <input type="hidden" id="editRowId">
+        
+        <div class="form-group">
+          <label>📅 填寫日期 (可填特定日子如 2026-08-18，或僅填月份如 2026-08，留空代表 Backlog)</label>
+          <input type="text" id="newDate" placeholder="例如: 2026-08 或 2026-08-18">
+        </div>
+
+        <div class="form-group">
+          <label>📌 類型 (Type)</label>
+          <select id="newType">
+            <option value="Task">Task (任務)</option>
+            <option value="Event">Event (事件)</option>
+            <option value="筆記">筆記 (Note)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>📋 內容 (支援 #標籤)</label>
+          <input type="text" id="newContent" placeholder="例: 完成月度報告 #工作" required>
+        </div>
+
+        <div class="form-group">
+          <label>💬 備註 / 詳情</label>
+          <textarea id="newRemarks" class="large-textarea" placeholder="補充細節..."></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:15px;">
+          <button type="button" onclick="closeModal()" style="padding:8px 14px; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">取消</button>
+          <button type="submit" style="background:var(--primary-color); color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer;">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="daily_monthly.js"></script>
+</body>
+</html>
