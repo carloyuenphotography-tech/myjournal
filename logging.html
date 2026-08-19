@@ -91,6 +91,8 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
     .page-title {
       font-size: 1.2rem;
@@ -98,7 +100,7 @@
       color: var(--primary-color);
     }
     .user-profile {
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       color: #475569;
       display: flex;
       align-items: center;
@@ -137,7 +139,7 @@
     }
     .form-group {
       flex: 1;
-      min-width: 140px;
+      min-width: 150px;
     }
     .form-group label {
       display: block;
@@ -146,13 +148,21 @@
       color: #334155;
       margin-bottom: 4px;
     }
-    .form-group select, .form-group input, .form-group textarea {
+    /* 统一所有输入框與選單的尺寸與外觀 */
+    .form-group select, .form-group input[type="date"], .form-group textarea {
       width: 100%;
-      padding: 8px 10px;
+      height: 38px;
+      padding: 6px 10px;
       border: 1px solid var(--border-color);
       border-radius: 6px;
       font-size: 0.9rem;
       background: #fff;
+      color: #1e293b;
+      appearance: none;
+    }
+    .form-group textarea {
+      height: auto;
+      min-height: 80px;
     }
 
     .checkbox-row {
@@ -207,7 +217,7 @@
       font-size: 0.9rem;
     }
     .log-content { display: flex; flex-direction: column; gap: 3px; }
-    .log-text { font-weight: bold; color: #0f172a; } /* 粗體樣式類別 */
+    .log-text { font-weight: bold; color: #0f172a; } /* 內容保持粗體 */
     .log-meta { font-size: 0.75rem; color: #64748b; display: flex; gap: 8px; }
     .badge {
       font-size: 0.7rem;
@@ -268,7 +278,9 @@
             <option value="完成">✓ 已完成 (完成)</option>
           </select>
         </div>
+      </div>
 
+      <div class="form-row">
         <div class="form-group">
           <label>😀 常用 Emoji</label>
           <select id="logEmoji">
@@ -294,9 +306,9 @@
         <label for="isBacklog">無日期 (存入 Backlog 備忘庫)</label>
       </div>
 
-      <div class="form-group" style="margin-bottom: 12px;">
+      <div class="form-group" style="margin-bottom: 12px; width: 100%;">
         <label>📝 內容 (支援 #hashtag 自動標籤)：</label>
-        <textarea id="logContent" rows="3" placeholder="輸入事項、靈感或工作進度... 例：準備明天會議資料 #work #meeting" required></textarea>
+        <textarea id="logContent" placeholder="輸入事項、靈感或工作進度... 例：準備明天會議資料 #work #meeting" required></textarea>
       </div>
 
       <button type="submit" class="submit-btn">⚡ 立即送出 Logging</button>
@@ -388,7 +400,12 @@
       document.getElementById('authOverlay').style.display = 'none';
       document.getElementById('mainContainer').style.display = 'block';
       const user = JSON.parse(sessionStorage.getItem('google_user') || '{}');
-      if (user.email) document.getElementById('userInfo').textContent = user.email;
+      // 只顯示使用者名稱 (Name)，不顯示過長的電郵
+      if (user.name) {
+        document.getElementById('userInfo').textContent = `👤 ${user.name}`;
+      } else if (user.email) {
+        document.getElementById('userInfo').textContent = `👤 ${user.email.split('@')[0]}`;
+      }
       loadRecentLocalLogs();
     }
 
