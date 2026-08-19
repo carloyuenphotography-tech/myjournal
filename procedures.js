@@ -9,15 +9,30 @@ let GID = '';
 let SHEET_ID = '';
 
 function initGoogleSignIn() {
-  if (typeof CONFIG !== 'undefined' && CONFIG.GOOGLE_CLIENT_ID) {
-    google.accounts.id.initialize({
-      client_id: CONFIG.GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse
-    });
-    google.accounts.id.renderButton(
-      document.getElementById("googleSignInContainer"),
-      { theme: "outline", size: "large", type: "standard", shape: "rectangular" }
-    );
+  if (typeof CONFIG === 'undefined' || !CONFIG.GOOGLE_CLIENT_ID) {
+    console.warn("CONFIG 未被正確載入，無法初始化 Google 登入");
+    return;
+  }
+  
+  if (window.google && window.google.accounts && window.google.accounts.id) {
+    try {
+      google.accounts.id.initialize({
+        client_id: CONFIG.GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse
+      });
+      const container = document.getElementById("googleSignInContainer");
+      if (container) {
+        container.innerHTML = '';
+        google.accounts.id.renderButton(
+          container,
+          { theme: "outline", size: "large", type: "standard", shape: "rectangular" }
+        );
+      }
+    } catch(err) {
+      console.error("渲染 Google 登入按鈕失敗:", err);
+    }
+  } else {
+    setTimeout(initGoogleSignIn, 300);
   }
 }
 
@@ -85,6 +100,7 @@ function checkLoginStatus() {
   } else {
     document.getElementById('authOverlay').style.display = 'flex';
     document.getElementById('mainContainer').style.display = 'none';
+    initGoogleSignIn();
   }
 }
 
@@ -165,8 +181,24 @@ function getPastelColor(str) {
 
 function formatTextWithTags(text) {
   if (!text) return '';
-  const tagRegex = /(#[^\s#]+)/g;
-  return text.replace(tagRegex, (tag) => `<span class="hashtag-pill" onclick="event.stopPropagation(); filterByTag('${tag}')">${tag}</span>`);
+
+  let formattedText = text;
+
+  // 1. 處理 *文字* 轉紅色粗體 (如 *重要*)
+  const boldRedRegex = /\*([^\*\n]+)\*/g;
+  formattedText = formattedText.replace(boldRedRegex, "<strong style='color:#ef4444;'>$1</strong>");
+
+  // 2. 精準處理 #標籤 (只匹配中文、英文、數字、底線，遇到空白/換行/標點即終止)
+  // \u4e00-\u9fa5 代表中文字元範圍
+  const tagRegex = /(#[\u4e00-\u9fa5a-zA-Z0-9_]+)/g;
+  formattedText = formattedText.replace(tagRegex, (tag) => 
+    `<span class="hashtag-pill" onclick="event.stopPropagation(); filterByTag('${tag}')">${tag}</span>`
+  );
+
+  // 3. 最後才把換行 \n 轉成 <br>，確保不會影響標籤解析
+  formattedText = formattedText.replace(/\n/g, '<br>');
+
+  return formattedText;
 }
 
 function filterByTag(tag) {
@@ -214,7 +246,6 @@ function toggleProjectSortMode() {
   renderProjectBoards();
 }
 
-// 渲染專案看板
 function renderProjectBoards() {
   const container = document.getElementById('projectBoardContainer');
   if (!container) return;
@@ -237,7 +268,6 @@ function renderProjectBoards() {
     return;
   }
 
-  // 套用儲存的專案順序
   const savedProjectOrder = JSON.parse(localStorage.getItem('custom_project_order') || '[]');
   if (savedProjectOrder.length > 0) {
     projects.sort((a, b) => {
@@ -291,18 +321,18 @@ function renderProjectBoards() {
 
       projectItems.forEach((item, index) => {
         const safeId = String(item.id).replace(/'/g, "\\'");
-        const formattedRemarks = item.remarks ? formatTextWithTags(item.remarks.replace(/\n/g, '<br>')) : '';
+        const formattedRemarks = item.remarks ? formatTextWithTags(item.remarks) : '';
 
         bodyHtml += `
-          <div class="mini-procedure-card" data-id="${item.id}" style="border-left: 4px solid ${theme.border};">
-            <span class="drag-handle" title="拖曳以排序">≡</span>
-            <div style="flex-grow:1; cursor:pointer;" onclick="openPreviewModal('${safeId}')">
-              <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px; line-height:1.4; display:flex; gap:6px;">
-                <span style="color:${theme.text}; flex-shrink:0;">${index + 1}.</span>
+          <div class="mini-procedure-card" data-id="${item.id}" style="border-left: 4px solid ${theme.border}; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+            <div style="flex-grow: 1; cursor: pointer;" onclick="openPreviewModal('${safeId}')">
+              <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 4px; line-height: 1.4; display: flex; gap: 6px;">
+                <span style="color: ${theme.text}; flex-shrink: 0;">${index + 1}.</span>
                 <span>${formatTextWithTags(item.content)}</span>
               </div>
-              ${formattedRemarks ? `<div style="font-size:0.78rem; color:#475569; line-height:1.3; margin-left:18px;">💬 ${formattedRemarks}</div>` : ''}
+              ${formattedRemarks ? `<div style="font-size: 0.8rem; color: #475569; line-height: 1.4; margin-left: 18px;">${formattedRemarks}</div>` : ''}
             </div>
+            <span class="drag-handle" title="拖曳以排序" style="flex-shrink: 0; padding: 4px; align-self: center;">≡</span>
           </div>
         `;
       });
@@ -312,7 +342,6 @@ function renderProjectBoards() {
     board.innerHTML = headerHtml + bodyHtml;
     container.appendChild(board);
 
-    // 小項目 Sortable 初始化：指定拖曳控制柄 `.drag-handle` 解決手機捲動衝突
     const bodyEl = document.getElementById(`board_body_${boardKey}`);
     if (bodyEl && typeof Sortable !== 'undefined' && projectItems.length > 0 && isOpen) {
       Sortable.create(bodyEl, {
@@ -328,7 +357,6 @@ function renderProjectBoards() {
     }
   });
 
-  // 專案層級 Sortable 初始化
   if (isProjectSortMode && typeof Sortable !== 'undefined') {
     Sortable.create(container, {
       animation: 150,
@@ -363,7 +391,7 @@ function openPreviewModal(id) {
   document.getElementById('previewRowId').value = item.id;
   document.getElementById('previewProject').textContent = item.project;
   document.getElementById('previewContent').innerHTML = formatTextWithTags(item.content);
-  document.getElementById('previewRemarks').innerHTML = item.remarks ? formatTextWithTags(item.remarks.replace(/\n/g, '<br>')) : '<span style="color:#94a3b8">無反思心得</span>';
+  document.getElementById('previewRemarks').innerHTML = item.remarks ? formatTextWithTags(item.remarks) : '<span style="color:#94a3b8">無反思心得</span>';
   
   document.getElementById('previewModal').style.display = 'flex';
 }

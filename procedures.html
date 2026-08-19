@@ -10,9 +10,10 @@
   
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
+  <script src="procedures.js"></script>
   
-  <!-- Google 官方 Identity SDK 驗證 -->
-  <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
+  <!-- 官方 Google SDK -->
+  <script src="https://accounts.google.com/gsi/client"></script>
   
   <style>
     :root { 
@@ -71,13 +72,12 @@
     .hashtag-pill { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin: 0 2px; }
     .hashtag-pill:hover { background: var(--primary-color); color: #ffffff; }
 
-    /* 📋 桌面版 3 欄式專案看板格狀排版 */
     .project-board-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin-top: 16px;
-      align-items: start; /* 讓不同高度的專案框自然依內容伸展，不會被同列強行拉高 */
+      align-items: start;
     }
     @media (max-width: 1024px) {
       .project-board-grid { grid-template-columns: repeat(2, 1fr); }
@@ -112,7 +112,6 @@
       border-radius: 12px;
     }
     
-    /* 變更重點：移除 max-height 與 overflow-y，讓區域能隨項目完整展開 */
     .project-body {
       padding: 10px;
       display: flex;
@@ -127,13 +126,9 @@
       border: 1px solid var(--border-color);
       border-radius: 6px;
       padding: 10px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }
     
-    /* 手機拖曳控制柄圖示風格 */
     .drag-handle {
       cursor: grab;
       color: #94a3b8;
@@ -145,25 +140,55 @@
     }
     .drag-handle:active { cursor: grabbing; }
 
-    /* Modal 視窗共用 */
-    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; }
-    .modal-box { background:#fff; width:100%; max-width:480px; border-radius:12px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+    /* Modal 視窗基本設定 (桌面版) */
+    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; box-sizing: border-box; }
+    .modal-box { 
+      background:#fff; 
+      width:100%; 
+      max-width:680px; 
+      border-radius:12px; 
+      padding:24px; 
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+      max-height: 85vh;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
     
-    .form-group { margin-bottom: 10px; }
-    .form-group label { display: block; font-weight: bold; font-size: 0.8rem; color: #334155; margin-bottom: 3px; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; box-sizing: border-box; }
-    .form-group textarea.large-textarea { min-height: 80px; resize: vertical; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-weight: bold; font-size: 0.88rem; color: #334155; margin-bottom: 6px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.92rem; box-sizing: border-box; }
+    
+    .form-group textarea.large-textarea { 
+      min-height: 180px; 
+      resize: vertical; 
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
 
     .preview-remarks-box {
       background: #f8fafc;
       border: 1px solid var(--border-color);
       border-radius: 6px;
-      padding: 8px 10px;
-      min-height: 80px; 
-      font-size: 0.85rem;
+      padding: 12px 14px;
+      min-height: 140px; 
+      font-size: 0.92rem;
       color: #0f172a;
       white-space: pre-wrap;
       word-break: break-word;
+      line-height: 1.55;
+    }
+
+    /* 📱 手機端尺寸優化 (螢幕寬度 640px 以下) */
+    @media (max-width: 640px) {
+      .modal-box {
+        width: 95%;
+        padding: 16px;
+        max-height: 90vh;
+      }
+      .form-group label { font-size: 0.82rem; }
+      .form-group input, .form-group select, .form-group textarea { font-size: 0.85rem; padding: 8px; }
+      .form-group textarea.large-textarea { min-height: 130px; }
+      .preview-remarks-box { font-size: 0.85rem; min-height: 100px; padding: 10px; }
     }
   </style>
 </head>
@@ -220,15 +245,15 @@
     <div class="modal-box">
       <h3 style="margin-top:0; color:var(--primary-color);">👁️ 步驟詳細檢視</h3>
       <input type="hidden" id="previewRowId">
-      <div class="form-group"><label>專案名稱 (Project)：</label><div id="previewProject" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; font-weight:bold;"></div></div>
-      <div class="form-group"><label>注意事項 / 步驟：</label><div id="previewContent" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem;"></div></div>
+      <div class="form-group"><label>專案名稱 (Project)：</label><div id="previewProject" style="padding:8px 10px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.9rem; font-weight:bold;"></div></div>
+      <div class="form-group"><label>注意事項 / 步驟：</label><div id="previewContent" style="padding:8px 10px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.9rem; line-height:1.5;"></div></div>
       <div class="form-group"><label>反思與優化心得 (Remarks)：</label><div id="previewRemarks" class="preview-remarks-box"></div></div>
       
-      <div style="display:flex; justify-content:space-between; margin-top:16px;">
-        <button type="button" onclick="deleteItem()" style="padding:6px 12px; border-radius:6px; border:1px solid #fca5a5; background:#fee2e2; color:#ef4444; font-weight:bold; cursor:pointer;">🗑️ 刪除</button>
-        <div style="display:flex; gap:8px;">
-          <button type="button" onclick="closePreviewModal()" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border-color); background:#f1f5f9; cursor:pointer;">關閉</button>
-          <button type="button" onclick="openEditMode()" style="padding:6px 16px; border-radius:6px; border:none; background:var(--primary-color); color:#fff; font-weight:bold; cursor:pointer;">✏️ 修改</button>
+      <div style="display:flex; justify-content:space-between; margin-top:20px;">
+        <button type="button" onclick="deleteItem()" style="padding:8px 14px; border-radius:6px; border:1px solid #fca5a5; background:#fee2e2; color:#ef4444; font-weight:bold; cursor:pointer;">🗑️ 刪除</button>
+        <div style="display:flex; gap:10px;">
+          <button type="button" onclick="closePreviewModal()" style="padding:8px 14px; border-radius:6px; border:1px solid var(--border-color); background:#f1f5f9; cursor:pointer;">關閉</button>
+          <button type="button" onclick="openEditMode()" style="padding:8px 16px; border-radius:6px; border:none; background:var(--primary-color); color:#fff; font-weight:bold; cursor:pointer;">✏️ 修改</button>
         </div>
       </div>
     </div>
@@ -247,8 +272,8 @@
         </div>
 
         <div class="form-group">
-          <label>📋 注意事項 / 步驟內容 (支援 #標籤)</label>
-          <input type="text" id="newContent" placeholder="例: 必須提前兩周確認場地合約 #SOP" required>
+          <label>📋 注意事項 / 步驟內容 (支援 *紅色粗體* 與 #標籤)</label>
+          <input type="text" id="newContent" placeholder="例: 必須提前兩周確認場地合約 *重要* #SOP" required>
         </div>
 
         <div class="form-group">
@@ -256,7 +281,7 @@
           <textarea id="newRemarks" class="large-textarea" placeholder="記錄這次經驗的優化方向、避坑指南..."></textarea>
         </div>
 
-        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:15px;">
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
           <button type="button" onclick="closeModal()" style="padding:8px 14px; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">取消</button>
           <button type="submit" style="background:var(--primary-color); color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer;">儲存</button>
         </div>
@@ -264,6 +289,12 @@
     </div>
   </div>
 
-  <script src="procedures.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      if (typeof initGoogleSignIn === 'function') {
+        initGoogleSignIn();
+      }
+    });
+  </script>
 </body>
 </html>
