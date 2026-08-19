@@ -2,731 +2,485 @@
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>⚡ 速記清單 - Daily</title>
-  
-  <!-- 載入設定檔與白名單 -->
-  <script src="config.js"></script>
-  <script src="allowed-emails.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📊 校曆與月檢視 - Dashboard</title>
+
+  <!-- PapaParse 用於解析 CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  
-  <!-- ✅ 引入 SortableJS 用於支援手動拖曳排序 -->
+  <!-- 載入全站統一設定 -->
+  <script src="config.js"></script>
+  <!-- 載入允許登入的 Email 白名單 -->
+  <script src="allowed-emails.js"></script>
+  <!-- 引入 SortableJS 支援拖曳排序 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-  
-  <!-- ✅ 修正的 Google 登入載入方式 -->
-  <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
-  
+  <!-- 引入 Google 官方 Identity SDK[cite: 1] -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
   <style>
     :root {
-      --primary-color: #6366f1;
+      --primary-color: #2563eb;
+      --daily-color: #6366f1;
+      --timetable-color: #0284c7;
+      --pm-timetable-color: #0d9488;
+      --duty-color: #ea580c;
       --bg-color: #f8fafc;
       --border-color: #e2e8f0;
+      --header-bg: #1e293b;
     }
 
     * { box-sizing: border-box; }
 
-    html, body {
-      overflow-x: hidden;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-    }
-
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background-color: var(--bg-color);
       color: #1e293b;
+      margin: 0;
       padding: 8px;
     }
 
-    /* Google 登入驗證遮罩 Modal */
-    .auth-overlay {
+    #loginOverlay {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(4px);
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(248, 250, 252, 0.95);
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       z-index: 9999;
-      padding: 16px;
+      gap: 16px;
     }
-    .auth-card {
-      background: #ffffff;
+    .login-card {
+      background: white;
+      padding: 40px;
       border-radius: 16px;
-      width: 100%;
-      max-width: 360px;
-      padding: 28px 20px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
       text-align: center;
+      max-width: 400px;
+      width: 100%;
     }
-    .auth-title {
-      font-size: 1.25rem;
-      font-weight: bold;
-      color: #0f172a;
-      margin-bottom: 8px;
-    }
-    .auth-desc {
-      font-size: 0.85rem;
-      color: #64748b;
-      margin-bottom: 20px;
-    }
-    .google-btn-wrapper {
-      display: flex;
-      justify-content: center;
-      min-height: 40px;
-    }
+    #mainContent { display: none; }
 
     .container {
-      width: 100%;
-      max-width: 950px;
+      max-width: 1150px;
       margin: 0 auto;
       background: #ffffff;
-      padding: 10px;
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      display: none;
+      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
     .nav-tabs {
       display: flex;
-      gap: 6px;
-      margin-bottom: 10px;
+      gap: 8px;
+      margin-bottom: 16px;
       border-bottom: 2px solid var(--border-color);
       padding-bottom: 8px;
       overflow-x: auto;
       white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
     }
     .nav-tabs::-webkit-scrollbar { display: none; }
+
     .nav-btn {
-      padding: 6px 12px;
-      font-size: 0.82rem;
+      padding: 8px 14px;
+      font-size: 0.88rem;
       border-radius: 6px;
       text-decoration: none;
       background: #e2e8f0;
       color: #475569;
       font-weight: bold;
+      transition: all 0.2s ease;
     }
+    .nav-btn:hover { background: #cbd5e1; }
     .nav-btn.active { background: var(--primary-color); color: #ffffff; }
 
-    .header-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .title-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--primary-color);
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
-    .user-profile {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.8rem;
-      color: #475569;
-    }
-    .logout-btn {
-      background: #f1f5f9;
-      border: 1px solid var(--border-color);
-      padding: 3px 7px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.75rem;
-    }
-    .date-controls {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .icon-btn {
-      background: #f1f5f9;
-      border: 1px solid var(--border-color);
-      padding: 5px 8px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .date-input {
-      padding: 4px 6px;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      font-weight: bold;
-      font-size: 0.82rem;
-    }
-    .today-btn {
-      background: var(--primary-color);
-      color: #fff;
-      border: none;
-      padding: 5px 9px;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 0.82rem;
-    }
-
-    #statusMessage {
-      font-size: 0.8rem;
-      font-weight: bold;
-      color: var(--primary-color);
-      margin-bottom: 6px;
-    }
-
-    .filter-box {
-      margin-bottom: 8px;
-      font-size: 0.82rem;
-      color: #475569;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .hashtag-container-box {
-      background: #f8fafc;
-      border: 1px solid var(--border-color);
+    .today-box {
+      background-color: #f0f9ff;
+      border: 1px solid #bae6fd;
       border-radius: 8px;
-      padding: 6px 10px;
-      margin-bottom: 10px;
+      padding: 12px;
+      margin-bottom: 16px;
     }
-    .hashtag-header {
+
+    .today-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.82rem;
-      font-weight: bold;
-      color: #475569;
-      cursor: pointer;
-      user-select: none;
-    }
-    .hashtag-bar {
-      display: none;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-      padding-top: 6px;
-      border-top: 1px solid var(--border-color);
-      max-height: 120px;
-      overflow-y: auto;
+      border-bottom: 1px dashed #93c5fd;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
     }
 
-    .tag-btn {
+    .today-title {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #0369a1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .today-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 8px;
+    }
+
+    .today-card {
+      background: #ffffff;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      border-left: 3px solid var(--primary-color);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    .today-card.duty { border-left-color: var(--duty-color); background-color: #fff7ed; }
+
+    .daily-box {
+      background-color: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .daily-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed #a7f3d0;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .daily-title {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #166534;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .daily-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    .btn-date-nav {
       padding: 2px 8px;
       font-size: 0.75rem;
-      border-radius: 12px;
+      border: 1px solid #a7f3d0;
       background: #ffffff;
-      border: 1px solid #cbd5e1;
-      color: #475569;
-      cursor: pointer;
-      font-weight: 500;
-    }
-    .tag-btn.active {
-      background: var(--primary-color);
-      color: #ffffff;
-      border-color: var(--primary-color);
-      font-weight: bold;
-    }
-
-    .hashtag-link {
-      color: #2563eb;
-      background-color: #eff6ff;
-      padding: 1px 4px;
+      color: #166534;
       border-radius: 4px;
-      font-size: 0.8rem;
       cursor: pointer;
-      font-weight: 500;
-    }
-    .hashtag-link:hover {
-      background-color: #dbeafe;
-      text-decoration: underline;
-    }
-
-    .input-card {
-      background: #f8fafc;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 8px;
-      margin-bottom: 12px;
-    }
-    .select-group {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 6px;
-    }
-    .select-group select {
-      flex: 1;
-      padding: 5px 6px;
-      border-radius: 6px;
-      border: 1px solid var(--border-color);
       font-weight: bold;
-      background: #fff;
-      font-size: 0.82rem;
     }
-    .input-options {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 6px;
-      font-size: 0.8rem;
-      color: #475569;
-    }
-    .input-group {
-      display: flex;
-      gap: 6px;
-    }
-    .input-group input {
-      flex: 1;
-      padding: 7px 9px;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      font-size: 0.85rem;
-      min-width: 0;
-    }
-    .add-btn {
-      background: var(--primary-color);
-      color: #fff;
-      border: none;
-      padding: 7px 12px;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      white-space: nowrap;
-      font-size: 0.85rem;
-    }
+    .btn-date-nav:hover { background: #dcfce7; }
 
-    .log-list { display: flex; flex-direction: column; gap: 6px; }
-    
-    .log-item {
-      background: #fff;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 8px 10px;
+    .daily-list {
       display: flex;
-      align-items: stretch;
-      justify-content: space-between;
+      flex-direction: column;
       gap: 8px;
-      width: 100%;
+    }
+
+    .daily-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
       cursor: grab;
     }
-    .log-item:active { cursor: grabbing; }
-    .log-item.done { opacity: 0.55; }
+    .daily-card:active { cursor: grabbing; }
 
-    /* 🚨 特別重要事項的紅色醒目框樣式 */
-    .log-item.important-log {
-      background-color: #fff5f5;
-      border: 1.5px solid #f87171;
-      box-shadow: 0 1px 3px rgba(239, 68, 68, 0.1);
+    .daily-card-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.3;
     }
-    
-    .log-main { 
-      display: flex; 
-      flex-direction: column; 
-      gap: 4px; 
-      flex: 1; 
-      min-width: 0;
-    }
-    
-    .log-header-line {
+
+    .daily-card-remark {
+      font-size: 0.82rem;
+      color: #475569;
       display: flex;
-      align-items: center;
-      gap: 6px;
+      align-items: flex-start;
+      gap: 4px;
+      line-height: 1.4;
+      flex-wrap: wrap;
     }
 
     .badge {
       font-size: 0.7rem;
-      padding: 1px 5px;
+      padding: 2px 6px;
       border-radius: 4px;
       font-weight: bold;
       white-space: nowrap;
       display: inline-block;
+      align-self: flex-start;
     }
     .badge.task, .badge.Task { background: #e0e7ff; color: #3730a3; }
     .badge.event, .badge.Event { background: #fef3c7; color: #92400e; }
     .badge.note, .badge.Note, .badge.筆記 { background: #f1f5f9; color: #475569; }
 
-    .date-tag {
-      font-size: 0.72rem;
-      color: #64748b;
-    }
-
-    .content-text {
-      font-size: 0.85rem;
-      line-height: 1.35;
-      word-break: break-word;
-      color: #0f172a;
-    }
-
-    .remarks-text {
+    .hashtag {
+      background-color: #eff6ff;
+      color: #2563eb;
       font-size: 0.75rem;
-      color: #64748b;
-      margin-top: 1px;
-      word-break: break-word;
-      line-height: 1.3;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-left: 2px;
     }
 
-    .action-btns-stacked { 
-      display: flex; 
-      flex-direction: column; 
-      gap: 4px; 
-      justify-content: center; 
-      align-items: center; 
-      flex-shrink: 0; 
-      width: 32px;
-    }
-    
-    .btn-icon-only {
-      width: 30px;
-      height: 28px;
-      padding: 0;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      border: 1px solid var(--border-color);
-      background: #fff;
-      cursor: pointer;
+    .calendar-controls {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
+      margin-bottom: 12px;
     }
 
-    .btn-icon-only.done { background: #dcfce7; border-color: #86efac; color: #15803d; }
-    .btn-icon-only.todo { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
-
-    .today-box {
-      background: #f0fdf4;
-      border: 1px solid #86efac;
-      border-radius: 10px;
-      padding: 8px 10px;
-      margin-bottom: 10px;
+    .btn-month {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.85rem;
     }
-    .today-title {
+
+    #monthSelect {
+      padding: 6px 10px;
       font-size: 0.9rem;
       font-weight: bold;
-      color: #166534;
-      margin-bottom: 6px;
-    }
-
-    .overdue-box {
-      background: #fef2f2;
-      border: 1px solid #fca5a5;
-      border-radius: 10px;
-      padding: 8px 10px;
-      margin-top: 10px;
-    }
-    .overdue-title {
-      color: #991b1b;
-      font-weight: bold;
-      font-size: 0.88rem;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      user-select: none;
-    }
-
-    .future-box {
-      background: #f0f9ff;
-      border: 1px solid #bae6fd;
-      border-radius: 10px;
-      padding: 8px 10px;
-      margin-top: 10px;
-    }
-    .future-title {
-      color: #0369a1;
-      font-weight: bold;
-      font-size: 0.88rem;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      user-select: none;
-    }
-
-    .backlog-box {
-      background: #faf5ff;
-      border: 1px solid #e9d5ff;
-      border-radius: 10px;
-      padding: 8px 10px;
-      margin-top: 10px;
-    }
-    .backlog-title {
-      color: #6b21a8;
-      font-weight: bold;
-      font-size: 0.88rem;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      user-select: none;
-    }
-
-    .collapsible-content {
-      margin-top: 6px;
-      display: none;
-    }
-
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.4);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      padding: 12px;
-    }
-    .modal-card {
-      background: #ffffff;
-      border-radius: 14px;
-      width: 100%;
-      max-width: 380px;
-      padding: 16px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    }
-    .modal-title {
-      font-size: 1rem;
-      font-weight: bold;
-      margin-bottom: 12px;
-      color: #1e293b;
-    }
-    .form-group { margin-bottom: 10px; }
-    .form-group label {
-      display: block;
-      font-weight: bold;
-      font-size: 0.8rem;
-      color: #334155;
-      margin-bottom: 3px;
-    }
-    .form-group input, .form-group select, .form-group textarea {
-      width: 100%;
-      padding: 7px;
-      border: 1px solid var(--border-color);
       border-radius: 6px;
-      font-size: 0.85rem;
+      border: 1px solid var(--border-color);
+      background-color: #fff;
     }
-    .modal-actions {
+
+    .legend-container {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-top: 14px;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 0.82rem;
+      flex-wrap: wrap;
     }
-    .modal-right-btns {
+
+    .tag-badge {
+      font-size: 0.72rem;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .badge-cycle { background: #2563eb; color: #fff; }
+    .badge-holiday { background: #ffe4e6; color: #e11d48; border: 1px solid #fecdd3; }
+    .badge-activity { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #cbd5e1;
+      gap: 1px;
+    }
+
+    .calendar-header-day {
+      background-color: var(--header-bg);
+      color: #ffffff;
+      text-align: center;
+      padding: 8px 0;
+      font-weight: bold;
+      font-size: 0.88rem;
+    }
+
+    .day-cell {
+      background-color: #ffffff;
+      min-height: 95px;
+      padding: 6px;
       display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .day-cell.other-month { background-color: #f1f5f9; opacity: 0.6; }
+    .day-cell.is-today { background-color: #e0f2fe; outline: 2px solid #0284c7; outline-offset: -2px; }
+
+    .day-number { font-weight: bold; font-size: 0.88rem; color: #0f172a; }
+
+    .event-tag {
+      font-size: 0.72rem;
+      padding: 3px 5px;
+      border-radius: 4px;
+      line-height: 1.2;
+    }
+
+    .event-cycle { background-color: #eff6ff; color: #1d4ed8; border-left: 3px solid #2563eb; font-weight: bold; }
+    .event-holiday { background-color: #ffe4e6; color: #9f1239; border-left: 3px solid #f43f5e; font-weight: bold; }
+    .event-activity { background-color: #fef3c7; color: #92400e; border-left: 3px solid #f59e0b; font-weight: bold; }
+
+    .calendar-list {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .list-day-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
       gap: 6px;
     }
-    .modal-btn {
-      padding: 7px 12px;
-      border-radius: 6px;
-      font-weight: bold;
-      font-size: 0.82rem;
-      cursor: pointer;
-      border: none;
+
+    .list-day-card.is-today {
+      border-color: #0284c7;
+      background-color: #f0f9ff;
     }
-    .btn-cancel { background: #f1f5f9; color: #475569; }
-    .btn-save { background: var(--primary-color); color: #ffffff; }
-    .btn-delete { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
+
+    .list-day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+      border-bottom: 1px dashed #e2e8f0;
+      padding-bottom: 4px;
+    }
+
+    .list-day-events {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    @media (max-width: 639px) {
+      .calendar-grid { display: none; }
+      .calendar-list { display: flex; }
+    }
+
+    #loading { font-size: 0.88rem; color: #0284c7; font-weight: bold; padding: 12px 0; }
   </style>
 </head>
 <body>
 
-  <!-- Google 登入驗證視窗 -->
-  <div id="authOverlay" class="auth-overlay">
-    <div class="auth-card">
-      <div class="auth-title">⚡ 速記清單</div>
-      <div class="auth-desc">請登入 Google 帳號以驗證身分</div>
-      <div class="google-btn-wrapper">
-        <div id="googleSignInContainer"></div>
+  <div id="loginOverlay">
+    <div class="login-card">
+      <h2>📊 校曆與 Dashboard</h2>
+      <p style="color: #8e8e93; font-size: 0.9rem; margin-bottom: 20px;">請先透過 Google 帳號驗證身分</p>
+      
+      <div id="g_id_onload" 
+           data-client_id="972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com" 
+           data-callback="handleCredentialResponse">
       </div>
+      <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"></div>
+
+      <div id="loginErr" style="color: #ff3b30; font-size: 0.85rem; margin-top: 12px; white-space: pre-line;"></div>
     </div>
   </div>
 
-  <div class="container" id="mainContainer">
+  <div id="mainContent" class="container">
     <div id="navbar" class="nav-tabs"></div>
 
-    <div class="header-bar">
-      <div class="title-group">
-        <span>⚡ 速記清單</span>
-      </div>
-      <div class="user-profile">
-        <span id="userInfo"></span>
-        <button class="logout-btn" onclick="logout()">登出</button>
-      </div>
-      <div class="date-controls">
-        <button class="icon-btn" onclick="changeDate(-1)">◀</button>
-        <input type="date" id="currentDate" class="date-input" onchange="handleDateChange()">
-        <button class="icon-btn" onclick="changeDate(1)">▶</button>
-        <button class="today-btn" onclick="jumpToToday()">今天</button>
-      </div>
-    </div>
-
-    <div id="statusMessage">⏳ 載入資料中...</div>
-
-    <div class="filter-box">
-      <input type="checkbox" id="showCompleted" checked onchange="renderAll()">
-      <label for="showCompleted">顯示已完成事項</label>
-    </div>
-
-    <div id="hashtagWrapperBox" class="hashtag-container-box" style="display:none;">
-      <div class="hashtag-header" onclick="toggleHashtagBar()">
-        <span>🏷️ 標籤篩選庫 (Hashtag) <span id="activeTagIndicator" style="color:var(--primary-color); font-weight:normal;"></span></span>
-        <span id="hashtagArrow">▶</span>
-      </div>
-      <div id="hashtagBar" class="hashtag-bar">
-        <div id="tagContainer" style="display:flex; gap:4px; flex-wrap:wrap; width:100%;"></div>
-      </div>
-    </div>
-
-    <form class="input-card" onsubmit="handleLogSubmit(event)">
-      <div class="select-group">
-        <select id="logType">
-          <option value="Task">• 任務 (Task)</option>
-          <option value="Event">o 事件 (Event)</option>
-          <option value="筆記">- 筆記 (Note)</option>
-        </select>
-        <select id="logEmoji">
-          <option value="">選取 Emoji</option>
-          <option value="📌">📌 釘選</option>
-          <option value="📍">📍 地點</option>
-          <option value="💡">💡 想法</option>
-          <option value="🏫">🏫 學校</option>
-          <option value="📐">📐 數學</option>
-          <option value="📝">📝 筆記</option>
-          <option value="📧">📧 電郵</option>
-          <option value="📞">📞 電話</option>
-          <option value="🛒">🛒 購物</option>
-          <option value="⚠️">⚠️ 緊急</option>
-          <option value="⏳">⏳ 待辦</option>
-          <option value="🎯">🎯 目標</option>
-          <option value="🔥">🔥 重要</option>
-        </select>
-      </div>
-
-      <div class="input-options">
-        <input type="checkbox" id="isBacklog">
-        <label for="isBacklog">無日期 (存入 Backlog 備忘庫)</label>
-      </div>
-
-      <div class="input-group">
-        <input type="text" id="logContent" placeholder="記下事項或筆記... (支援 #標籤)" required>
-        <button type="submit" class="add-btn">新增</button>
-      </div>
-    </form>
-
     <div class="today-box">
-      <div class="today-title">📌 當日工作與筆記</div>
-      <div id="dailyList" class="log-list"></div>
-    </div>
-
-    <div class="overdue-box">
-      <div class="overdue-title" onclick="toggleSection('overdueContent', 'overdueArrow')">
-        <span>⚠️ 待處理及逾期工作 (Overdue)</span>
-        <span id="overdueArrow">▶</span>
+      <div class="today-header">
+        <div class="today-title">📌 今日安排 <span id="todayDateStr" style="font-size: 0.85rem; color: #64748b; font-weight: normal;"></span></div>
+        <div id="todayBadge"></div>
       </div>
-      <div id="overdueContent" class="collapsible-content">
-        <div id="overdueList" class="log-list"></div>
+      <div id="todaySchedule" class="today-grid">
+        <div style="color: #64748b; font-size: 0.85rem;">⏳ 載入今日行程中...</div>
       </div>
     </div>
 
-    <div class="future-box">
-      <div class="future-title" onclick="toggleSection('futureContent', 'futureArrow')">
-        <span>📅 將來預定事項 (Future)</span>
-        <span id="futureArrow">▶</span>
-      </div>
-      <div id="futureContent" class="collapsible-content">
-        <div id="futureList" class="log-list"></div>
-      </div>
-    </div>
-
-    <div class="backlog-box">
-      <div class="backlog-title" onclick="toggleSection('backlogContent', 'backlogArrow')">
-        <span>📥 備忘庫 (Backlog - 暫無日期)</span>
-        <span id="backlogArrow">▶</span>
-      </div>
-      <div id="backlogContent" class="collapsible-content">
-        <div id="backlogList" class="log-list"></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="editModal" class="modal-overlay">
-    <div class="modal-card">
-      <div class="modal-title">✏️ 編輯事項</div>
-      <input type="hidden" id="modalTargetId">
-      <input type="hidden" id="modalOldContent">
-      
-      <div class="form-group">
-        <label>日期 (留空即轉為 Backlog)：</label>
-        <input type="date" id="modalDate">
-      </div>
-      <div class="form-group">
-        <label>種類：</label>
-        <select id="modalType">
-          <option value="Task">Task (任務)</option>
-          <option value="Event">Event (事件)</option>
-          <option value="筆記">筆記 (Note)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>內容：</label>
-        <input type="text" id="modalContent">
-      </div>
-      <div class="form-group">
-        <label>備註 (Remarks)：</label>
-        <textarea id="modalRemarks" rows="2" placeholder="備註內容..."></textarea>
-      </div>
-
-      <div class="modal-actions">
-        <button class="modal-btn btn-delete" onclick="deleteFromModal()">🗑️ 刪除</button>
-        <div class="modal-right-btns">
-          <button class="modal-btn btn-cancel" onclick="closeModal()">取消</button>
-          <button class="modal-btn btn-save" onclick="saveModalEdit()">Storage 儲存</button>
+    <div class="daily-box">
+      <div class="daily-header">
+        <div class="daily-title">📌 當日工作與筆記</div>
+        <div class="daily-ctrl">
+          <span id="dailyDateDisplay" style="font-size: 0.85rem; color: #166534; font-weight: bold; margin-right: 2px;"></span>
+          <button class="btn-date-nav" onclick="changeDailyDate(-1)">◀</button>
+          <button class="btn-date-nav" onclick="changeDailyDate(1)">▶</button>
         </div>
       </div>
+      <div id="todayDailyList" class="daily-list">
+        <div style="color: #64748b; font-size: 0.85rem;">⏳ 載入資料中...</div>
+      </div>
     </div>
+
+    <div class="calendar-controls">
+      <button class="btn-month" onclick="changeMonth(-1)">◀ 上月</button>
+      <select id="monthSelect" onchange="onMonthSelectChange()"></select>
+      <button class="btn-month" onclick="changeMonth(1)">下月 ▶</button>
+    </div>
+
+    <div class="legend-container">
+      <div style="display:flex; align-items:center; gap:4px;"><span class="tag-badge badge-cycle">A-F</span> 循環日</div>
+      <div style="display:flex; align-items:center; gap:4px;"><span class="tag-badge badge-holiday">假期</span> 學校假期</div>
+      <div style="display:flex; align-items:center; gap:4px;"><span class="tag-badge badge-activity">活動</span> 特別活動</div>
+    </div>
+
+    <div id="loading">⏳ 正在載入校曆與時間表...</div>
+
+    <div id="calendarGrid" class="calendar-grid"></div>
+
+    <div id="calendarList" class="calendar-list"></div>
   </div>
 
   <script>
-    let allLogs = [];
-    let selectedTag = 'all';
-
-    function getTodayString() {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+    function parseJwt(token) {
+      try {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+      } catch (e) { return null; }
     }
 
-    let currentDateStr = getTodayString();
-
-    function initGoogleSignIn() {
-      if (typeof CONFIG !== 'undefined' && CONFIG.GOOGLE_CLIENT_ID) {
-        google.accounts.id.initialize({
-          client_id: CONFIG.GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse
-        });
-        google.accounts.id.renderButton(
-          document.getElementById("googleSignInContainer"),
-          { theme: "outline", size: "large", type: "standard", shape: "rectangular" }
-        );
+    function handleCredentialResponse(response) {
+      const payload = parseJwt(response.credential);
+      if (!payload || !payload.email) {
+        document.getElementById('loginErr').innerText = "❌ 驗證失敗：無法讀取登入資訊";
+        return;
       }
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      loadNavbar();
-      document.getElementById('currentDate').value = currentDateStr;
-
-      if (typeof CONFIG === 'undefined') {
-        showStatus('❌ 找不到 config.js 設定', '#ef4444');
+      const userEmail = payload.email.toLowerCase().trim();
+      
+      if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
+        const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
+        if (!cleanList.includes(userEmail)) {
+          document.getElementById('loginErr').innerText = `⚠️ 存取被拒：\n${userEmail}\n未獲授權使用此系統。`;
+          return;
+        }
+      } else {
+        document.getElementById('loginErr').innerText = `⚠️ 系統錯誤：無法讀取白名單清單。`;
         return;
       }
 
-      const savedEmail = sessionStorage.getItem("user_google_email") || (sessionStorage.getItem("google_user") ? JSON.parse(sessionStorage.getItem("google_user")).email : null);
-          
+      sessionStorage.setItem("user_google_email", userEmail);
+      sessionStorage.setItem("google_user", JSON.stringify({
+        name: payload.name,
+        email: userEmail,
+        picture: payload.picture
+      }));
+      
+      initializeApp();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedEmail = sessionStorage.getItem("user_google_email");
+      
       if (savedEmail && typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
         const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
         if (cleanList.includes(savedEmail.toLowerCase().trim())) {
@@ -734,83 +488,64 @@
           return;
         }
       }
-      
-      checkLoginStatus();
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('mainContent').style.display = 'none';
     });
 
     function initializeApp() {
       if (window.google && window.google.accounts && window.google.accounts.id) {
         window.google.accounts.id.cancel();
       }
-      document.getElementById('authOverlay').style.display = 'none';
-      document.getElementById('mainContainer').style.display = 'block';
-      loadLogsData();
-    }
 
-    function parseJwt(token) {
-      try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        return JSON.parse(jsonPayload);
-      } catch(e) {
-        return null;
-      }
-    }
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
 
-    function handleCredentialResponse(response) {
-      const payload = parseJwt(response.credential);
-      if (payload && payload.email) {
-        const userEmail = payload.email.toLowerCase().trim();
-        if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
-          const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
-          if (!cleanList.includes(userEmail)) {
-            alert(`⚠️ 存取被拒：帳號 (${userEmail}) 未獲授權使用此系統。`);
-            return;
-          }
+      loadNavbar();
+      
+      Papa.parse(CSV_URL, {
+        download: true, header: true, skipEmptyLines: true,
+        complete: (results) => {
+          processCalendarData(results.data);
+          loadTimetable();
+          loadDailyLog();
+        },
+        error: (err) => {
+          console.error("校曆載入失敗:", err);
+          document.getElementById('loading').textContent = '⚠️ 校曆資料讀取失敗，請確認網頁路徑';
+          loadTimetable();
+          loadDailyLog();
         }
-
-        sessionStorage.setItem("user_google_email", userEmail);
-        sessionStorage.setItem('google_user', JSON.stringify({
-          name: payload.name,
-          email: userEmail,
-          picture: payload.picture
-        }));
-        sessionStorage.setItem('google_token', response.credential);
-        initializeApp();
-      }
+      });
     }
 
-    function checkLoginStatus() {
-      const userStr = sessionStorage.getItem('google_user');
-      if (userStr) {
-        initializeApp();
-      } else {
-        document.getElementById('authOverlay').style.display = 'flex';
-        document.getElementById('mainContainer').style.display = 'none';
-      }
+    const CSV_URL = 'Sch Calendar-Grid view.csv';
+    
+    const GOOGLE_SHEET_ID = (typeof CONFIG !== 'undefined' && CONFIG.DAILY_SHEET_ID) ? CONFIG.DAILY_SHEET_ID : '';
+    const DAILY_GID = (typeof CONFIG !== 'undefined' && CONFIG.GIDS && CONFIG.GIDS.DAILY_LOG) ? CONFIG.GIDS.DAILY_LOG : '0';
+
+    const TIMETABLE_CSV_URL = GOOGLE_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=timetable&t=${new Date().getTime()}` : '';
+    const DAILY_CSV_URL = GOOGLE_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${DAILY_GID}&t=${new Date().getTime()}` : '';
+
+    let calendarData = {};
+    let timetableRows = [];
+    let dailyRows = [];
+    let availableMonths = [];
+    let currentYearMonth = '';
+    
+    function getTodayString() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     }
 
-    function logout() {
-      sessionStorage.removeItem('google_user');
-      sessionStorage.removeItem('user_google_email');
-      sessionStorage.removeItem('google_token');
-      location.reload();
-    }
-
-    function showStatus(text, color = '#6366f1') {
-      const msg = document.getElementById('statusMessage');
-      if (msg) {
-        msg.style.color = color;
-        msg.textContent = text;
-      }
-    }
+    const todayStr = getTodayString();
+    let selectedDailyDate = todayStr;
 
     function loadNavbar() {
       fetch('nav.html')
-        .then(res => res.text())
+        .then(response => response.text())
         .then(data => {
           const navContainer = document.getElementById('navbar');
           if (navContainer) {
@@ -820,184 +555,103 @@
               if (link.getAttribute('href') === currentPath) link.classList.add('active');
             });
           }
-        })
-        .catch(err => console.log('導覽列載入失敗', err));
+        }).catch(err => console.log('導覽列載入失敗:', err));
     }
 
-    function extractHashtags(text) {
-      if (!text) return [];
-      const matches = text.match(/#([\u4e00-\u9fa5\w_]+)/g);
-      return matches ? matches.map(tag => tag.substring(1)) : [];
-    }
-
-    function formatContentWithTags(text) {
-      if (!text) return '';
-      return text.replace(/#([\u4e00-\u9fa5\w_]+)/g, '<span class="hashtag-link" onclick="filterByTag(\'$1\')">#$1</span>');
-    }
-
-    function loadLogsData() {
-      const sheetId = CONFIG.DAILY_SHEET_ID;
-      const gid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_LOG : '0';
-
-      if (!sheetId) {
-        showStatus('❌ config.js 中缺少 DAILY_SHEET_ID', '#ef4444');
+    function loadTimetable() {
+      if (!TIMETABLE_CSV_URL) {
+        document.getElementById('todaySchedule').innerHTML = '<div style="color:#ef4444; font-size:0.85rem;">❌ 未設定 DAILY_SHEET_ID</div>';
+        document.getElementById('loading').style.display = 'none';
         return;
       }
-
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&t=${new Date().getTime()}`;
-
-      Papa.parse(csvUrl, {
-        download: true,
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          allLogs = parseLogs(results.data);
-          showStatus('');
-          renderHashtagBar();
-          renderAll();
+      Papa.parse(TIMETABLE_CSV_URL, {
+        download: true, header: true, skipEmptyLines: true,
+        complete: (res) => {
+          if (res.data) timetableRows = res.data;
+          document.getElementById('loading').style.display = 'none';
+          renderTodaySchedule();
         },
         error: () => {
-          showStatus('❌ 讀取失敗，請確認 Google Sheet 已設定公開權限', '#ef4444');
+          document.getElementById('todaySchedule').innerHTML = '<div style="color:#64748b; font-size:0.85rem;">無法載入時間表資料</div>';
+          document.getElementById('loading').style.display = 'none';
         }
       });
     }
 
-    function parseLogs(rows) {
-      if (!rows) return [];
-      return rows.map((r, i) => {
-        const v = Object.values(r);
-        const content = r.Content || r.content || v[3] || '';
-        const remarks = r.Remarks || r.remarks || v[5] || '';
-        const combinedText = content + ' ' + remarks;
-
-        return {
-          id: r.ID || r.id || v[0] || `L_${i}`,
-          date: r.Date || r.date || v[1] || '',
-          type: r.Type || r.type || v[2] || 'Task',
-          content: content,
-          status: r.Status || r.status || v[4] || 'Pending',
-          remarks: remarks,
-          tags: extractHashtags(combinedText)
-        };
-      });
-    }
-
-    function toggleHashtagBar() {
-      const bar = document.getElementById('hashtagBar');
-      const arrow = document.getElementById('hashtagArrow');
-      if (bar.style.display === 'none' || bar.style.display === '') {
-        bar.style.display = 'flex';
-        arrow.textContent = '▼';
-      } else {
-        bar.style.display = 'none';
-        arrow.textContent = '▶';
+    function normalizeDateStr(dateStr) {
+      if (!dateStr) return '';
+      let cleaned = dateStr.toString().trim().replace(/\//g, '-').replace(/\./g, '-');
+      const parts = cleaned.split('-');
+      if (parts.length === 3) {
+        let y = parts[0].trim();
+        if (y.length === 2) y = '20' + y;
+        const m = parts[1].trim().padStart(2, '0');
+        const d = parts[2].trim().padStart(2, '0');
+        return `${y}-${m}-${d}`;
       }
+      return cleaned;
     }
 
-    function renderHashtagBar() {
-      const tagContainer = document.getElementById('tagContainer');
-      const wrapperBox = document.getElementById('hashtagWrapperBox');
-      const indicator = document.getElementById('activeTagIndicator');
-      if (!tagContainer) return;
-
-      const tagMap = {};
-      allLogs.forEach(r => {
-        if (r.tags) {
-          r.tags.forEach(t => tagMap[t] = (tagMap[t] || 0) + 1);
-        }
-      });
-
-      const uniqueTags = Object.keys(tagMap);
-      if (uniqueTags.length === 0) {
-        wrapperBox.style.display = 'none';
+    function loadDailyLog() {
+      if (!DAILY_CSV_URL) {
+        document.getElementById('todayDailyList').innerHTML = '<div style="color:#ef4444; font-size:0.85rem;">❌ 未設定 GIDS.DAILY_LOG</div>';
         return;
       }
 
-      wrapperBox.style.display = 'block';
-      if (selectedTag === 'all') {
-        indicator.textContent = '';
-      } else {
-        indicator.textContent = `(目前: #${selectedTag})`;
-      }
+      Papa.parse(DAILY_CSV_URL, {
+        download: true, 
+        header: true, 
+        skipEmptyLines: true,
+        complete: (res) => {
+          if (res.data) {
+            dailyRows = res.data.map((r, i) => {
+              const v = Object.values(r);
+              return {
+                id: r.ID || r.id || v[0] || `L_${i}`,
+                parsedDate: normalizeDateStr(r.Date || r.date || v[1] || ''),
+                parsedType: r.Type || r.type || v[2] || 'Task',
+                parsedContent: r.Content || r.content || v[3] || '',
+                parsedStatus: r.Status || r.status || v[4] || 'Pending',
+                parsedRemarks: r.Remarks || r.remarks || v[5] || '' 
+              };
+            });
 
-      let html = `<button class="tag-btn ${selectedTag === 'all' ? 'active' : ''}" onclick="filterByTag('all')">全部</button>`;
-      uniqueTags.forEach(t => {
-        html += `<button class="tag-btn ${selectedTag === t ? 'active' : ''}" onclick="filterByTag('${t}')">#${t} (${tagMap[t]})</button>`;
+            renderDailyLog();
+          }
+        },
+        error: (err) => {
+          console.error("載入速記失敗:", err);
+          document.getElementById('todayDailyList').innerHTML = `<div style="color:#ef4444; font-size:0.85rem;">❌ 載入失敗，請檢查權限</div>`;
+        }
       });
-      tagContainer.innerHTML = html;
     }
 
-    function filterByTag(tag) {
-      selectedTag = tag;
-      renderHashtagBar();
-      renderAll();
+    function formatHashtags(text) {
+      if (!text) return '';
+      return text.replace(/#([\w\u4e00-\u9fa5]+)/g, '<span class="hashtag">#$1</span>');
     }
 
-    function jumpToToday() {
-      currentDateStr = getTodayString();
-      document.getElementById('currentDate').value = currentDateStr;
-      renderAll();
-    }
+    function renderDailyLog() {
+      const container = document.getElementById('todayDailyList');
+      const dateDisplay = document.getElementById('dailyDateDisplay');
+      if (!container) return;
 
-    function changeDate(days) {
-      const d = new Date(currentDateStr);
-      d.setDate(d.getDate() + days);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      currentDateStr = `${year}-${month}-${day}`;
-      document.getElementById('currentDate').value = currentDateStr;
-      renderAll();
-    }
-
-    function handleDateChange() {
-      currentDateStr = document.getElementById('currentDate').value;
-      renderAll();
-    }
-
-    function renderAll() {
-      renderDailyLogs();
-      renderOverdue();
-      renderFuture();
-      renderBacklog();
-    }
-
-    function isItemDone(status) {
-      return status === '完成' || status === 'Done';
-    }
-
-    function passesTagFilter(item) {
-      if (selectedTag === 'all') return true;
-      return item.tags && item.tags.includes(selectedTag);
-    }
-
-    function toggleSection(contentId, arrowId) {
-      const content = document.getElementById(contentId);
-      const arrow = document.getElementById(arrowId);
-      if (content.style.display === 'none' || content.style.display === '') {
-        content.style.display = 'block';
-        arrow.textContent = '▼';
-      } else {
-        content.style.display = 'none';
-        arrow.textContent = '▶';
-      }
-    }
-
-    function renderDailyLogs() {
-      const container = document.getElementById('dailyList');
       container.innerHTML = '';
+      const isToday = (selectedDailyDate === todayStr);
+      if (dateDisplay) dateDisplay.textContent = `${selectedDailyDate}${isToday ? ' (今天)' : ''}`;
 
-      const showCompleted = document.getElementById('showCompleted').checked;
-      let currentLogs = allLogs.filter(item => {
-        if (item.date !== currentDateStr) return false;
-        if (!showCompleted && isItemDone(item.status)) return false;
-        if (!passesTagFilter(item)) return false;
-        return true;
+      const targetDate = normalizeDateStr(selectedDailyDate);
+      
+      let logs = dailyRows.filter(r => {
+        const status = r.parsedStatus;
+        const isDone = (status === 'Done' || status === '完成' || status === '已完成');
+        return r.parsedDate === targetDate && !isDone;
       });
 
-      const savedOrder = JSON.parse(localStorage.getItem(`daily_order_${currentDateStr}`) || '[]');
+      // 從 localStorage 讀取該日期的自訂次序
+      const savedOrder = JSON.parse(localStorage.getItem(`daily_order_${selectedDailyDate}`) || '[]');
       if (savedOrder.length > 0) {
-        currentLogs.sort((a, b) => {
+        logs.sort((a, b) => {
           let indexA = savedOrder.indexOf(a.id);
           let indexB = savedOrder.indexOf(b.id);
           if (indexA === -1) indexA = 9999;
@@ -1006,297 +660,233 @@
         });
       }
 
-      if (currentLogs.length === 0) {
-        container.innerHTML = '<div style="color:#64748b; font-size:0.82rem; text-align:center; padding:6px;">當日無任何紀錄項目</div>';
+      if (logs.length === 0) {
+        container.innerHTML = `<div style="color:#64748b; font-size:0.85rem; padding: 6px 0;">當日無未完成事項。</div>`;
         return;
       }
 
-      currentLogs.forEach(item => {
-        container.appendChild(createLogElement(item, false));
+      logs.forEach(item => {
+        const type = item.parsedType;
+        const content = item.parsedContent;
+        const remarks = item.parsedRemarks;
+
+        let badgeClass = 'task';
+        if (type === '事件' || type === 'Event') badgeClass = 'event';
+        if (type === '筆記' || type === 'Note') badgeClass = 'note';
+
+        const div = document.createElement('div');
+        div.className = 'daily-card';
+        div.setAttribute('data-id', item.id);
+        
+        const formattedRemark = formatHashtags(remarks ? remarks.replace(/\n/g, '<br>') : '');
+
+        div.innerHTML = `
+          <span class="badge ${badgeClass}">${type}</span>
+          <div class="daily-card-title">${content}</div>
+          ${remarks ? `<div class="daily-card-remark">💬 ${formattedRemark}</div>` : ''}
+        `;
+        container.appendChild(div);
       });
 
+      // 啟用 SortableJS 並儲存次序至 localStorage
       if (typeof Sortable !== 'undefined') {
         Sortable.create(container, {
           animation: 150,
           onEnd: function (evt) {
-            const movedItem = currentLogs[evt.oldIndex];
-            currentLogs.splice(evt.oldIndex, 1);
-            currentLogs.splice(evt.newIndex, 0, movedItem);
+            const movedItem = logs[evt.oldIndex];
+            logs.splice(evt.oldIndex, 1);
+            logs.splice(evt.newIndex, 0, movedItem);
 
-            const newOrderIds = currentLogs.map(item => item.id);
-            localStorage.setItem(`daily_order_${currentDateStr}`, JSON.stringify(newOrderIds));
+            const newOrderIds = logs.map(item => item.id);
+            localStorage.setItem(`daily_order_${selectedDailyDate}`, JSON.stringify(newOrderIds));
           }
         });
       }
     }
 
-    function renderOverdue() {
-      const container = document.getElementById('overdueList');
-      container.innerHTML = '';
-      const todayStr = getTodayString();
+    function changeDailyDate(days) {
+      const parts = selectedDailyDate.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setDate(d.getDate() + days);
+      
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      selectedDailyDate = `${y}-${m}-${day}`;
+      renderDailyLog();
+    }
 
-      const overdueItems = allLogs.filter(item => {
-        if (!item.date || item.date >= todayStr || isItemDone(item.status)) return false;
-        if (!passesTagFilter(item)) return false;
-        return true;
+    function processCalendarData(rows) {
+      const monthSet = new Set();
+      rows.forEach(row => {
+        if (!row.Date) return;
+        const parts = row.Date.split('/');
+        if (parts.length === 3) {
+          const formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+          const ym = `${parts[2]}-${parts[1].padStart(2, '0')}`;
+
+          calendarData[formattedDate] = {
+            weekday: row['Weekday'] || '',
+            cycleDay: row['Cycle Day'] || '',
+            holiday: row['Sch Holiday/Special Sch Day'] || '',
+            activity: row['Special Activity'] || ''
+          };
+          monthSet.add(ym);
+        }
       });
 
-      if (overdueItems.length === 0) {
-        container.innerHTML = '<div style="color:#059669; font-size:0.82rem;">✅ 目前沒有逾期的待辦事項</div>';
+      availableMonths = Array.from(monthSet).sort();
+      const select = document.getElementById('monthSelect');
+      select.innerHTML = '';
+      availableMonths.forEach(ym => {
+        const [y, m] = ym.split('-');
+        const opt = document.createElement('option');
+        opt.value = ym;
+        opt.textContent = `${y} 年 ${parseInt(m, 10)} 月`;
+        select.appendChild(opt);
+      });
+
+      const todayYM = todayStr.substring(0, 7);
+      currentYearMonth = availableMonths.includes(todayYM) ? todayYM : (availableMonths[0] || '');
+      select.value = currentYearMonth;
+
+      renderCalendar(currentYearMonth);
+    }
+
+    function renderTodaySchedule() {
+      const todayInfo = calendarData[todayStr];
+      const todayBox = document.getElementById('todaySchedule');
+      const todayDateStr = document.getElementById('todayDateStr');
+      const todayBadge = document.getElementById('todayBadge');
+
+      const d = new Date();
+      const dateDisplay = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+      if (todayDateStr) todayDateStr.textContent = `(${dateDisplay})`;
+
+      if (!todayInfo) {
+        if (todayBox) todayBox.innerHTML = `<div style="color:#64748b; font-size:0.85rem;">今日無校曆紀錄或為放假日。</div>`;
         return;
       }
 
-      overdueItems.forEach(item => {
-        container.appendChild(createLogElement(item, true));
+      let badgeHtml = '';
+      if (todayInfo.cycleDay && todayInfo.cycleDay !== '-') badgeHtml += `<span class="tag-badge badge-cycle">${todayInfo.cycleDay}</span> `;
+      if (todayInfo.holiday) badgeHtml += `<span class="tag-badge badge-holiday">${todayInfo.holiday}</span> `;
+      if (todayInfo.activity) badgeHtml += `<span class="tag-badge badge-activity">${todayInfo.activity}</span>`;
+      if (todayBadge) todayBadge.innerHTML = badgeHtml;
+
+      const cycle = String(todayInfo.cycleDay || '').trim();
+      const matched = timetableRows.filter(r => {
+        const rDay = String(r['Cycle'] || r['循環日'] || '').trim();
+        return rDay && rDay.toLowerCase() === cycle.toLowerCase();
       });
-    }
 
-    function renderFuture() {
-      const container = document.getElementById('futureList');
-      container.innerHTML = '';
-      const todayStr = getTodayString();
-
-      const showCompleted = document.getElementById('showCompleted').checked;
-      const futureItems = allLogs.filter(item => {
-        if (!item.date || item.date <= todayStr) return false;
-        if (!showCompleted && isItemDone(item.status)) return false;
-        if (!passesTagFilter(item)) return false;
-        return true;
-      }).sort((a, b) => a.date.localeCompare(b.date));
-
-      if (futureItems.length === 0) {
-        container.innerHTML = '<div style="color:#0284c7; font-size:0.82rem;">📅 目前沒有將來預定事項</div>';
+      if (matched.length === 0) {
+        if (todayBox) todayBox.innerHTML = `<div style="color:#64748b; font-size:0.85rem;">今日沒有預定的課堂或當值安排。</div>`;
         return;
       }
 
-      futureItems.forEach(item => {
-        container.appendChild(createLogElement(item, true));
-      });
-    }
+      let cardsHtml = '';
+      matched.forEach(item => {
+        const period = item['Period'] || item['課節'] || '';
+        const subject = item['Subject'] || item['科目'] || '';
+        const className = item['Class'] || item['班別'] || '';
+        const room = item['Room'] || item['地點'] || '';
+        const duty = item['Break Duty'] || item['Playtime Duty'] || item['Lunch Duty'] || item['Dismissal Duty'] || '';
 
-    function renderBacklog() {
-      const container = document.getElementById('backlogList');
-      container.innerHTML = '';
-
-      const showCompleted = document.getElementById('showCompleted').checked;
-      const backlogItems = allLogs.filter(item => {
-        if (item.date && item.date.trim() !== '') return false;
-        if (!showCompleted && isItemDone(item.status)) return false;
-        if (!passesTagFilter(item)) return false;
-        return true;
+        if (duty) cardsHtml += `<div class="today-card duty"><b>📢 當值：</b>${duty}</div>`;
+        if (subject) cardsHtml += `<div class="today-card"><b>${period}：</b>${subject} (${className}) <span style="color:#64748b;">📍${room}</span></div>`;
       });
 
-      if (backlogItems.length === 0) {
-        container.innerHTML = '<div style="color:#7e22ce; font-size:0.82rem;">📥 備忘庫空空如也</div>';
-        return;
-      }
-
-      backlogItems.forEach(item => {
-        container.appendChild(createLogElement(item, false));
-      });
+      if (todayBox) todayBox.innerHTML = cardsHtml;
     }
 
-    function createLogElement(item, showDateTag) {
-      const isDone = isItemDone(item.status);
-      
-      // 🔍 檢查是否包含特別重要的 hashtag 或 emoji（例如：#important, #urgent, #重要, 🔥, ⚠️）
-      const combinedText = (item.content || '') + ' ' + (item.remarks || '');
-      const isImportant = combinedText.includes('#important') || 
-                          combinedText.includes('#urgent') || 
-                          combinedText.includes('#重要') || 
-                          combinedText.includes('🔥') || 
-                          combinedText.includes('⚠️');
+    function renderCalendar(ym) {
+      const grid = document.getElementById('calendarGrid');
+      const list = document.getElementById('calendarList');
+      if (!grid || !list) return;
+      grid.innerHTML = '';
+      list.innerHTML = '';
 
-      const div = document.createElement('div');
-      div.className = `log-item ${isDone ? 'done' : ''} ${isImportant ? 'important-log' : ''}`;
-      div.setAttribute('data-id', item.id);
+      if (!ym) return;
 
-      let badgeClass = 'task';
-      if (item.type === '事件' || item.type === 'Event') badgeClass = 'event';
-      if (item.type === '筆記' || item.type === 'Note') badgeClass = 'note';
+      const [year, month] = ym.split('-').map(Number);
+      const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
-      const formattedContent = formatContentWithTags(item.content);
-      const formattedRemarks = formatContentWithTags(item.remarks);
-
-      div.innerHTML = `
-        <div class="log-main">
-          <div class="log-header-line">
-            <span class="badge ${badgeClass}">${item.type}</span>
-            ${showDateTag && item.date ? `<span class="date-tag">(${item.date})</span>` : ''}
-          </div>
-          <div class="content-text">${formattedContent}</div>
-          ${item.remarks ? `<div class="remarks-text">💬 ${formattedRemarks}</div>` : ''}
-        </div>
-        <div class="action-btns-stacked">
-          <button class="btn-icon-only" onclick="openModal('${item.id}')" title="編輯">✏️</button>
-          <button class="btn-icon-only ${isDone ? 'done' : 'todo'}" onclick="toggleStatus('${item.id}')">
-            ${isDone ? '✓' : '⏳'}
-          </button>
-        </div>
-      `;
-      return div;
-    }
-
-    function openModal(id) {
-      const target = allLogs.find(l => l.id === id);
-      if (!target) return;
-
-      document.getElementById('modalTargetId').value = target.id;
-      document.getElementById('modalOldContent').value = target.content;
-      document.getElementById('modalDate').value = target.date || '';
-      document.getElementById('modalType').value = target.type;
-      document.getElementById('modalContent').value = target.content;
-      document.getElementById('modalRemarks').value = target.remarks || '';
-
-      document.getElementById('editModal').style.display = 'flex';
-    }
-
-    function closeModal() {
-      document.getElementById('editModal').style.display = 'none';
-    }
-
-    function saveModalEdit() {
-      const id = document.getElementById('modalTargetId').value;
-      const oldContent = document.getElementById('modalOldContent').value;
-      const newDate = document.getElementById('modalDate').value;
-      const newType = document.getElementById('modalType').value;
-      const newContent = document.getElementById('modalContent').value.trim();
-      const newRemarks = document.getElementById('modalRemarks').value.trim();
-
-      if (!newContent) return;
-
-      const target = allLogs.find(l => l.id === id || l.content === oldContent);
-      if (target) {
-        target.date = newDate;
-        target.type = newType;
-        target.content = newContent;
-        target.remarks = newRemarks;
-        target.tags = extractHashtags(newContent + ' ' + newRemarks);
-      }
-
-      closeModal();
-      renderHashtagBar();
-      renderAll();
-
-      showStatus('⏳ 正在同步更新至 Google Sheet...');
-      const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
-      if (apiUrl) {
-        const params = new URLSearchParams({
-          action: 'editLog',
-          key: CONFIG.SECRET_KEY || '',
-          id: id,
-          oldContent: oldContent,
-          date: newDate,
-          type: newType,
-          content: newContent,
-          remarks: newRemarks
-        });
-
-        fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' })
-          .then(() => showStatus(''))
-          .catch(() => showStatus('❌ 更新寫入失敗', '#ef4444'));
-      }
-    }
-
-    function deleteFromModal() {
-      const id = document.getElementById('modalTargetId').value;
-      if (!id) return;
-
-      if (!confirm('確定要刪除這筆事項嗎？')) return;
-
-      const targetIndex = allLogs.findIndex(l => l.id === id);
-      if (targetIndex === -1) return;
-
-      const target = allLogs[targetIndex];
-      allLogs.splice(targetIndex, 1);
-
-      closeModal();
-      renderHashtagBar();
-      renderAll();
-
-      showStatus('⏳ 正在從 Google Sheet 刪除...');
-      const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
-      if (apiUrl) {
-        const params = new URLSearchParams({
-          action: 'deleteLog',
-          key: CONFIG.SECRET_KEY || '',
-          id: id,
-          content: target.content
-        });
-        fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' })
-          .then(() => showStatus(''))
-          .catch(() => showStatus('❌ 刪除寫入失敗', '#ef4444'));
-      }
-    }
-
-    function toggleStatus(id) {
-      const target = allLogs.find(l => l.id === id);
-      if (!target) return;
-
-      const isDone = isItemDone(target.status);
-      const newStatus = isDone ? 'Pending' : '完成';
-      
-      target.status = newStatus;
-      renderAll();
-
-      const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
-      if (apiUrl) {
-        const params = new URLSearchParams({
-          action: 'toggleLog',
-          key: CONFIG.SECRET_KEY || '',
-          id: target.id,
-          content: target.content,
-          status: newStatus
-        });
-        fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' });
-      }
-    }
-
-    function handleLogSubmit(e) {
-      e.preventDefault();
-      const type = document.getElementById('logType').value;
-      const emoji = document.getElementById('logEmoji').value;
-      const isBacklog = document.getElementById('isBacklog').checked;
-      let rawContent = document.getElementById('logContent').value.trim();
-
-      if (!rawContent) return;
-
-      const finalContent = emoji ? `${emoji} ${rawContent}` : rawContent;
-      const targetDate = isBacklog ? "" : currentDateStr;
-      const newId = 'L' + new Date().getTime();
-
-      allLogs.push({
-        id: newId,
-        date: targetDate,
-        type: type,
-        content: finalContent,
-        status: 'Pending',
-        remarks: '',
-        tags: extractHashtags(finalContent)
+      weekDays.forEach(day => {
+        const header = document.createElement('div');
+        header.className = 'calendar-header-day';
+        header.textContent = day;
+        grid.appendChild(header);
       });
 
-      document.getElementById('logContent').value = '';
-      document.getElementById('isBacklog').checked = false;
-      
-      renderHashtagBar();
-      renderAll();
+      const startingDayOfWeek = new Date(year, month - 1, 1).getDay();
+      const daysInMonth = new Date(year, month, 0).getDate();
 
-      const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
-      if (apiUrl) {
-        const params = new URLSearchParams({
-          action: 'addLog',
-          key: CONFIG.SECRET_KEY || '',
-          id: newId,
-          date: targetDate,
-          type: type,
-          content: finalContent,
-          status: 'Pending',
-          remarks: ''
-        });
-        fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' });
+      for (let i = 0; i < startingDayOfWeek; i++) {
+        grid.appendChild(createCell('day-cell other-month', ''));
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const monthStr = String(month).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const fullDateStr = `${year}-${monthStr}-${dayStr}`;
+        const data = calendarData[fullDateStr];
+        const isToday = (fullDateStr === todayStr);
+
+        let gridContent = `<div class="day-number">${day}</div>`;
+        if (data) {
+          if (data.cycleDay && data.cycleDay !== '-') gridContent += `<div class="event-tag event-cycle">${data.cycleDay}</div>`;
+          if (data.holiday) gridContent += `<div class="event-tag event-holiday">${data.holiday}</div>`;
+          if (data.activity) gridContent += `<div class="event-tag event-activity">${data.activity}</div>`;
+        }
+        grid.appendChild(createCell(`day-cell ${isToday ? 'is-today' : ''}`, gridContent));
+
+        if (data && (data.cycleDay || data.holiday || data.activity || isToday)) {
+          const dayOfWeekText = weekDays[new Date(year, month - 1, day).getDay()];
+          let listHtml = `
+            <div class="list-day-header">
+              <span>${month}月${day}日 (${dayOfWeekText}) ${isToday ? '📌 今日' : ''}</span>
+              ${data.cycleDay && data.cycleDay !== '-' ? `<span class="tag-badge badge-cycle">${data.cycleDay}</span>` : ''}
+            </div>
+            <div class="list-day-events">
+              ${data.holiday ? `<span class="event-tag event-holiday">🚩 ${data.holiday}</span>` : ''}
+              ${data.activity ? `<span class="event-tag event-activity">⭐ ${data.activity}</span>` : ''}
+            </div>
+          `;
+          const listCard = document.createElement('div');
+          listCard.className = `list-day-card ${isToday ? 'is-today' : ''}`;
+          listCard.innerHTML = listHtml;
+          list.appendChild(listCard);
+        }
+      }
+
+      const totalRendered = startingDayOfWeek + daysInMonth;
+      const remainingCells = (7 - (totalRendered % 7)) % 7;
+      for (let i = 0; i < remainingCells; i++) {
+        grid.appendChild(createCell('day-cell other-month', ''));
+      }
+    }
+
+    function createCell(className, content) {
+      const cell = document.createElement('div');
+      cell.className = className;
+      cell.innerHTML = content;
+      return cell;
+    }
+
+    function onMonthSelectChange() {
+      currentYearMonth = document.getElementById('monthSelect').value;
+      renderCalendar(currentYearMonth);
+    }
+
+    function changeMonth(delta) {
+      const idx = availableMonths.indexOf(currentYearMonth);
+      if (idx !== -1 && idx + delta >= 0 && idx + delta < availableMonths.length) {
+        currentYearMonth = availableMonths[idx + delta];
+        document.getElementById('monthSelect').value = currentYearMonth;
+        renderCalendar(currentYearMonth);
       }
     }
   </script>
-
 </body>
 </html>
