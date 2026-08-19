@@ -207,6 +207,7 @@
       font-size: 0.9rem;
     }
     .log-content { display: flex; flex-direction: column; gap: 3px; }
+    .log-text { font-weight: bold; color: #0f172a; } /* 粗體樣式類別 */
     .log-meta { font-size: 0.75rem; color: #64748b; display: flex; gap: 8px; }
     .badge {
       font-size: 0.7rem;
@@ -492,7 +493,7 @@
         div.className = 'log-item';
         div.innerHTML = `
           <div class="log-content">
-            <div><span class="badge ${item.type}">${item.type}</span> ${item.content}</div>
+            <div><span class="badge ${item.type}">${item.type}</span> <span class="log-text">${item.content}</span></div>
             <div class="log-meta">
               <span>📅 ${item.date}</span>
               <span class="badge ${isDone ? 'done' : 'pending'}">${item.status}</span>
