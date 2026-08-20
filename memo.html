@@ -3,17 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- iOS 主畫面圖示 (Apple Touch Icon) -->
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
 
-<!-- 瀏覽器分頁 Favicon 圖示 (包含 📐 數學尺與 📝 Memo 主題) -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📐</text></svg>">
+  <!-- WebApp 圖示設定 -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📐</text></svg>">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="數學Memo">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-<!-- Android / Chrome 主畫面設定 -->
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="數學Memo">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>數學科 Teaching Memo App</title>
   <style>
     :root {
@@ -24,9 +22,9 @@
       --text: #333333;
       --border: #e0e0e0;
       
-      --color-2a: #2b5c8f; /* 藍色 */
-      --color-2b: #2e7d32; /* 綠色 */
-      --color-4e: #6a1b9a; /* 紫色 */
+      --color-2a: #2b5c8f;
+      --color-2b: #2e7d32;
+      --color-4e: #6a1b9a;
     }
 
     body {
@@ -34,7 +32,7 @@
       background-color: var(--bg-color);
       color: var(--text);
       margin: 0;
-      padding: 20px;
+      padding: 16px;
     }
 
     .container { max-width: 1100px; margin: 0 auto; }
@@ -43,7 +41,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .controls {
@@ -51,7 +49,7 @@
       gap: 10px;
       flex-wrap: wrap;
       background: var(--card-bg);
-      padding: 15px;
+      padding: 12px 15px;
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
       margin-bottom: 20px;
@@ -63,16 +61,16 @@
       color: white;
       border: none;
       padding: 8px 16px;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
+      font-weight: 500;
       transition: opacity 0.2s;
     }
 
     button:hover { opacity: 0.9; }
     button.secondary { background: #6c757d; }
 
-    /* 班別按鈕專屬顏色 (預設半透明/灰底，選取時高亮) */
     .btn-class-all { background: #6c757d; }
     .btn-class-2a { background: var(--color-2a); opacity: 0.6; }
     .btn-class-2b { background: var(--color-2b); opacity: 0.6; }
@@ -87,13 +85,13 @@
     input[type="text"], select.filter-select {
       padding: 8px;
       border: 1px solid var(--border);
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 14px;
     }
 
     .memo-list { 
       display: grid; 
-      gap: 20px; 
+      gap: 16px; 
       grid-template-columns: 1fr;
     }
 
@@ -101,12 +99,12 @@
       .memo-list { grid-template-columns: repeat(2, 1fr); }
     }
 
-    /* 固定統一尺寸 Memo 卡片 */
+    /* 卡片獨立統一尺寸與滾動 */
     .memo-card {
       background: var(--card-bg);
-      border-radius: 8px;
+      border-radius: 12px;
       border-left: 6px solid var(--primary);
-      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.06);
       padding: 16px;
       height: 420px;
       display: flex;
@@ -124,7 +122,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .badge {
@@ -140,15 +138,17 @@
     .badge.class-4E { background-color: var(--color-4e); }
     .badge.cycle-day { background-color: #6c757d; }
 
-    .memo-date { font-size: 13px; color: #666; margin-bottom: 8px; }
+    .memo-date { font-size: 13px; color: #666; margin-bottom: 4px; }
     .memo-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    /* 縮小標題與下方分隔線的距離 */
-.memo-title { 
-  font-size: 18px; 
-  font-weight: bold; 
-  margin-top: 4px; 
-  margin-bottom: 2px; /* 縮小標題下方的間距，使其貼近分隔線 */
-}
+    
+    .memo-title { 
+      font-size: 19px; 
+      font-weight: bold; 
+      margin-top: 4px; 
+      margin-bottom: 2px;
+      color: #1a1a1a;
+    }
+
     .tag {
       color: var(--primary);
       cursor: pointer;
@@ -157,20 +157,19 @@
       font-size: 13px;
     }
 
-    .action-btn { cursor: pointer; font-size: 16px; margin-left: 6px; user-select: none; }
+    .action-btn { cursor: pointer; font-size: 16px; margin-left: 8px; user-select: none; }
 
-    /* 調整分隔線與下方教學內容的距離 */
-.memo-body {
-  margin-top: 6px;    /* 縮小分隔線上方的間距 */
-  padding-top: 8px;   /* 縮小分隔線下方的內邊距 */
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
+    .memo-body {
+      margin-top: 6px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
 
     .teaching-content {
-      font-size: 16px;
+      font-size: 17px;
       line-height: 1.5;
       font-weight: 500;
       color: #222;
@@ -180,59 +179,93 @@
     }
 
     .reminder-box {
-      background-color: #fdf2f2;
-      border-left: 5px solid #d9534f;
-      color: #d9534f;
+      background-color: #fff1f0;
+      border-left: 5px solid #ff4d4f;
+      color: #cf1322;
       font-size: 16px;
       font-weight: bold;
-      padding: 8px 10px;
-      border-radius: 4px;
+      padding: 8px 12px;
+      border-radius: 6px;
       margin-top: 6px;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    /* 重新設計的優雅功課欄（唯讀膠囊清單） */
+    .hw-container {
+      margin-top: auto;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .hw-header-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: #64748b;
       margin-bottom: 8px;
-      line-height: 1.3;
+      display: flex;
+      justify-content: space-between;
     }
 
-    .hw-table-wrapper { margin-top: auto; padding-top: 10px; }
-
-    .hw-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
+    .hw-item {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
-    .hw-table th, .hw-table td {
-      border: 1px solid var(--border);
-      padding: 5px;
-      text-align: left;
+    .hw-item:last-child { margin-bottom: 0; }
+
+    .hw-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    .hw-table th { background: #f8f9fa; }
-
-    .inline-select, .inline-input {
-      width: 100%;
-      font-size: 12px;
-      padding: 3px;
-      border: 1px solid #ccc;
-      border-radius: 3px;
-      box-sizing: border-box;
+    .hw-item-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #1e293b;
     }
 
-    .btn-save-inline {
-      background: #28a745;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 8px;
-      font-size: 12px;
-      cursor: pointer;
-      white-space: nowrap;
+    .hw-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
     }
 
+    .pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .pill-location { background: #e0f2fe; color: #0369a1; }
+    .pill-collect-收齊 { background: #dcfce7; color: #15803d; }
+    .pill-collect-未收齊 { background: #fee2e2; color: #b91c1c; }
+    .pill-collect-收集中 { background: #fef3c7; color: #b45309; }
+
+    .pill-marking-完成批改 { background: #dcfce7; color: #15803d; }
+    .pill-marking-未批改 { background: #f1f5f9; color: #475569; }
+    .pill-marking-批改中 { background: #fef3c7; color: #b45309; }
+
+    .pill-missing { background: #fee2e2; color: #b91c1c; border: 1px dashed #f87171; }
+
+    /* Modal 彈窗通用樣式 */
     .modal {
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(2px);
       justify-content: center;
       align-items: center;
       z-index: 1000;
@@ -241,24 +274,25 @@
     .modal-content {
       background: white;
       padding: 20px;
-      border-radius: 8px;
+      border-radius: 12px;
       width: 90%;
-      max-width: 580px;
+      max-width: 500px;
       max-height: 85vh;
       overflow-y: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
 
     .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
     .form-group input, .form-group textarea, .form-group select {
-      width: 100%; padding: 8px; box-sizing: border-box;
+      width: 100%; padding: 8px; box-sizing: border-box; font-size: 14px; border-radius: 6px; border: 1px solid var(--border);
     }
 
     .hw-form-row {
-      background: #f9f9f9;
+      background: #f8fafc;
       padding: 10px;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       margin-bottom: 8px;
     }
   </style>
@@ -278,7 +312,6 @@
       <button class="filter-btn btn-class-2b" onclick="filterClass('2B', this)">2B</button>
       <button class="filter-btn btn-class-4e" onclick="filterClass('4E', this)">4E</button>
       
-      <!-- 位置篩選選單 -->
       <select id="locationFilter" class="filter-select" onchange="renderMemos()">
         <option value="ALL">📍 所有存放位置</option>
         <option value="教員室">教員室</option>
@@ -298,7 +331,7 @@
     </div>
   </div>
 
-  <!-- Memo Modal -->
+  <!-- 主 Memo Modal (新增/修改整個 Memo) -->
   <div id="memoModal" class="modal">
     <div class="modal-content">
       <h3 id="modalTitle">新增教學 Memo</h3>
@@ -355,6 +388,53 @@
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
         <button class="secondary" onclick="closeModal()">取消</button>
         <button onclick="saveMemo()">儲存 Memo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 單獨修改功課狀態 Modal (快速修改對話框) -->
+  <div id="hwQuickEditModal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;" id="quickHwTitle">✏️ 修改功課狀態</h3>
+      <input type="hidden" id="quickHwId">
+
+      <div class="form-group">
+        <label>收繳狀態</label>
+        <select id="quickCollect">
+          <option value="未收齊">未收齊</option>
+          <option value="收集中">收集中</option>
+          <option value="收齊">收齊</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>批改狀態</label>
+        <select id="quickMarking">
+          <option value="未批改">未批改</option>
+          <option value="批改中">批改中</option>
+          <option value="完成批改">完成批改</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>欠交學生號碼 (用逗號分隔)</label>
+        <input type="text" id="quickMissing" placeholder="例如: #10, #12">
+      </div>
+
+      <div class="form-group">
+        <label>存放位置</label>
+        <select id="quickLocation">
+          <option value="教員室">教員室</option>
+          <option value="7/F簿櫃">7/F簿櫃</option>
+          <option value="課室外">課室外</option>
+          <option value="課室內">課室內</option>
+          <option value="學生">學生</option>
+        </select>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button class="secondary" onclick="closeQuickHwModal()">取消</button>
+        <button id="quickSaveBtn" onclick="submitQuickHwEdit()">儲存更新</button>
       </div>
     </div>
   </div>

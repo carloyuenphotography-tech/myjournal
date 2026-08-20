@@ -37,11 +37,9 @@ function renderMemos() {
     const matchClass = (currentClass === 'ALL') || (item.class_name === currentClass);
     const matchArchive = Boolean(item.is_archived) === showArchived;
     
-    // 關鍵字比對
     const contentStr = `${item.topic} ${item.content} ${item.reminders} ${item.hashtags} ${item.cycle_day}`.toLowerCase();
     const matchSearch = contentStr.includes(searchKeyword);
 
-    // 位置比對：如果選了特定位置，檢查 Memo 的功課清單中是否有符合該位置的功課
     let matchLocation = true;
     if (selectedLocation !== 'ALL') {
       matchLocation = item.homework_list && item.homework_list.some(hw => hw.storage_location === selectedLocation);
@@ -66,58 +64,28 @@ function renderMemos() {
       .map(t => `<span class="tag" onclick="searchTag('${t.trim()}', event)">${t.trim()}</span>`)
       .join('');
 
+    // ✨ 重新設計：唯讀極簡膠囊清單（無複雜輸入框，閱讀極佳）
     let hwHtml = '';
     if (memo.homework_list && memo.homework_list.length > 0) {
       hwHtml = `
-        <div class="hw-table-wrapper">
-          <table class="hw-table">
-            <thead>
-              <tr>
-                <th style="width:18%;">功課</th>
-                <th style="width:20%;">收繳</th>
-                <th style="width:20%;">批改</th>
-                <th style="width:18%;">欠交</th>
-                <th style="width:16%;">位置</th>
-                <th style="width:8%; text-align:center;">儲存</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${memo.homework_list.map(hw => `
-                <tr id="hw_row_${hw.homework_id}">
-                  <td><strong>${hw.title || '-'}</strong></td>
-                  <td>
-                    <select class="inline-select hw-collect-val">
-                      <option value="未收齊" ${hw.collect_status === '未收齊' ? 'selected' : ''}>未收齊</option>
-                      <option value="收集中" ${hw.collect_status === '收集中' ? 'selected' : ''}>收集中</option>
-                      <option value="收齊" ${hw.collect_status === '收齊' ? 'selected' : ''}>收齊</option>
-                    </select>
-                  </td>
-                  <td>
-                    <select class="inline-select hw-marking-val">
-                      <option value="未批改" ${hw.marking_status === '未批改' ? 'selected' : ''}>未批改</option>
-                      <option value="批改中" ${hw.marking_status === '批改中' ? 'selected' : ''}>批改中</option>
-                      <option value="完成批改" ${hw.marking_status === '完成批改' ? 'selected' : ''}>完成批改</option>
-                    </select>
-                  </td>
-                  <td>
-                    <input type="text" class="inline-input hw-missing-val" value="${hw.missing_students || ''}" placeholder="號碼">
-                  </td>
-                  <td>
-                    <select class="inline-select hw-location-val">
-                      <option value="教員室" ${hw.storage_location === '教員室' ? 'selected' : ''}>教員室</option>
-                      <option value="7/F簿櫃" ${hw.storage_location === '7/F簿櫃' ? 'selected' : ''}>7/F簿櫃</option>
-                      <option value="課室外" ${hw.storage_location === '課室外' ? 'selected' : ''}>課室外</option>
-                      <option value="課室內" ${hw.storage_location === '課室內' ? 'selected' : ''}>課室內</option>
-                      <option value="學生" ${hw.storage_location === '學生' ? 'selected' : ''}>學生</option>
-                    </select>
-                  </td>
-                  <td style="text-align:center;">
-                    <button class="btn-save-inline" title="一次過儲存此功課狀態" onclick="saveWholeHomeworkRow('${hw.homework_id}')">💾</button>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+        <div class="hw-container">
+          <div class="hw-header-title">
+            <span>📚 功課進度追蹤</span>
+          </div>
+          ${memo.homework_list.map(hw => `
+            <div class="hw-item">
+              <div class="hw-item-top">
+                <span class="hw-item-title">${hw.title || '-'}</span>
+                <span style="cursor:pointer; font-size:14px;" title="點擊修改功課狀態" onclick="openQuickHwModal('${hw.homework_id}')">✏️</span>
+              </div>
+              <div class="hw-badges">
+                <span class="pill pill-collect-${hw.collect_status || '未收齊'}">${hw.collect_status || '未收齊'}</span>
+                <span class="pill pill-marking-${hw.marking_status || '未批改'}">${hw.marking_status || '未批改'}</span>
+                <span class="pill pill-location">📍 ${hw.storage_location || '教員室'}</span>
+                ${hw.missing_students ? `<span class="pill pill-missing">⚠️ 欠交: ${hw.missing_students}</span>` : ''}
+              </div>
+            </div>
+          `).join('')}
         </div>`;
     }
 
@@ -132,7 +100,7 @@ function renderMemos() {
           <div class="memo-title">${memo.topic || '(無課題名稱)'}</div>
         </div>
         <div style="white-space:nowrap;">
-          <span class="action-btn" title="修改" onclick="openEditModal('${memo.id}', event)">✏️</span>
+          <span class="action-btn" title="修改Memo" onclick="openEditModal('${memo.id}', event)">✏️</span>
           <span class="action-btn" title="收藏" onclick="toggleFavorite('${memo.id}', event)">
             ${memo.is_favorite ? '⭐' : '☆'}
           </span>
@@ -142,7 +110,7 @@ function renderMemos() {
         </div>
       </div>
       
-      <div style="margin-top:8px;">${tagsHtml}</div>
+      <div style="margin-top:6px;">${tagsHtml}</div>
 
       <div class="memo-body">
         <div class="teaching-content">${memo.content || '<span style="color:#999; font-size:15px;">(暫無教學內容)</span>'}</div>
@@ -172,6 +140,60 @@ function toggleArchiveView(btn) {
   showArchived = !showArchived;
   btn.innerText = showArchived ? "查看一般 Memo" : "查看典藏";
   renderMemos();
+}
+
+// ✨ 開啟「功課快速修改」彈窗
+function openQuickHwModal(hwId) {
+  let targetHw = null;
+  for (let memo of rawMemos) {
+    if (memo.homework_list) {
+      let found = memo.homework_list.find(h => h.homework_id === hwId);
+      if (found) { targetHw = found; break; }
+    }
+  }
+
+  if (!targetHw) return;
+
+  document.getElementById('quickHwId').value = hwId;
+  document.getElementById('quickHwTitle').innerText = `✏️ 修改：${targetHw.title}`;
+  document.getElementById('quickCollect').value = targetHw.collect_status || '未收齊';
+  document.getElementById('quickMarking').value = targetHw.marking_status || '未批改';
+  document.getElementById('quickMissing').value = targetHw.missing_students || '';
+  document.getElementById('quickLocation').value = targetHw.storage_location || '教員室';
+
+  document.getElementById('hwQuickEditModal').style.display = 'flex';
+}
+
+function closeQuickHwModal() {
+  document.getElementById('hwQuickEditModal').style.display = 'none';
+}
+
+// ✨ 儲存快速修改並即時同步 Google Sheet
+async function submitQuickHwEdit() {
+  const hwId = document.getElementById('quickHwId').value;
+  const saveBtn = document.getElementById('quickSaveBtn');
+  saveBtn.innerText = '⏳ 儲存中...';
+
+  const payload = {
+    action: 'updateHomeworkInline',
+    data: {
+      homework_id: hwId,
+      collect_status: document.getElementById('quickCollect').value,
+      marking_status: document.getElementById('quickMarking').value,
+      missing_students: document.getElementById('quickMissing').value,
+      storage_location: document.getElementById('quickLocation').value
+    }
+  };
+
+  await fetch(CONFIG.GAS_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+
+  saveBtn.innerText = '儲存更新';
+  closeQuickHwModal();
+  fetchMemos(); // 重新讀取與渲染
 }
 
 function addHomeworkRow(data = {}) {
@@ -302,39 +324,6 @@ async function saveMemo() {
   });
 
   fetchMemos();
-}
-
-async function saveWholeHomeworkRow(hwId) {
-  const row = document.getElementById(`hw_row_${hwId}`);
-  if (!row) return;
-
-  const btn = row.querySelector('.btn-save-inline');
-  btn.innerText = '⏳';
-
-  const collectStatus = row.querySelector('.hw-collect-val').value;
-  const markingStatus = row.querySelector('.hw-marking-val').value;
-  const missingStudents = row.querySelector('.hw-missing-val').value;
-  const storageLocation = row.querySelector('.hw-location-val').value;
-
-  const payload = {
-    action: 'updateHomeworkInline',
-    data: {
-      homework_id: hwId,
-      collect_status: collectStatus,
-      marking_status: markingStatus,
-      missing_students: missingStudents,
-      storage_location: storageLocation
-    }
-  };
-
-  await fetch(CONFIG.GAS_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  });
-
-  btn.innerText = '✅';
-  setTimeout(() => { btn.innerText = '💾'; }, 1500);
 }
 
 async function toggleFavorite(id, event) {
