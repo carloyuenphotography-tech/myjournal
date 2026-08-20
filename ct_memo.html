@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <!-- WebApp 圖示設定 -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏫</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏫</text></svg>">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="2A班主任Memo">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <title>🏫 2A 班主任事務 Memo App</title>
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --primary: #ea580c; /* 班主任主題色：橘色 */
+      --text: #1e293b;
+      --border: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      margin: 0;
+      padding: 12px;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    header h2 {
+      font-size: 18px;
+      margin: 0;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .icon-btn-add {
+      background: var(--primary);
+      color: white;
+      border: none;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--card-bg);
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 12px;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .filter-btn {
+      background: #64748b;
+      color: white;
+      border: none;
+      padding: 5px 9px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .filter-btn.active {
+      background: var(--primary);
+      font-weight: bold;
+      box-shadow: 0 0 0 2px #333;
+    }
+
+    input[type="text"], select.filter-select {
+      padding: 5px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 12px;
+      height: 32px;
+      box-sizing: border-box;
+    }
+
+    select.filter-select {
+      background-color: #fff;
+      flex-shrink: 0;
+    }
+
+    .btn-archive {
+      background: #64748b;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      height: 32px;
+      flex-shrink: 0;
+    }
+
+    .memo-list { 
+      display: grid; 
+      gap: 12px; 
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 768px) {
+      .memo-list { grid-template-columns: repeat(2, 1fr); }
+      header h2 { font-size: 20px; }
+    }
+
+    .memo-card {
+      background: var(--card-bg);
+      border-radius: 10px;
+      border-left: 5px solid var(--primary);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+      padding: 12px;
+      height: 380px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    .badge-group { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+    .badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; color: white; font-weight: bold; background-color: var(--primary); }
+    .badge.category { background-color: #0284c7; }
+
+    .memo-date { font-size: 12px; color: #64748b; margin-bottom: 2px; }
+    .memo-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    
+    .memo-title { 
+      font-size: 17px; 
+      font-weight: bold; 
+      margin-top: 2px; 
+      margin-bottom: 2px;
+      color: #0f172a;
+    }
+
+    .tag { color: var(--primary); cursor: pointer; font-weight: 500; margin-right: 4px; font-size: 12px; }
+    .action-btn { cursor: pointer; font-size: 15px; margin-left: 6px; user-select: none; }
+
+    .memo-body {
+      margin-top: 4px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .teaching-content {
+      font-size: 15px;
+      line-height: 1.4;
+      font-weight: 500;
+      color: #334155;
+      margin: 4px 0 8px 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .reminder-box {
+      background-color: #fff1f0;
+      border-left: 4px solid #ef4444;
+      color: #b91c1c;
+      font-size: 15px;
+      font-weight: bold;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin-top: 4px;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .hw-container {
+      margin-top: auto;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 8px;
+    }
+
+    .hw-header-title { font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 6px; }
+
+    .hw-item {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .hw-item:last-child { margin-bottom: 0; }
+
+    .hw-item-top { display: flex; justify-content: space-between; align-items: center; }
+    .hw-item-title { font-size: 13px; font-weight: bold; color: #1e293b; }
+
+    .hw-badges { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .pill { font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 600; }
+    .pill-collect-已收齊 { background: #dcfce7; color: #15803d; }
+    .pill-collect-未收齊 { background: #fee2e2; color: #b91c1c; }
+    .pill-collect-收集中 { background: #fef3c7; color: #b45309; }
+
+    .pill-missing { background: #fee2e2; color: #b91c1c; border: 1px dashed #f87171; }
+
+    /* Modal 樣式 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15,23,42,0.6);
+      backdrop-filter: blur(2px);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 12px;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 450px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      box-sizing: border-box;
+    }
+
+    .form-group { margin-bottom: 10px; width: 100%; }
+    .form-group label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px; }
+    
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 8px;
+      box-sizing: border-box !important;
+      font-size: 13px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background-color: #fcfcfc;
+    }
+
+    .hw-form-row {
+      background: #f8fafc;
+      padding: 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .hw-form-row-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .btn-del-hw {
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      width: 22px;
+      height: 22px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h2>🏫 2A 班主任事務 Memo</h2>
+      <button class="icon-btn-add" onclick="openModal()" title="新增 Memo">➕</button>
+    </header>
+
+    <div class="controls">
+      <!-- 類別快速篩選 -->
+      <div class="control-row">
+        <button class="filter-btn active" onclick="filterCategory('ALL', this)">全部類別</button>
+        <button class="filter-btn" onclick="filterCategory('螢亮手冊', this)">螢亮手冊</button>
+        <button class="filter-btn" onclick="filterCategory('通告回條', this)">通告回條</button>
+        <button class="filter-btn" onclick="filterCategory('Planner', this)">Student Planner</button>
+        <button class="filter-btn" onclick="filterCategory('行政事項', this)">行政事項</button>
+      </div>
+
+      <!-- 搜尋欄與典藏 -->
+      <div style="display: flex; gap: 6px; width: 100%; align-items: center;">
+        <input type="text" id="searchInput" placeholder="搜尋關鍵字或 #Hashtag..." oninput="renderMemos()" style="flex: 1; min-width: 0;">
+        <button class="btn-archive" onclick="toggleArchiveView(this)">📦 典藏</button>
+      </div>
+    </div>
+
+    <div id="memoList" class="memo-list">
+      <p>資料載入中...</p>
+    </div>
+  </div>
+
+  <!-- 主 Memo Modal -->
+  <div id="memoModal" class="modal">
+    <div class="modal-content">
+      <h3 id="modalTitle" style="margin-top:0;">新增班主任 Memo</h3>
+      <input type="hidden" id="formMemoId">
+
+      <div class="form-group">
+        <label>日期</label>
+        <input type="date" id="formDate">
+      </div>
+      <div class="form-group">
+        <label>事務類別</label>
+        <select id="formCategory">
+          <option value="螢亮手冊">螢亮手冊</option>
+          <option value="通告回條">通告回條</option>
+          <option value="Planner">Student Planner</option>
+          <option value="行政事項">行政事項</option>
+          <option value="學生照顧">學生照顧</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>主題 / 項目</label>
+        <input type="text" id="formTopic" placeholder="例：檢查第 3 週手冊家長簽署">
+      </div>
+      <div class="form-group">
+        <label>跟進內容 / 細節</label>
+        <textarea id="formContent" rows="3" placeholder="記下需要跟進的事項..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>提醒事項 (緊急/重要跟進)</label>
+        <input type="text" id="formReminders" placeholder="例：中午前須回覆校務處">
+      </div>
+      <div class="form-group">
+        <label>Hashtag (用逗號隔開)</label>
+        <input type="text" id="formHashtags" placeholder="#螢亮手冊,#請假信">
+      </div>
+      
+      <hr style="border:0; border-top:1px solid #e2e8f0; margin:12px 0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h4 style="margin:0; font-size:14px;">文件/物品收集追蹤</h4>
+        <button type="button" class="btn-archive" style="padding:3px 8px; font-size:11px;" onclick="addHomeworkRow()">+ 新增項目</button>
+      </div>
+      
+      <div id="homeworkFormContainer"></div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button class="btn-archive" onclick="closeModal()">取消</button>
+        <button class="filter-btn active" style="opacity:1;" onclick="saveMemo()">儲存 Memo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 快速修改收集狀態 Modal -->
+  <div id="hwQuickEditModal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;" id="quickHwTitle">✏️ 修改收集狀態</h3>
+      <input type="hidden" id="quickHwId">
+
+      <div class="form-group">
+        <label>收繳狀態</label>
+        <select id="quickCollect">
+          <option value="未收齊">未收齊</option>
+          <option value="收集中">收集中</option>
+          <option value="已收齊">已收齊</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>欠交/未完成學生號碼 (逗號隔開)</label>
+        <input type="text" id="quickMissing" placeholder="例如: #03, #15">
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button class="btn-archive" onclick="closeQuickHwModal()">取消</button>
+        <button id="quickSaveBtn" class="filter-btn active" style="opacity:1;" onclick="submitQuickHwEdit()">儲存更新</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="ct_memo_gas.js"></script>
+  <script src="ct_memo.js"></script>
+</body>
+</html>
