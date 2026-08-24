@@ -68,15 +68,19 @@
                 <h3 class="font-bold text-gray-800 text-lg"><i class="fa-solid fa-pen-to-square text-yellow-500"></i> 編輯筆記</h3>
                 <button id="closeEditModalBtn" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-            <input type="text" id="editNoteTitle" placeholder="朋友名字" class="w-full px-3 py-2 font-semibold text-gray-800 border-b border-gray-100 mb-2 focus:outline-none">
+            <!-- 這裡就是修改朋友名字的輸入框 -->
+            <label class="block text-xs text-gray-400 mb-1">朋友名字</label>
+            <input type="text" id="editNoteTitle" placeholder="朋友名字" class="w-full px-3 py-2 font-semibold text-gray-800 border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
+            
+            <label class="block text-xs text-gray-400 mb-1">筆記內容</label>
             <textarea id="editNoteContent" rows="4" placeholder="內容..." class="w-full px-3 py-2 text-gray-600 border rounded-lg text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"></textarea>
+            
             <div class="flex justify-end gap-2">
                 <button id="saveEditBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">儲存變更</button>
             </div>
         </div>
     </div>
 
-    <!-- 載入設定檔與邏輯控制 (注意順序：config.js 必須在 index.js 之前載入) -->
     <script src="config.js"></script>
     <script src="index.js"></script>
 </body>
