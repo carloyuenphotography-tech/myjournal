@@ -62,16 +62,17 @@ function renderMemos() {
     if (memo.homework_list && memo.homework_list.length > 0) {
       hwHtml = `
         <div class="hw-container">
-          <div class="hw-header-title">📋 收集進度追蹤</div>
+          <div class="hw-header-title">📋 收集進度追蹤 (點擊標籤直接切換)</div>
           ${memo.homework_list.map(hw => `
             <div class="hw-item">
               <div class="hw-item-top">
                 <span class="hw-item-title">${hw.title || '-'}</span>
-                <span style="cursor:pointer; font-size:14px;" title="修改狀態" onclick="openQuickHwModal('${hw.homework_id}')">✏️</span>
               </div>
               <div class="hw-badges">
-                <span class="pill pill-collect-${hw.collect_status || '未收齊'}">${hw.collect_status || '未收齊'}</span>
-                ${hw.missing_students ? `<span class="pill pill-missing">⚠️ 未交: ${hw.missing_students}</span>` : ''}
+                <span class="pill pill-collect-${hw.collect_status || '未收齊'}" style="cursor:pointer;" title="點擊切換收集狀態" onclick="cycleCollectStatus('${hw.homework_id}')">${hw.collect_status || '未收齊'}</span>
+                <span class="pill ${hw.missing_students ? 'pill-missing' : 'pill-collect-已收齊'}" style="cursor:pointer;" title="點擊修改未交學生" onclick="editMissingStudents('${hw.homework_id}')">
+                  ${hw.missing_students ? `⚠️ 未交: ${hw.missing_students}` : '+ 記錄未交'}
+                </span>
               </div>
             </div>
           `).join('')}
@@ -112,6 +113,64 @@ function renderMemos() {
   });
 }
 
+// 輔助工具：尋找特定 homework 並回傳該 hw 與其 memo
+function findHomeworkAndMemo(hwId) {
+  for (let memo of rawMemos) {
+    if (memo.homework_list) {
+      let hw = memo.homework_list.find(h => h.homework_id === hwId);
+      if (hw) return { memo, hw };
+    }
+  }
+  return null;
+}
+
+// 快速更新並同步到後端
+async function updateHwAndSync(hwId, updatedFields) {
+  const target = findHomeworkAndMemo(hwId);
+  if (!target) return;
+
+  // 局部更新前端資料並立即重新渲染
+  Object.assign(target.hw, updatedFields);
+  renderMemos();
+
+  // 背景發送 API 更新 Google Sheet
+  const payload = {
+    action: 'updateHomeworkInline',
+    data: {
+      homework_id: hwId,
+      collect_status: target.hw.collect_status,
+      missing_students: target.hw.missing_students
+    }
+  };
+
+  await fetch(CT_MEMO_CONFIG.GAS_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+}
+
+// 1. 循環切換收集狀態
+function cycleCollectStatus(hwId) {
+  const target = findHomeworkAndMemo(hwId);
+  if (!target) return;
+  const sequence = ['未收齊', '收集中', '已收齊'];
+  const currentIndex = sequence.indexOf(target.hw.collect_status || '未收齊');
+  const nextStatus = sequence[(currentIndex + 1) % sequence.length];
+  updateHwAndSync(hwId, { collect_status: nextStatus });
+}
+
+// 2. 點擊修改未交學生號碼
+function editMissingStudents(hwId) {
+  const target = findHomeworkAndMemo(hwId);
+  if (!target) return;
+  const currentVal = target.hw.missing_students || '';
+  const newVal = prompt(`請輸入 ${target.hw.title} 的未交學生號碼（例如: 03, 15）：`, currentVal);
+  if (newVal !== null) {
+    updateHwAndSync(hwId, { missing_students: newVal.trim() });
+  }
+}
+
 function filterCategory(categoryName, btn) {
   currentCategory = categoryName;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -129,54 +188,6 @@ function toggleArchiveView(btn) {
   showArchived = !showArchived;
   btn.innerText = showArchived ? "查看一般 Memo" : "📦 典藏";
   renderMemos();
-}
-
-function openQuickHwModal(hwId) {
-  let targetHw = null;
-  for (let memo of rawMemos) {
-    if (memo.homework_list) {
-      let found = memo.homework_list.find(h => h.homework_id === hwId);
-      if (found) { targetHw = found; break; }
-    }
-  }
-
-  if (!targetHw) return;
-
-  document.getElementById('quickHwId').value = hwId;
-  document.getElementById('quickHwTitle').innerText = `✏️ 修改：${targetHw.title}`;
-  document.getElementById('quickCollect').value = targetHw.collect_status || '未收齊';
-  document.getElementById('quickMissing').value = targetHw.missing_students || '';
-
-  document.getElementById('hwQuickEditModal').style.display = 'flex';
-}
-
-function closeQuickHwModal() {
-  document.getElementById('hwQuickEditModal').style.display = 'none';
-}
-
-async function submitQuickHwEdit() {
-  const hwId = document.getElementById('quickHwId').value;
-  const saveBtn = document.getElementById('quickSaveBtn');
-  saveBtn.innerText = '⏳ 儲存中...';
-
-  const payload = {
-    action: 'updateHomeworkInline',
-    data: {
-      homework_id: hwId,
-      collect_status: document.getElementById('quickCollect').value,
-      missing_students: document.getElementById('quickMissing').value
-    }
-  };
-
-  await fetch(CT_MEMO_CONFIG.GAS_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  });
-
-  saveBtn.innerText = '儲存更新';
-  closeQuickHwModal();
-  fetchMemos();
 }
 
 function addHomeworkRow(data = {}) {
@@ -254,7 +265,7 @@ function closeModal() {
 }
 
 async function saveMemo() {
-  const memoId = document.getElementById('formMemoId').value;
+  const memoId = document.getElementById('formMemoId'].value;
   
   const hwRows = document.querySelectorAll('.hw-form-row');
   const homeworkList = [];
