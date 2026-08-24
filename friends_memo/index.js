@@ -1,7 +1,9 @@
-let API_URL = localStorage.getItem("gas_api_url") || "";
+// 優先使用 localStorage，若無則讀取 config.js 中的 APP_CONFIG.GAS_URL
+let API_URL = localStorage.getItem("gas_api_url") || (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.GAS_URL : "");
+
 let notes = [];
 let currentFilterTag = "all";
-let currentEditingId = null; // 紀錄目前正在編輯的筆記 ID
+let currentEditingId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     loadNotes();
@@ -45,7 +47,7 @@ async function loadNotes() {
         renderNotes();
         renderTagFilters();
     } catch (error) {
-        console.log("使用本地測試資料模式。");
+        console.log("使用本地測試資料模式（未連線或未設定 GAS 網址）。");
         notes = [
             { id: "1", title: "阿明", content: "喜歡手沖咖啡 https://example.com #咖啡 #生日5月", pinned: true, updatedAt: new Date().toISOString() },
             { id: "2", title: "小美", content: "最近在準備轉職，壓力大 #工作 #朋友", pinned: false, updatedAt: new Date().toISOString() }
@@ -122,7 +124,7 @@ function handleSaveEdit() {
         note.title = title;
         note.content = content;
         note.tags = content.match(/#[^\s#]+/g) || [];
-        note.updatedAt = new Date().toISOString(); // 更新修改日期時間
+        note.updatedAt = new Date().toISOString();
     }
 
     document.getElementById("editModal").classList.add("hidden");
@@ -214,7 +216,6 @@ function renderNotes(searchQuery = "") {
 
         processedContent = processedContent.replace(/(#[^\s#]+)/g, '<span class="text-yellow-600 font-semibold bg-yellow-50 px-1 rounded">$1</span>');
 
-        // 格式化最後修改日期時間
         let formattedDate = "";
         if (note.updatedAt) {
             const dateObj = new Date(note.updatedAt);
