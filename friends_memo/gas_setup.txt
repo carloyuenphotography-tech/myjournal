@@ -1,0 +1,85 @@
+========================================
+ Friends’ memo - Google Apps Script 設定說明
+========================================
+
+【步驟一：建立 Google Sheet】
+1. 開啟 Google 試算表 (Google Sheets)，建立一個新的空白表格。
+2. 將表格命名為：Friends_memo_data
+3. 在第一列 (Row 1) 依序填入以下欄位標題：
+   A1: id
+   B1: title
+   C1: content
+   D1: tags
+   E1: pinned
+   F1: updatedAt
+
+【步驟二：加入 Apps Script 程式碼】
+1. 點選上方選單的「擴充功能」 > 「Apps Script」。
+2. 清空原本的程式碼，把下方的 JavaScript 程式碼完整貼上：
+
+----------------------------------------
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var rows = sheet.getDataRange().getValues();
+  var notes = [];
+  
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0]) {
+      notes.push({
+        id: String(rows[i][0]),
+        title: rows[i][1],
+        content: rows[i][2],
+        tags: rows[i][3] ? rows[i][3].split(",") : [],
+        pinned: rows[i][4] === true || rows[i][4] === "TRUE",
+        updatedAt: rows[i][5]
+      });
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ notes: notes }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  var notes = data.notes;
+  
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+  }
+  
+  var rows = [];
+  for (var i = 0; i < notes.length; i++) {
+    var n = notes[i];
+    rows.push([
+      n.id,
+      n.title,
+      n.content,
+      n.tags ? n.tags.join(",") : "",
+      n.pinned,
+      n.updatedAt
+    ]);
+  }
+  
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+----------------------------------------
+
+【步驟三：部署為網頁應用程式】
+1. 點擊 Apps Script 右上角的「部署」 > 「新增部署」。
+2. 選擇類型為：「網頁應用程式」。
+3. 設定：
+   - 執行身分：我 (Me)
+   - 誰可以存取：任何人 (Anyone)
+4. 點擊部署，授權帳戶權限後，複製產生的「網頁應用程式網址」。
+
+【步驟四：於前端網頁連線】
+1. 打開你的 index.html。
+2. 點擊右上角的「齒輪設定按鈕」。
+3. 貼上剛剛複製的網址並儲存，即完成雲端同步設定！
