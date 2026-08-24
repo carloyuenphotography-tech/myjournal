@@ -34,7 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("closeEditModalBtn").addEventListener("click", () => editModal.classList.add("hidden"));
     document.getElementById("saveEditBtn").addEventListener("click", handleSaveEdit);
 
-    // 詳細閱讀 Modal 關閉
     const detailModal = document.getElementById("detailModal");
     document.getElementById("closeDetailModalBtn").addEventListener("click", () => detailModal.classList.add("hidden"));
     detailModal.addEventListener("click", (e) => {
@@ -44,14 +43,13 @@ document.addEventListener("DOMContentLoaded", () => {
     initSortable();
 });
 
-// 設定拖拉排序（限制感應區只能透過右側的 .drag-handle 進行，避免手機捲動誤觸）
 function initSortable() {
     const container = document.getElementById("notesContainer");
     if (typeof Sortable === 'undefined') return;
 
     Sortable.create(container, {
         animation: 150,
-        handle: '.drag-handle', // 限制只有按住拖拉圖示才能移動卡片
+        handle: '.drag-handle',
         ghostClass: 'opacity-30',
         onEnd: function (evt) {
             const cardElements = container.querySelectorAll('[data-id]');
@@ -86,7 +84,7 @@ async function loadNotes() {
     } catch (error) {
         console.log("使用本地測試資料模式。");
         notes = [
-            { id: "1", title: "阿明", content: "喜歡手沖咖啡 https://example.com \n第二行測試換行 #咖啡 #生日5月", pinned: true, updatedAt: new Date().toISOString() },
+            { id: "1", title: "阿明", content: "喜歡看這篇文章 https://github.com \n壓力大時看看 #工作 #推薦", pinned: true, updatedAt: new Date().toISOString() },
             { id: "2", title: "小美", content: "最近在準備轉職，壓力大 #工作 #朋友", pinned: false, updatedAt: new Date().toISOString() }
         ];
         renderNotes();
@@ -147,7 +145,6 @@ function openEditModal(id) {
     document.getElementById("editModal").classList.remove("hidden");
 }
 
-// 開啟詳細閱讀 Modal
 function openDetailModal(id) {
     const note = notes.find(n => n.id === id);
     if (!note) return;
@@ -237,6 +234,47 @@ function renderTagFilters() {
     });
 }
 
+// 異步取得連結預覽資料
+async function fetchLinkPreview(url, placeholderId) {
+    const el = document.getElementById(placeholderId);
+    if (!el) return;
+
+    try {
+        // 使用免費的 Microlink API 抓取網站 metadata (Title, Description, Image)
+        const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
+        const result = await response.json();
+
+        if (result.status === 'success' && result.data) {
+            const data = result.data;
+            let domain = "";
+            try { domain = new URL(url).hostname; } catch(e) { domain = url; }
+
+            el.innerHTML = `
+                <a href="${url}" target="_blank" class="block my-2 p-2.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-yellow-50/40 transition group">
+                    <div class="flex items-center gap-1.5 text-[11px] text-gray-400 mb-1">
+                        <i class="fa-solid fa-globe text-yellow-500"></i>
+                        <span class="truncate">${domain}</span>
+                    </div>
+                    <div class="font-bold text-gray-800 text-xs line-clamp-1 group-hover:text-yellow-600 transition">${escapeHtml(data.title || domain)}</div>
+                    ${data.description ? `<div class="text-[11px] text-gray-500 line-clamp-1 mt-0.5">${escapeHtml(data.description)}</div>` : ''}
+                </a>
+            `;
+        } else {
+            throw new Error("API 沒回傳成功資料");
+        }
+    } catch (e) {
+        // 失敗時自動降級為精簡按鈕
+        let domain = "";
+        try { domain = new URL(url).hostname; } catch(e) { domain = url; }
+        el.innerHTML = `
+            <a href="${url}" target="_blank" class="inline-flex items-center gap-1.5 my-1 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs hover:bg-yellow-50/60 transition max-w-full">
+                <i class="fa-solid fa-link text-yellow-500 shrink-0 text-[10px]"></i>
+                <span class="text-gray-700 font-medium truncate">${domain}</span>
+            </a>
+        `;
+    }
+}
+
 function renderNotes(searchQuery = "") {
     const container = document.getElementById("notesContainer");
     container.innerHTML = "";
@@ -262,16 +300,14 @@ function renderNotes(searchQuery = "") {
 
         let processedContent = escapeHtml(note.content);
         
-        // 超連結盒子改為精巧的精簡膠囊樣式
+        // 將網址替換為動態載入預覽的佔位區塊 (Placeholder)
+        let linkCounter = 0;
         processedContent = processedContent.replace(/(https?:\/\/[^\s]+)/g, (url) => {
-            let domain = "";
-            try { domain = new URL(url).hostname; } catch(e) { domain = url; }
-            return `
-                <a href="${url}" target="_blank" class="inline-flex items-center gap-1.5 my-1 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs hover:bg-yellow-50/60 transition max-w-full group">
-                    <i class="fa-solid fa-link text-yellow-500 shrink-0 text-[10px]"></i>
-                    <span class="text-gray-700 font-medium truncate">${domain}</span>
-                </a>
-            `;
+            linkCounter++;
+            const placeholderId = `preview-${note.id}-${linkCounter}`;
+            // 非同步在背景呼叫 API 填入預覽
+            setTimeout(() => fetchLinkPreview(url, placeholderId), 50);
+            return `<div id="${placeholderId}"><div class="inline-flex items-center gap-1.5 my-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs text-gray-400"><i class="fa-solid fa-spinner fa-spin text-yellow-500"></i> 載入連結預覽中...</div></div>`;
         });
 
         processedContent = processedContent.replace(/(#[^\s#]+)/g, '<span class="text-yellow-600 font-semibold bg-yellow-50 px-1 rounded">$1</span>');
@@ -285,7 +321,6 @@ function renderNotes(searchQuery = "") {
         card.innerHTML = `
             <div>
                 <div class="flex justify-between items-start mb-2">
-                    <!-- 點擊名字開啟詳細閱讀視窗 -->
                     <h3 onclick="openDetailModal('${note.id}')" class="font-bold text-gray-800 text-base flex items-center gap-1 cursor-pointer hover:text-yellow-600 transition" title="點擊詳細閱讀">
                         <i class="fa-solid fa-user-tag text-yellow-500 text-xs"></i> ${escapeHtml(note.title)}
                     </h3>
@@ -299,12 +334,10 @@ function renderNotes(searchQuery = "") {
                         <button onclick="deleteNote('${note.id}')" class="text-gray-400 hover:text-red-500 p-1 transition" title="刪除">
                             <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
-                        <!-- 限制只有按住這個圖示才能拖拉，解決手機滑動誤觸問題 -->
                         <i class="fa-solid fa-grip-vertical text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing drag-handle p-1 ml-1" title="按住拖拉排序"></i>
                     </div>
                 </div>
-                <!-- 內文換行由 whitespace-pre-wrap 完整保留 -->
-                <div class="text-gray-600 text-sm whitespace-pre-wrap mb-4 line-clamp-4">${processedContent}</div>
+                <div class="text-gray-600 text-sm whitespace-pre-wrap mb-4 line-clamp-5">${processedContent}</div>
             </div>
             <div class="text-[10px] text-gray-400 text-right">
                 ${formattedDate}
