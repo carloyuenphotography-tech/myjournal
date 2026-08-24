@@ -34,29 +34,35 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("closeEditModalBtn").addEventListener("click", () => editModal.classList.add("hidden"));
     document.getElementById("saveEditBtn").addEventListener("click", handleSaveEdit);
 
-    // 初始化 SortableJS 拖拉排序功能
+    // 詳細閱讀 Modal 關閉
+    const detailModal = document.getElementById("detailModal");
+    document.getElementById("closeDetailModalBtn").addEventListener("click", () => detailModal.classList.add("hidden"));
+    detailModal.addEventListener("click", (e) => {
+        if (e.target === detailModal) detailModal.classList.add("hidden");
+    });
+
     initSortable();
 });
 
-// 設定拖拉排序行為
+// 設定拖拉排序（限制感應區只能透過右側的 .drag-handle 進行，避免手機捲動誤觸）
 function initSortable() {
     const container = document.getElementById("notesContainer");
+    if (typeof Sortable === 'undefined') return;
+
     Sortable.create(container, {
-        animation: 150, // 拖拉動畫毫秒數
-        ghostClass: 'opacity-30', // 拖拉時原位置的透明樣式留影
+        animation: 150,
+        handle: '.drag-handle', // 限制只有按住拖拉圖示才能移動卡片
+        ghostClass: 'opacity-30',
         onEnd: function (evt) {
-            // 當拖拉結束時，抓取畫面上所有卡片的 data-id 順序
             const cardElements = container.querySelectorAll('[data-id]');
             const newOrderIds = Array.from(cardElements).map(el => el.getAttribute('data-id'));
 
-            // 根據畫面上新的順序重新排列 notes 陣列
             let reorderedNotes = [];
             newOrderIds.forEach(id => {
                 const note = notes.find(n => n.id === id);
                 if (note) reorderedNotes.push(note);
             });
 
-            // 將沒有顯示在目前畫面（例如被標籤或搜尋過濾掉的）其他筆記補回陣列尾端
             notes.forEach(note => {
                 if (!reorderedNotes.some(n => n.id === note.id)) {
                     reorderedNotes.push(note);
@@ -64,7 +70,7 @@ function initSortable() {
             });
 
             notes = reorderedNotes;
-            saveNotesToCloud(); // 自動同步新次序到 Google Sheet
+            saveNotesToCloud();
         }
     });
 }
@@ -80,7 +86,7 @@ async function loadNotes() {
     } catch (error) {
         console.log("使用本地測試資料模式。");
         notes = [
-            { id: "1", title: "阿明", content: "喜歡手沖咖啡 https://example.com #咖啡 #生日5月", pinned: true, updatedAt: new Date().toISOString() },
+            { id: "1", title: "阿明", content: "喜歡手沖咖啡 https://example.com \n第二行測試換行 #咖啡 #生日5月", pinned: true, updatedAt: new Date().toISOString() },
             { id: "2", title: "小美", content: "最近在準備轉職，壓力大 #工作 #朋友", pinned: false, updatedAt: new Date().toISOString() }
         ];
         renderNotes();
@@ -97,7 +103,6 @@ async function saveNotesToCloud() {
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({ notes })
         });
-        console.log("順序與資料已同步至 Google Sheet");
     } catch (error) {
         console.error("同步失敗", error);
     }
@@ -140,6 +145,33 @@ function openEditModal(id) {
     document.getElementById("editNoteTitle").value = note.title;
     document.getElementById("editNoteContent").value = note.content;
     document.getElementById("editModal").classList.remove("hidden");
+}
+
+// 開啟詳細閱讀 Modal
+function openDetailModal(id) {
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+
+    document.getElementById("detailNoteTitle").innerHTML = `<i class="fa-solid fa-user-tag text-yellow-500"></i> ${escapeHtml(note.title)}`;
+    
+    let processedContent = escapeHtml(note.content);
+    processedContent = processedContent.replace(/(https?:\/\/[^\s]+)/g, (url) => {
+        let domain = "";
+        try { domain = new URL(url).hostname; } catch(e) { domain = url; }
+        return `<a href="${url}" target="_blank" class="inline-flex items-center gap-1 my-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs text-yellow-600 hover:bg-yellow-50 transition max-w-full truncate"><i class="fa-solid fa-link text-yellow-500"></i><span class="truncate">${domain}</span></a>`;
+    });
+    processedContent = processedContent.replace(/(#[^\s#]+)/g, '<span class="text-yellow-600 font-semibold bg-yellow-50 px-1 rounded">$1</span>');
+
+    document.getElementById("detailNoteContent").innerHTML = processedContent;
+
+    let formattedDate = "";
+    if (note.updatedAt) {
+        const dateObj = new Date(note.updatedAt);
+        formattedDate = `最後修改於：${dateObj.getFullYear()}/${dateObj.getMonth() + 1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+    }
+    document.getElementById("detailNoteDate").textContent = formattedDate;
+
+    document.getElementById("detailModal").classList.remove("hidden");
 }
 
 function handleSaveEdit() {
@@ -225,22 +257,19 @@ function renderNotes(searchQuery = "") {
 
     filtered.forEach(note => {
         const card = document.createElement("div");
-        // 關鍵：加入 data-id 屬性讓 SortableJS 能夠追蹤卡片身份
         card.setAttribute("data-id", note.id);
-        card.className = `bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 border ${note.pinned ? 'border-yellow-400 bg-yellow-50/20' : 'border-gray-200'} flex flex-col justify-between cursor-grab active:cursor-grabbing`;
+        card.className = `bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 border ${note.pinned ? 'border-yellow-400 bg-yellow-50/20' : 'border-gray-200'} flex flex-col justify-between`;
 
         let processedContent = escapeHtml(note.content);
         
+        // 超連結盒子改為精巧的精簡膠囊樣式
         processedContent = processedContent.replace(/(https?:\/\/[^\s]+)/g, (url) => {
             let domain = "";
             try { domain = new URL(url).hostname; } catch(e) { domain = url; }
             return `
-                <a href="${url}" target="_blank" class="block my-2 p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-yellow-50/50 transition group">
-                    <div class="flex items-center gap-2 text-xs text-gray-500 mb-1">
-                        <i class="fa-solid fa-link text-yellow-500"></i>
-                        <span class="font-medium text-gray-700 truncate">${domain}</span>
-                    </div>
-                    <div class="text-xs text-yellow-600 truncate underline">${url}</div>
+                <a href="${url}" target="_blank" class="inline-flex items-center gap-1.5 my-1 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs hover:bg-yellow-50/60 transition max-w-full group">
+                    <i class="fa-solid fa-link text-yellow-500 shrink-0 text-[10px]"></i>
+                    <span class="text-gray-700 font-medium truncate">${domain}</span>
                 </a>
             `;
         });
@@ -256,22 +285,26 @@ function renderNotes(searchQuery = "") {
         card.innerHTML = `
             <div>
                 <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-bold text-gray-800 text-base flex items-center gap-1">
+                    <!-- 點擊名字開啟詳細閱讀視窗 -->
+                    <h3 onclick="openDetailModal('${note.id}')" class="font-bold text-gray-800 text-base flex items-center gap-1 cursor-pointer hover:text-yellow-600 transition" title="點擊詳細閱讀">
                         <i class="fa-solid fa-user-tag text-yellow-500 text-xs"></i> ${escapeHtml(note.title)}
                     </h3>
-                    <div class="flex gap-2">
-                        <button onclick="openEditModal('${note.id}')" class="text-gray-400 hover:text-yellow-500 transition" title="編輯">
-                            <i class="fa-solid fa-pen"></i>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="openEditModal('${note.id}')" class="text-gray-400 hover:text-yellow-500 p-1 transition" title="編輯">
+                            <i class="fa-solid fa-pen text-xs"></i>
                         </button>
-                        <button onclick="togglePin('${note.id}')" class="text-gray-400 hover:text-yellow-500 transition" title="釘選">
-                            <i class="fa-solid fa-thumbtack ${note.pinned ? 'text-yellow-500 rotate-45' : ''}"></i>
+                        <button onclick="togglePin('${note.id}')" class="text-gray-400 hover:text-yellow-500 p-1 transition" title="釘選">
+                            <i class="fa-solid fa-thumbtack text-xs ${note.pinned ? 'text-yellow-500 rotate-45' : ''}"></i>
                         </button>
-                        <button onclick="deleteNote('${note.id}')" class="text-gray-400 hover:text-red-500 transition" title="刪除">
-                            <i class="fa-solid fa-trash-can"></i>
+                        <button onclick="deleteNote('${note.id}')" class="text-gray-400 hover:text-red-500 p-1 transition" title="刪除">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
+                        <!-- 限制只有按住這個圖示才能拖拉，解決手機滑動誤觸問題 -->
+                        <i class="fa-solid fa-grip-vertical text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing drag-handle p-1 ml-1" title="按住拖拉排序"></i>
                     </div>
                 </div>
-                <div class="text-gray-600 text-sm whitespace-pre-wrap mb-4">${processedContent}</div>
+                <!-- 內文換行由 whitespace-pre-wrap 完整保留 -->
+                <div class="text-gray-600 text-sm whitespace-pre-wrap mb-4 line-clamp-4">${processedContent}</div>
             </div>
             <div class="text-[10px] text-gray-400 text-right">
                 ${formattedDate}
