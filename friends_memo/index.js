@@ -1,6 +1,4 @@
-// 從瀏覽器 localStorage 讀取 GAS 網址，若無則預設為空
 let API_URL = localStorage.getItem("gas_api_url") || "";
-
 let notes = [];
 let currentFilterTag = "all";
 
@@ -15,7 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
         renderNotes();
     });
 
-    // 設定視窗開關控制
     const modal = document.getElementById("settingsModal");
     document.getElementById("openSettingsBtn").addEventListener("click", () => {
         document.getElementById("gasUrlInput").value = API_URL;
@@ -32,7 +29,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// 載入資料
 async function loadNotes() {
     try {
         if (!API_URL) throw new Error("未設定 GAS 網址");
@@ -52,7 +48,6 @@ async function loadNotes() {
     }
 }
 
-// 同步到雲端
 async function saveNotesToCloud() {
     if (!API_URL) return;
     try {
@@ -67,7 +62,6 @@ async function saveNotesToCloud() {
     }
 }
 
-// 新增筆記
 function handleAddNote() {
     const titleInput = document.getElementById("noteTitle");
     const contentInput = document.getElementById("noteContent");
@@ -140,7 +134,6 @@ function renderTagFilters() {
     });
 }
 
-// 渲染筆記畫面（包含連結預覽與高亮）
 function renderNotes(searchQuery = "") {
     const container = document.getElementById("notesContainer");
     container.innerHTML = "";
@@ -163,10 +156,8 @@ function renderNotes(searchQuery = "") {
         const card = document.createElement("div");
         card.className = `bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 border ${note.pinned ? 'border-yellow-400 bg-yellow-50/20' : 'border-gray-200'} flex flex-col justify-between`;
 
-        // 處理內文：高亮 #標籤 並自動將網址轉換成預覽卡片格式
         let processedContent = escapeHtml(note.content);
         
-        // 抓出網址並轉換成美觀的預覽卡片
         processedContent = processedContent.replace(/(https?:\/\/[^\s]+)/g, (url) => {
             let domain = "";
             try { domain = new URL(url).hostname; } catch(e) { domain = url; }
@@ -181,7 +172,6 @@ function renderNotes(searchQuery = "") {
             `;
         });
 
-        // 高亮 hashtag
         processedContent = processedContent.replace(/(#[^\s#]+)/g, '<span class="text-yellow-600 font-semibold bg-yellow-50 px-1 rounded">$1</span>');
 
         card.innerHTML = `
