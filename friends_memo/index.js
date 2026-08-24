@@ -57,20 +57,23 @@ async function loadNotes() {
     }
 }
 
+// 同步到雲端 (已優化跨域傳輸)
 async function saveNotesToCloud() {
     if (!API_URL) return;
     try {
         await fetch(API_URL, {
             method: "POST",
             mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "text/plain;charset=utf-8" 
+            },
             body: JSON.stringify({ notes })
         });
+        console.log("已嘗試同步至 Google Sheet");
     } catch (error) {
         console.error("同步失敗", error);
     }
 }
-
 // 新增筆記
 function handleAddNote() {
     const titleInput = document.getElementById("noteTitle");
