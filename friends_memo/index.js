@@ -33,7 +33,41 @@ document.addEventListener("DOMContentLoaded", () => {
     const editModal = document.getElementById("editModal");
     document.getElementById("closeEditModalBtn").addEventListener("click", () => editModal.classList.add("hidden"));
     document.getElementById("saveEditBtn").addEventListener("click", handleSaveEdit);
+
+    // 初始化 SortableJS 拖拉排序功能
+    initSortable();
 });
+
+// 設定拖拉排序行為
+function initSortable() {
+    const container = document.getElementById("notesContainer");
+    Sortable.create(container, {
+        animation: 150, // 拖拉動畫毫秒數
+        ghostClass: 'opacity-30', // 拖拉時原位置的透明樣式留影
+        onEnd: function (evt) {
+            // 當拖拉結束時，抓取畫面上所有卡片的 data-id 順序
+            const cardElements = container.querySelectorAll('[data-id]');
+            const newOrderIds = Array.from(cardElements).map(el => el.getAttribute('data-id'));
+
+            // 根據畫面上新的順序重新排列 notes 陣列
+            let reorderedNotes = [];
+            newOrderIds.forEach(id => {
+                const note = notes.find(n => n.id === id);
+                if (note) reorderedNotes.push(note);
+            });
+
+            // 將沒有顯示在目前畫面（例如被標籤或搜尋過濾掉的）其他筆記補回陣列尾端
+            notes.forEach(note => {
+                if (!reorderedNotes.some(n => n.id === note.id)) {
+                    reorderedNotes.push(note);
+                }
+            });
+
+            notes = reorderedNotes;
+            saveNotesToCloud(); // 自動同步新次序到 Google Sheet
+        }
+    });
+}
 
 async function loadNotes() {
     try {
@@ -63,7 +97,7 @@ async function saveNotesToCloud() {
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({ notes })
         });
-        console.log("已同步變更至 Google Sheet");
+        console.log("順序與資料已同步至 Google Sheet");
     } catch (error) {
         console.error("同步失敗", error);
     }
@@ -98,7 +132,6 @@ function handleAddNote() {
     saveNotesToCloud();
 }
 
-// 點擊編輯按鈕：把該筆記的名字與內容帶入對話框
 function openEditModal(id) {
     const note = notes.find(n => n.id === id);
     if (!note) return;
@@ -109,7 +142,6 @@ function openEditModal(id) {
     document.getElementById("editModal").classList.remove("hidden");
 }
 
-// 儲存編輯結果（同時更新名字與內容，並更新時間戳記）
 function handleSaveEdit() {
     const title = document.getElementById("editNoteTitle").value.trim();
     const content = document.getElementById("editNoteContent").value.trim();
@@ -118,8 +150,8 @@ function handleSaveEdit() {
 
     const note = notes.find(n => n.id === currentEditingId);
     if (note) {
-        note.title = title; // 更新名字
-        note.content = content; // 更新內容
+        note.title = title;
+        note.content = content;
         note.tags = content.match(/#[^\s#]+/g) || [];
         note.updatedAt = new Date().toISOString();
     }
@@ -127,7 +159,7 @@ function handleSaveEdit() {
     document.getElementById("editModal").classList.add("hidden");
     renderNotes();
     renderTagFilters();
-    saveNotesToCloud(); // 自動同步到 Google Sheet
+    saveNotesToCloud();
 }
 
 function togglePin(id) {
@@ -193,7 +225,9 @@ function renderNotes(searchQuery = "") {
 
     filtered.forEach(note => {
         const card = document.createElement("div");
-        card.className = `bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 border ${note.pinned ? 'border-yellow-400 bg-yellow-50/20' : 'border-gray-200'} flex flex-col justify-between`;
+        // 關鍵：加入 data-id 屬性讓 SortableJS 能夠追蹤卡片身份
+        card.setAttribute("data-id", note.id);
+        card.className = `bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 border ${note.pinned ? 'border-yellow-400 bg-yellow-50/20' : 'border-gray-200'} flex flex-col justify-between cursor-grab active:cursor-grabbing`;
 
         let processedContent = escapeHtml(note.content);
         
