@@ -1,6 +1,7 @@
 let API_URL = localStorage.getItem("gas_api_url") || "";
 let notes = [];
 let currentFilterTag = "all";
+let currentEditingId = null; // 紀錄目前正在編輯的筆記 ID
 
 document.addEventListener("DOMContentLoaded", () => {
     loadNotes();
@@ -13,20 +14,26 @@ document.addEventListener("DOMContentLoaded", () => {
         renderNotes();
     });
 
-    const modal = document.getElementById("settingsModal");
+    // 設定視窗開關
+    const settingsModal = document.getElementById("settingsModal");
     document.getElementById("openSettingsBtn").addEventListener("click", () => {
         document.getElementById("gasUrlInput").value = API_URL;
-        modal.classList.remove("hidden");
+        settingsModal.classList.remove("hidden");
     });
-    document.getElementById("closeSettingsBtn").addEventListener("click", () => modal.classList.add("hidden"));
+    document.getElementById("closeSettingsBtn").addEventListener("click", () => settingsModal.classList.add("hidden"));
     document.getElementById("saveSettingsBtn").addEventListener("click", () => {
         const newUrl = document.getElementById("gasUrlInput").value.trim();
         localStorage.setItem("gas_api_url", newUrl);
         API_URL = newUrl;
-        modal.classList.add("hidden");
+        settingsModal.classList.add("hidden");
         alert("GAS 網址已儲存！");
         loadNotes();
     });
+
+    // 編輯視窗關閉與儲存
+    const editModal = document.getElementById("editModal");
+    document.getElementById("closeEditModalBtn").addEventListener("click", () => editModal.classList.add("hidden"));
+    document.getElementById("saveEditBtn").addEventListener("click", handleSaveEdit);
 });
 
 async function loadNotes() {
@@ -62,6 +69,7 @@ async function saveNotesToCloud() {
     }
 }
 
+// 新增筆記
 function handleAddNote() {
     const titleInput = document.getElementById("noteTitle");
     const contentInput = document.getElementById("noteContent");
@@ -86,6 +94,38 @@ function handleAddNote() {
     titleInput.value = "";
     contentInput.value = "";
 
+    renderNotes();
+    renderTagFilters();
+    saveNotesToCloud();
+}
+
+// 開啟編輯視窗
+function openEditModal(id) {
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+
+    currentEditingId = id;
+    document.getElementById("editNoteTitle").value = note.title;
+    document.getElementById("editNoteContent").value = note.content;
+    document.getElementById("editModal").classList.remove("hidden");
+}
+
+// 儲存編輯結果
+function handleSaveEdit() {
+    const title = document.getElementById("editNoteTitle").value.trim();
+    const content = document.getElementById("editNoteContent").value.trim();
+
+    if (!title && !content) return;
+
+    const note = notes.find(n => n.id === currentEditingId);
+    if (note) {
+        note.title = title;
+        note.content = content;
+        note.tags = content.match(/#[^\s#]+/g) || [];
+        note.updatedAt = new Date().toISOString(); // 更新修改日期時間
+    }
+
+    document.getElementById("editModal").classList.add("hidden");
     renderNotes();
     renderTagFilters();
     saveNotesToCloud();
@@ -174,6 +214,13 @@ function renderNotes(searchQuery = "") {
 
         processedContent = processedContent.replace(/(#[^\s#]+)/g, '<span class="text-yellow-600 font-semibold bg-yellow-50 px-1 rounded">$1</span>');
 
+        // 格式化最後修改日期時間
+        let formattedDate = "";
+        if (note.updatedAt) {
+            const dateObj = new Date(note.updatedAt);
+            formattedDate = `修改於：${dateObj.getFullYear()}/${dateObj.getMonth() + 1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+        }
+
         card.innerHTML = `
             <div>
                 <div class="flex justify-between items-start mb-2">
@@ -181,6 +228,9 @@ function renderNotes(searchQuery = "") {
                         <i class="fa-solid fa-user-tag text-yellow-500 text-xs"></i> ${escapeHtml(note.title)}
                     </h3>
                     <div class="flex gap-2">
+                        <button onclick="openEditModal('${note.id}')" class="text-gray-400 hover:text-yellow-500 transition" title="編輯">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
                         <button onclick="togglePin('${note.id}')" class="text-gray-400 hover:text-yellow-500 transition" title="釘選">
                             <i class="fa-solid fa-thumbtack ${note.pinned ? 'text-yellow-500 rotate-45' : ''}"></i>
                         </button>
@@ -192,7 +242,7 @@ function renderNotes(searchQuery = "") {
                 <div class="text-gray-600 text-sm whitespace-pre-wrap mb-4">${processedContent}</div>
             </div>
             <div class="text-[10px] text-gray-400 text-right">
-                ${new Date(note.updatedAt).toLocaleDateString()}
+                ${formattedDate}
             </div>
         `;
         container.appendChild(card);
