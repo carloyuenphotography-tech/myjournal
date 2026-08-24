@@ -235,12 +235,12 @@ function renderTagFilters() {
 }
 
 // 異步取得連結預覽資料
+// 異步取得連結預覽資料（全新美化版）
 async function fetchLinkPreview(url, placeholderId) {
     const el = document.getElementById(placeholderId);
     if (!el) return;
 
     try {
-        // 使用免費的 Microlink API 抓取網站 metadata (Title, Description, Image)
         const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
         const result = await response.json();
 
@@ -248,26 +248,32 @@ async function fetchLinkPreview(url, placeholderId) {
             const data = result.data;
             let domain = "";
             try { domain = new URL(url).hostname; } catch(e) { domain = url; }
+            
+            // 抓取網站的預覽縮圖 (如果有提供)
+            const imageUrl = data.image?.url || data.image || "";
 
             el.innerHTML = `
-                <a href="${url}" target="_blank" class="block my-2 p-2.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-yellow-50/40 transition group">
-                    <div class="flex items-center gap-1.5 text-[11px] text-gray-400 mb-1">
-                        <i class="fa-solid fa-globe text-yellow-500"></i>
-                        <span class="truncate">${domain}</span>
+                <a href="${url}" target="_blank" class="flex items-center gap-3 my-2.5 p-2.5 bg-white border border-gray-200 rounded-xl hover:border-yellow-400 hover:shadow-md transition group overflow-hidden">
+                    ${imageUrl ? `<img src="${imageUrl}" class="w-14 h-14 object-cover rounded-lg shrink-0 bg-gray-100" onerror="this.style.display='none'">` : ''}
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-1 text-[10px] text-gray-400 mb-0.5">
+                            <i class="fa-solid fa-globe text-yellow-500"></i>
+                            <span class="truncate">${domain}</span>
+                        </div>
+                        <div class="font-bold text-gray-800 text-xs line-clamp-1 group-hover:text-yellow-600 transition">${escapeHtml(data.title || domain)}</div>
+                        ${data.description ? `<div class="text-[10px] text-gray-500 line-clamp-1 mt-0.5">${escapeHtml(data.description)}</div>` : ''}
                     </div>
-                    <div class="font-bold text-gray-800 text-xs line-clamp-1 group-hover:text-yellow-600 transition">${escapeHtml(data.title || domain)}</div>
-                    ${data.description ? `<div class="text-[11px] text-gray-500 line-clamp-1 mt-0.5">${escapeHtml(data.description)}</div>` : ''}
                 </a>
             `;
         } else {
             throw new Error("API 沒回傳成功資料");
         }
     } catch (e) {
-        // 失敗時自動降級為精簡按鈕
+        // 失敗或逾時侯的降級精簡按鈕
         let domain = "";
         try { domain = new URL(url).hostname; } catch(e) { domain = url; }
         el.innerHTML = `
-            <a href="${url}" target="_blank" class="inline-flex items-center gap-1.5 my-1 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs hover:bg-yellow-50/60 transition max-w-full">
+            <a href="${url}" target="_blank" class="inline-flex items-center gap-1.5 my-1.5 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs hover:border-yellow-400 transition max-w-full shadow-2xs">
                 <i class="fa-solid fa-link text-yellow-500 shrink-0 text-[10px]"></i>
                 <span class="text-gray-700 font-medium truncate">${domain}</span>
             </a>
