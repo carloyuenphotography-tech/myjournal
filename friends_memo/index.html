@@ -6,8 +6,8 @@
     <title>Friends’ memo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 引入 SortableJS 用於實現卡片拖拉排序 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/SortableJS/1.15.0/Sortable.min.js"></script>
+    <!-- 改用 jsDelivr CDN 來載入 SortableJS，更穩定 -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <!-- 頂部導覽列 -->
@@ -42,7 +42,7 @@
             <button class="tag-filter-all px-3 py-1 bg-gray-800 text-white rounded-full text-xs font-medium transition whitespace-nowrap">全部標籤</button>
         </div>
 
-        <!-- 筆記卡片網格 (支援拖拉) -->
+        <!-- 筆記卡片網格 -->
         <div id="notesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <!-- 動態載入 -->
         </div>
