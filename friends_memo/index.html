@@ -53,7 +53,7 @@
                 <h3 class="font-bold text-gray-800 text-lg"><i class="fa-solid fa-database text-yellow-500"></i> 設定 Google Sheets 連結</h3>
                 <button id="closeSettingsBtn" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-            <p class="text-xs text-gray-500 mb-4">請輸入你的 Google Apps Script 網頁應用程式網址。資料將直接同步至你的 Google Sheet。</p>
+            <p class="text-xs text-gray-500 mb-4">優先讀取 config.js 設定，你也可以在此直接修改並覆蓋儲存至本機。</p>
             <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 border rounded-lg text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-yellow-400">
             <div class="flex justify-end gap-2">
                 <button id="saveSettingsBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">儲存並連線</button>
@@ -76,7 +76,8 @@
         </div>
     </div>
 
-    <!-- 載入外部 JS -->
+    <!-- 載入設定檔與邏輯控制 (注意順序：config.js 必須在 index.js 之前載入) -->
+    <script src="config.js"></script>
     <script src="index.js"></script>
 </body>
 </html>
