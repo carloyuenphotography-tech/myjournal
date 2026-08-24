@@ -1,4 +1,3 @@
-// 優先使用 localStorage，若無則讀取 config.js 中的 APP_CONFIG.GAS_URL
 let API_URL = localStorage.getItem("gas_api_url") || (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.GAS_URL : "");
 
 let notes = [];
@@ -16,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
         renderNotes();
     });
 
-    // 設定視窗開關
     const settingsModal = document.getElementById("settingsModal");
     document.getElementById("openSettingsBtn").addEventListener("click", () => {
         document.getElementById("gasUrlInput").value = API_URL;
@@ -32,7 +30,6 @@ document.addEventListener("DOMContentLoaded", () => {
         loadNotes();
     });
 
-    // 編輯視窗關閉與儲存
     const editModal = document.getElementById("editModal");
     document.getElementById("closeEditModalBtn").addEventListener("click", () => editModal.classList.add("hidden"));
     document.getElementById("saveEditBtn").addEventListener("click", handleSaveEdit);
@@ -47,7 +44,7 @@ async function loadNotes() {
         renderNotes();
         renderTagFilters();
     } catch (error) {
-        console.log("使用本地測試資料模式（未連線或未設定 GAS 網址）。");
+        console.log("使用本地測試資料模式。");
         notes = [
             { id: "1", title: "阿明", content: "喜歡手沖咖啡 https://example.com #咖啡 #生日5月", pinned: true, updatedAt: new Date().toISOString() },
             { id: "2", title: "小美", content: "最近在準備轉職，壓力大 #工作 #朋友", pinned: false, updatedAt: new Date().toISOString() }
@@ -57,24 +54,21 @@ async function loadNotes() {
     }
 }
 
-// 同步到雲端 (已優化跨域傳輸)
 async function saveNotesToCloud() {
     if (!API_URL) return;
     try {
         await fetch(API_URL, {
             method: "POST",
             mode: "no-cors",
-            headers: { 
-                "Content-Type": "text/plain;charset=utf-8" 
-            },
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({ notes })
         });
-        console.log("已嘗試同步至 Google Sheet");
+        console.log("已同步變更至 Google Sheet");
     } catch (error) {
         console.error("同步失敗", error);
     }
 }
-// 新增筆記
+
 function handleAddNote() {
     const titleInput = document.getElementById("noteTitle");
     const contentInput = document.getElementById("noteContent");
@@ -104,7 +98,7 @@ function handleAddNote() {
     saveNotesToCloud();
 }
 
-// 開啟編輯視窗
+// 點擊編輯按鈕：把該筆記的名字與內容帶入對話框
 function openEditModal(id) {
     const note = notes.find(n => n.id === id);
     if (!note) return;
@@ -115,7 +109,7 @@ function openEditModal(id) {
     document.getElementById("editModal").classList.remove("hidden");
 }
 
-// 儲存編輯結果
+// 儲存編輯結果（同時更新名字與內容，並更新時間戳記）
 function handleSaveEdit() {
     const title = document.getElementById("editNoteTitle").value.trim();
     const content = document.getElementById("editNoteContent").value.trim();
@@ -124,8 +118,8 @@ function handleSaveEdit() {
 
     const note = notes.find(n => n.id === currentEditingId);
     if (note) {
-        note.title = title;
-        note.content = content;
+        note.title = title; // 更新名字
+        note.content = content; // 更新內容
         note.tags = content.match(/#[^\s#]+/g) || [];
         note.updatedAt = new Date().toISOString();
     }
@@ -133,7 +127,7 @@ function handleSaveEdit() {
     document.getElementById("editModal").classList.add("hidden");
     renderNotes();
     renderTagFilters();
-    saveNotesToCloud();
+    saveNotesToCloud(); // 自動同步到 Google Sheet
 }
 
 function togglePin(id) {
