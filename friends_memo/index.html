@@ -6,6 +6,8 @@
     <title>Friends’ memo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入 SortableJS 用於實現卡片拖拉排序 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/SortableJS/1.15.0/Sortable.min.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <!-- 頂部導覽列 -->
@@ -40,7 +42,7 @@
             <button class="tag-filter-all px-3 py-1 bg-gray-800 text-white rounded-full text-xs font-medium transition whitespace-nowrap">全部標籤</button>
         </div>
 
-        <!-- 筆記卡片網格 -->
+        <!-- 筆記卡片網格 (支援拖拉) -->
         <div id="notesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <!-- 動態載入 -->
         </div>
@@ -68,7 +70,6 @@
                 <h3 class="font-bold text-gray-800 text-lg"><i class="fa-solid fa-pen-to-square text-yellow-500"></i> 編輯筆記</h3>
                 <button id="closeEditModalBtn" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-            <!-- 這裡就是修改朋友名字的輸入框 -->
             <label class="block text-xs text-gray-400 mb-1">朋友名字</label>
             <input type="text" id="editNoteTitle" placeholder="朋友名字" class="w-full px-3 py-2 font-semibold text-gray-800 border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm">
             
