@@ -243,10 +243,31 @@ function renderTagFilters() {
     `;
 }
 
+// 異步取得連結預覽資料（已加入 Google Photos 專屬卡片支援）
 async function fetchLinkPreview(url, placeholderId) {
     const el = document.getElementById(placeholderId);
     if (!el) return;
 
+    // 1. 針對 Google Photos 連結直接客製化顯示（繞過無法抓取預覽的限制）
+    if (url.includes('photos.app.goo.gl') || url.includes('photos.google.com')) {
+        el.innerHTML = `
+            <a href="${url}" target="_blank" class="flex items-center gap-3 my-2.5 p-3 bg-white border border-yellow-200 rounded-xl hover:border-yellow-400 hover:shadow-md transition group overflow-hidden">
+                <div class="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center shrink-0 text-yellow-600 text-base">
+                    <i class="fa-solid fa-photo-film"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1 text-[10px] text-yellow-600 font-medium mb-0.5">
+                        <i class="fa-solid fa-images"></i>
+                        <span>Google Photos 相簿</span>
+                    </div>
+                    <div class="font-bold text-gray-800 text-xs truncate group-hover:text-yellow-600 transition">點擊開啟相簿檢視相片</div>
+                </div>
+            </a>
+        `;
+        return;
+    }
+
+    // 2. 一般網址維持原有的 Microlink API 預覽抓取
     try {
         const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
         const result = await response.json();
