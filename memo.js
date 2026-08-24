@@ -64,25 +64,25 @@ function renderMemos() {
       .map(t => `<span class="tag" onclick="searchTag('${t.trim()}', event)">${t.trim()}</span>`)
       .join('');
 
-    // ✨ 重新設計：唯讀極簡膠囊清單（無複雜輸入框，閱讀極佳）
     let hwHtml = '';
     if (memo.homework_list && memo.homework_list.length > 0) {
       hwHtml = `
         <div class="hw-container">
           <div class="hw-header-title">
-            <span>📚 功課進度追蹤</span>
+            <span>📚 功課進度追蹤 (點擊標籤直接切換狀態)</span>
           </div>
           ${memo.homework_list.map(hw => `
             <div class="hw-item">
               <div class="hw-item-top">
                 <span class="hw-item-title">${hw.title || '-'}</span>
-                <span style="cursor:pointer; font-size:14px;" title="點擊修改功課狀態" onclick="openQuickHwModal('${hw.homework_id}')">✏️</span>
               </div>
               <div class="hw-badges">
-                <span class="pill pill-collect-${hw.collect_status || '未收齊'}">${hw.collect_status || '未收齊'}</span>
-                <span class="pill pill-marking-${hw.marking_status || '未批改'}">${hw.marking_status || '未批改'}</span>
-                <span class="pill pill-location">📍 ${hw.storage_location || '教員室'}</span>
-                ${hw.missing_students ? `<span class="pill pill-missing">⚠️ 欠交: ${hw.missing_students}</span>` : ''}
+                <span class="pill pill-collect-${hw.collect_status || '未收齊'}" style="cursor:pointer;" title="點擊切換收繳狀態" onclick="cycleCollectStatus('${hw.homework_id}')">${hw.collect_status || '未收齊'}</span>
+                <span class="pill pill-marking-${hw.marking_status || '未批改'}" style="cursor:pointer;" title="點擊切換批改狀態" onclick="cycleMarkingStatus('${hw.homework_id}')">${hw.marking_status || '未批改'}</span>
+                <span class="pill pill-location" style="cursor:pointer;" title="點擊切換存放位置" onclick="cycleLocation('${hw.homework_id}')">📍 ${hw.storage_location || '教員室'}</span>
+                <span class="pill ${hw.missing_students ? 'pill-missing' : 'pill-collect-收齊'}" style="cursor:pointer;" title="點擊修改欠交學生" onclick="editMissingStudents('${hw.homework_id}')">
+                  ${hw.missing_students ? `⚠️ 欠交: ${hw.missing_students}` : '+ 記錄欠交'}
+                </span>
               </div>
             </div>
           `).join('')}
@@ -123,6 +123,86 @@ function renderMemos() {
   });
 }
 
+// 輔助工具：尋找特定 homework 並回傳該 hw 與其 memo
+function findHomeworkAndMemo(hwId) {
+  for (let memo of rawMemos) {
+    if (memo.homework_list) {
+      let hw = memo.homework_list.find(h => h.homework_id === hwId);
+      if (hw) return { memo, hw };
+    }
+  }
+  return null;
+}
+
+// 快速更新並同步到後端
+async function updateHwAndSync(hwId, updatedFields) {
+  const target = findHomeworkAndMemo(hwId);
+  if (!target) return;
+
+  // 局部更新前端資料
+  Object.assign(target.hw, updatedFields);
+  renderMemos(); // 立即重新渲染畫面
+
+  // 背景發送 API 更新
+  const payload = {
+    action: 'updateHomeworkInline',
+    data: {
+      homework_id: hwId,
+      collect_status: target.hw.collect_status,
+      marking_status: target.hw.marking_status,
+      missing_students: target.hw.missing_students,
+      storage_location: target.hw.storage_location
+    }
+  };
+
+  await fetch(CONFIG.GAS_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+}
+
+// 1. 循環切換收繳狀態
+function cycleCollectStatus(hwId) {
+  const target = findHomeworkAndMemo(hwId);
+  if (!target) return;
+  const sequence = ['未收齊', '收集中', '收齊'];
+  const currentIndex = sequence.indexOf(target.hw.collect_status || '未收齊');
+  const nextStatus = sequence[(currentIndex + 1) % sequence.length];
+  updateHwAndSync(hwId, { collect_status: nextStatus });
+}
+
+// 2. 循環切換批改狀態
+function cycleMarkingStatus(hwId) {
+  const target = findHomeworkAndMemo(hwId);
+  if (!target) return;
+  const sequence = ['未批改', '批改中', '完成批改'];
+  const currentIndex = sequence.indexOf(target.hw.marking_status || '未批改');
+  const nextStatus = sequence[(currentIndex + 1) % sequence.length];
+  updateHwAndSync(hwId, { marking_status: nextStatus });
+}
+
+// 3. 循環切換地點
+function cycleLocation(hwId) {
+  const target = findHomeworkAndMemo(hwId);
+  if (!target) return;
+  const sequence = ['教員室', '7/F簿櫃', '課室外', '課室內', '學生'];
+  const currentIndex = sequence.indexOf(target.hw.storage_location || '教員室');
+  const nextStatus = sequence[(currentIndex + 1) % sequence.length];
+  updateHwAndSync(hwId, { storage_location: nextStatus });
+}
+
+// 4. 點擊修改欠交學生
+function editMissingStudents(hwId) {
+  const target = findHomeworkAndMemo(hwId);
+  if (!target) return;
+  const currentVal = target.hw.missing_students || '';
+  const newVal = prompt(`請輸入 ${target.hw.title} 的欠交學生號碼（例如: 10, 12, 15）：`, currentVal);
+  if (newVal !== null) {
+    updateHwAndSync(hwId, { missing_students: newVal.trim() });
+  }
+}
+
 function filterClass(className, btn) {
   currentClass = className;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -140,60 +220,6 @@ function toggleArchiveView(btn) {
   showArchived = !showArchived;
   btn.innerText = showArchived ? "查看一般 Memo" : "查看典藏";
   renderMemos();
-}
-
-// ✨ 開啟「功課快速修改」彈窗
-function openQuickHwModal(hwId) {
-  let targetHw = null;
-  for (let memo of rawMemos) {
-    if (memo.homework_list) {
-      let found = memo.homework_list.find(h => h.homework_id === hwId);
-      if (found) { targetHw = found; break; }
-    }
-  }
-
-  if (!targetHw) return;
-
-  document.getElementById('quickHwId').value = hwId;
-  document.getElementById('quickHwTitle').innerText = `✏️ 修改：${targetHw.title}`;
-  document.getElementById('quickCollect').value = targetHw.collect_status || '未收齊';
-  document.getElementById('quickMarking').value = targetHw.marking_status || '未批改';
-  document.getElementById('quickMissing').value = targetHw.missing_students || '';
-  document.getElementById('quickLocation').value = targetHw.storage_location || '教員室';
-
-  document.getElementById('hwQuickEditModal').style.display = 'flex';
-}
-
-function closeQuickHwModal() {
-  document.getElementById('hwQuickEditModal').style.display = 'none';
-}
-
-// ✨ 儲存快速修改並即時同步 Google Sheet
-async function submitQuickHwEdit() {
-  const hwId = document.getElementById('quickHwId').value;
-  const saveBtn = document.getElementById('quickSaveBtn');
-  saveBtn.innerText = '⏳ 儲存中...';
-
-  const payload = {
-    action: 'updateHomeworkInline',
-    data: {
-      homework_id: hwId,
-      collect_status: document.getElementById('quickCollect').value,
-      marking_status: document.getElementById('quickMarking').value,
-      missing_students: document.getElementById('quickMissing').value,
-      storage_location: document.getElementById('quickLocation').value
-    }
-  };
-
-  await fetch(CONFIG.GAS_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  });
-
-  saveBtn.innerText = '儲存更新';
-  closeQuickHwModal();
-  fetchMemos(); // 重新讀取與渲染
 }
 
 function addHomeworkRow(data = {}) {
