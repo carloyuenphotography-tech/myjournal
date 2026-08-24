@@ -6,7 +6,6 @@
     <title>Friends’ memo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 改用 jsDelivr CDN 來載入 SortableJS，更穩定 -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -79,6 +78,18 @@
             <div class="flex justify-end gap-2">
                 <button id="saveEditBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">儲存變更</button>
             </div>
+        </div>
+    </div>
+
+    <!-- 詳細閱讀對話框 (Modal) -->
+    <div id="detailModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
+                <h3 id="detailNoteTitle" class="font-bold text-gray-800 text-lg flex items-center gap-2"></h3>
+                <button id="closeDetailModalBtn" class="text-gray-400 hover:text-gray-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="detailNoteContent" class="text-gray-700 text-sm whitespace-pre-wrap my-2 overflow-y-auto flex-1 leading-relaxed"></div>
+            <div id="detailNoteDate" class="text-[11px] text-gray-400 text-right pt-3 border-t border-gray-100 mt-2"></div>
         </div>
     </div>
 
