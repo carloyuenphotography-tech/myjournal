@@ -9,11 +9,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("addNoteBtn").addEventListener("click", handleAddNote);
     document.getElementById("searchInput").addEventListener("input", handleSearch);
-    
-    document.querySelector(".tag-filter-all").addEventListener("click", () => {
-        currentFilterTag = "all";
-        renderNotes();
-    });
 
     const settingsModal = document.getElementById("settingsModal");
     document.getElementById("openSettingsBtn").addEventListener("click", () => {
@@ -157,7 +152,8 @@ function openDetailModal(id) {
         try { domain = new URL(url).hostname; } catch(e) { domain = url; }
         return `<a href="${url}" target="_blank" class="inline-flex items-center gap-1 my-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs text-yellow-600 hover:bg-yellow-50 transition max-w-full truncate"><i class="fa-solid fa-link text-yellow-500"></i><span class="truncate">${domain}</span></a>`;
     });
-    processedContent = processedContent.replace(/(#[^\s#]+)/g, '<span class="text-yellow-600 font-semibold bg-yellow-50 px-1 rounded">$1</span>');
+    // 讓詳細對話框裏面的 hashtag 也可以點擊篩選
+    processedContent = processedContent.replace(/(#[^\s#]+)/g, '<span onclick="filterByTag(\'$1\')" class="text-yellow-600 font-semibold bg-yellow-50 px-1.5 py-0.5 rounded cursor-pointer hover:bg-yellow-100 transition inline-block my-0.5">$1</span>');
 
     document.getElementById("detailNoteContent").innerHTML = processedContent;
 
@@ -211,31 +207,42 @@ function handleSearch(e) {
     renderNotes(e.target.value.toLowerCase());
 }
 
-function renderTagFilters() {
-    const bar = document.getElementById("tagFilterBar");
-    const allBtn = bar.querySelector(".tag-filter-all");
-    bar.innerHTML = "";
-    bar.appendChild(allBtn);
-
-    const allTags = new Set();
-    notes.forEach(n => {
-        if (n.tags) n.tags.forEach(t => allTags.add(t));
-    });
-
-    allTags.forEach(tag => {
-        const btn = document.createElement("button");
-        btn.className = `px-3 py-1 rounded-full text-xs font-medium transition whitespace-nowrap ${currentFilterTag === tag ? 'bg-yellow-500 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`;
-        btn.textContent = tag;
-        btn.addEventListener("click", () => {
-            currentFilterTag = tag;
-            renderNotes();
-            renderTagFilters();
-        });
-    });
+// 點擊 hashtag 進行篩選
+function filterByTag(tag) {
+    currentFilterTag = tag;
+    renderNotes();
+    renderTagFilters();
 }
 
-// 異步取得連結預覽資料
-// 異步取得連結預覽資料（全新美化版）
+// 取消篩選，恢復全體顯示
+function clearFilter() {
+    currentFilterTag = "all";
+    renderNotes();
+    renderTagFilters();
+}
+
+// 動態渲染篩選狀態提示列（沒篩選時隱藏，有篩選時出現）
+function renderTagFilters() {
+    const bar = document.getElementById("tagFilterBar");
+    if (currentFilterTag === "all") {
+        bar.innerHTML = "";
+        bar.classList.add("hidden");
+        return;
+    }
+    bar.classList.remove("hidden");
+    bar.innerHTML = `
+        <div class="flex items-center justify-between bg-yellow-50 border border-yellow-200 px-4 py-2.5 rounded-xl text-sm shadow-2xs">
+            <div class="flex items-center gap-2 text-yellow-800">
+                <i class="fa-solid fa-filter text-yellow-500"></i>
+                <span>目前篩選標籤：<strong class="font-bold">${currentFilterTag}</strong></span>
+            </div>
+            <button onclick="clearFilter()" class="text-xs bg-white border border-yellow-300 text-yellow-700 px-3 py-1.5 rounded-lg hover:bg-yellow-100 transition font-medium shadow-2xs flex items-center gap-1 cursor-pointer">
+                取消篩選 <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    `;
+}
+
 async function fetchLinkPreview(url, placeholderId) {
     const el = document.getElementById(placeholderId);
     if (!el) return;
@@ -248,8 +255,6 @@ async function fetchLinkPreview(url, placeholderId) {
             const data = result.data;
             let domain = "";
             try { domain = new URL(url).hostname; } catch(e) { domain = url; }
-            
-            // 抓取網站的預覽縮圖 (如果有提供)
             const imageUrl = data.image?.url || data.image || "";
 
             el.innerHTML = `
@@ -269,7 +274,6 @@ async function fetchLinkPreview(url, placeholderId) {
             throw new Error("API 沒回傳成功資料");
         }
     } catch (e) {
-        // 失敗或逾時侯的降級精簡按鈕
         let domain = "";
         try { domain = new URL(url).hostname; } catch(e) { domain = url; }
         el.innerHTML = `
@@ -306,17 +310,16 @@ function renderNotes(searchQuery = "") {
 
         let processedContent = escapeHtml(note.content);
         
-        // 將網址替換為動態載入預覽的佔位區塊 (Placeholder)
         let linkCounter = 0;
         processedContent = processedContent.replace(/(https?:\/\/[^\s]+)/g, (url) => {
             linkCounter++;
             const placeholderId = `preview-${note.id}-${linkCounter}`;
-            // 非同步在背景呼叫 API 填入預覽
             setTimeout(() => fetchLinkPreview(url, placeholderId), 50);
             return `<div id="${placeholderId}"><div class="inline-flex items-center gap-1.5 my-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs text-gray-400"><i class="fa-solid fa-spinner fa-spin text-yellow-500"></i> 載入連結預覽中...</div></div>`;
         });
 
-        processedContent = processedContent.replace(/(#[^\s#]+)/g, '<span class="text-yellow-600 font-semibold bg-yellow-50 px-1 rounded">$1</span>');
+        // 讓筆記卡片內的 hashtag 變成可點擊的按鈕
+        processedContent = processedContent.replace(/(#[^\s#]+)/g, '<span onclick="filterByTag(\'$1\')" class="text-yellow-600 font-semibold bg-yellow-50 px-1.5 py-0.5 rounded cursor-pointer hover:bg-yellow-100 transition inline-block my-0.5">$1</span>');
 
         let formattedDate = "";
         if (note.updatedAt) {
