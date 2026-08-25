@@ -155,34 +155,22 @@
 
     <div class="header-bar">
       <div class="title-group">⚡ 每日事項時間軸</div>
-      <!-- 1. 修改 .top-actions：新增「典藏庫」Bubble 按鈕 -->
-<div class="top-actions">
-  <button class="btn-bubble btn-overdue" onclick="openOverdueModal()">
-    ⚠️ 逾期工作 <span id="overdueBadgeCount" class="badge-pill">0</span>
-  </button>
-  <button class="btn-bubble btn-backlog" onclick="openBacklogModal()">
-    📥 未有日期 <span id="backlogBadgeCount" class="badge-pill">0</span>
-  </button>
-  <button class="btn-bubble btn-completed" onclick="openCompletedModal()">
-    ✅ 已完成 <span id="completedBadgeCount" class="badge-pill">0</span>
-  </button>
-  <!-- 🆕 典藏庫按鈕 -->
-  <button class="btn-bubble" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openArchivedModal()">
-    📦 典藏庫 <span id="archivedBadgeCount" class="badge-pill">0</span>
-  </button>
-  <button class="today-btn" onclick="scrollToToday()">回今天</button>
-</div>
-
-<!-- 2. 在頁尾 Modal 區域新增「📦 典藏庫 Modal」 -->
-<div id="archivedModal" class="modal-overlay">
-  <div class="modal-card">
-    <div class="modal-header">
-      <span>📦 典藏庫 (Archived)</span>
-      <button style="border:none; background:none; cursor:pointer; font-size:1.2rem;" onclick="closeArchivedModal()">✕</button>
+      <div class="top-actions">
+        <button class="btn-bubble btn-overdue" onclick="openOverdueModal()">
+          ⚠️ 逾期工作 <span id="overdueBadgeCount" class="badge-pill">0</span>
+        </button>
+        <button class="btn-bubble btn-backlog" onclick="openBacklogModal()">
+          📥 未有日期 <span id="backlogBadgeCount" class="badge-pill">0</span>
+        </button>
+        <button class="btn-bubble btn-completed" onclick="openCompletedModal()">
+          ✅ 已完成 <span id="completedBadgeCount" class="badge-pill">0</span>
+        </button>
+        <button class="btn-bubble" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openArchivedModal()">
+          📦 典藏庫 <span id="archivedBadgeCount" class="badge-pill">0</span>
+        </button>
+        <button class="today-btn" onclick="scrollToToday()">回今天</button>
+      </div>
     </div>
-    <div id="archivedModalBody" class="modal-body"></div>
-  </div>
-</div>
 
     <div id="statusMessage" style="font-size:0.8rem; color:var(--primary); margin:8px 0 0 0;">⏳ 載入中...</div>
 
@@ -226,7 +214,18 @@
     </div>
   </div>
 
-  <!-- 4. ✏️ 新增 / 編輯事項 Modal 對話框 -->
+  <!-- 4. 📦 典藏庫 Modal 對話框 -->
+  <div id="archivedModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>📦 典藏庫 (Archived)</span>
+        <button style="border:none; background:none; cursor:pointer; font-size:1.2rem;" onclick="closeArchivedModal()">✕</button>
+      </div>
+      <div id="archivedModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- 5. ✏️ 新增 / 編輯事項 Modal 對話框 -->
   <div id="itemModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
