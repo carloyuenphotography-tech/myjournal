@@ -77,6 +77,42 @@
       border-radius: 10px; font-size: 0.72rem;
     }
 
+    /* ⚡ Rapid Logging 快速輸入卡片樣式 */
+    .quick-input-card {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quick-input-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .quick-input-row select, .quick-input-row input[type="text"] {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      font-size: 0.85rem;
+    }
+    .quick-input-row select { font-weight: bold; background: #fff; }
+    .quick-input-row input[type="text"] { flex: 1; min-width: 0; }
+    .btn-add-quick {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
     /* 時間軸 (Timeline Layout) */
     .timeline-container { display: flex; flex-direction: column; gap: 16px; margin-top: 14px; }
 
@@ -172,13 +208,31 @@
       </div>
     </div>
 
+    <!-- ⚡ Rapid Logging 快速輸入欄 -->
+    <form class="quick-input-card" onsubmit="handleQuickSubmit(event)">
+      <div class="quick-input-row">
+        <select id="quickType">
+          <option value="Task">• Task (任務)</option>
+          <option value="Event">o Event (事件)</option>
+          <option value="筆記">- 筆記 (Note)</option>
+        </select>
+        <label style="font-size:0.78rem; color:#64748b; display:flex; align-items:center; gap:4px; margin-left:auto; cursor:pointer;">
+          <input type="checkbox" id="quickIsBacklog"> 無日期 (Backlog)
+        </label>
+      </div>
+      <div class="quick-input-row">
+        <input type="text" id="quickContent" placeholder="⚡ 快速記下事項或筆記... (按下 Enter 直接新增)" required>
+        <button type="submit" class="btn-add-quick">新增</button>
+      </div>
+    </form>
+
     <div id="statusMessage" style="font-size:0.8rem; color:var(--primary); margin:8px 0 0 0;">⏳ 載入中...</div>
 
     <!-- 主時間軸容器 -->
     <div id="timelineContainer" class="timeline-container"></div>
   </div>
 
-  <!-- 懸浮新增按鈕 -->
+  <!-- 懸浮新增按鈕 (作為進階輸入備用) -->
   <button class="fab-btn" onclick="openAddModal()">＋</button>
 
   <!-- 1. ⚠️ 逾期工作 Modal 對話框 -->
