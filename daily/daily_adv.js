@@ -12,22 +12,16 @@ let todayStr = getTodayString();
 
 function initGoogleSignIn() {
   const container = document.getElementById("googleSignInContainer");
-  
-  // 若 DOM 尚未完全載入，等待DOMContentLoaded後再執行
   if (!container) {
     document.addEventListener('DOMContentLoaded', initGoogleSignIn);
     return;
   }
-
   if (typeof CONFIG !== 'undefined' && CONFIG.GOOGLE_CLIENT_ID && window.google) {
     google.accounts.id.initialize({
       client_id: CONFIG.GOOGLE_CLIENT_ID,
       callback: handleCredentialResponse
     });
-    google.accounts.id.renderButton(
-      container,
-      { theme: "outline", size: "large", type: "standard" }
-    );
+    google.accounts.id.renderButton(container, { theme: "outline", size: "large" });
   } else if (typeof CONFIG === 'undefined' || !CONFIG.GOOGLE_CLIENT_ID) {
     container.innerHTML = '<div style="color:#ef4444; font-size:0.8rem;">❌ 讀取失敗：缺少 config.js 或 GOOGLE_CLIENT_ID</div>';
   }
@@ -118,7 +112,7 @@ function loadLogsData() {
       allLogs = parseLogs(results.data);
       showStatus('');
       renderTimeline();
-      updateBacklogBadge();
+      updateAllBadges();
     },
     error: () => showStatus('❌ 讀取失敗，請確認 Google Sheet 公開權限', '#ef4444')
   });
@@ -143,34 +137,27 @@ function isItemDone(status) {
   return status === '完成' || status === 'Done';
 }
 
-/* 渲染時間軸 (Timeline View) */
+/* 更新頂部 Bubbles 氣泡數字 */
+function updateAllBadges() {
+  const overdueCount = allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status)).length;
+  const backlogCount = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status)).length;
+  const completedCount = allLogs.filter(i => isItemDone(i.status)).length;
+
+  document.getElementById('overdueBadgeCount').textContent = overdueCount;
+  document.getElementById('backlogBadgeCount').textContent = backlogCount;
+  document.getElementById('completedBadgeCount').textContent = completedCount;
+}
+
+/* 渲染每日時間軸 (不含已完成與逾期，保持主畫面乾淨) */
 function renderTimeline() {
   const container = document.getElementById('timelineContainer');
   container.innerHTML = '';
-  const showCompleted = document.getElementById('showCompleted').checked;
 
-  // 1. 逾期項目 (Overdue)
-  const overdueItems = allLogs.filter(item => item.date && item.date < todayStr && !isItemDone(item.status));
-  if (overdueItems.length > 0) {
-    const overdueDiv = document.createElement('div');
-    overdueDiv.className = 'overdue-section';
-    overdueDiv.innerHTML = `
-      <div class="overdue-header">
-        <span>⚠️ 逾期未完成事項 (${overdueItems.length})</span>
-      </div>
-      <div class="overdue-list" style="display:flex; flex-direction:column; gap:6px;"></div>
-    `;
-    const listDiv = overdueDiv.querySelector('.overdue-list');
-    overdueItems.forEach(item => listDiv.appendChild(createTaskCard(item)));
-    container.appendChild(overdueDiv);
-  }
-
-  // 2. 收集所有有日期的項目 (今天、將來或歷史)
-  const datedLogs = allLogs.filter(item => item.date && item.date >= todayStr);
+  // 收集今日及未來的待辦事項
+  const datedLogs = allLogs.filter(item => item.date && item.date >= todayStr && !isItemDone(item.status));
   
-  // 建立日期地圖，確保「今天」必定存在
   const datesSet = new Set(datedLogs.map(i => i.date));
-  datesSet.add(todayStr);
+  datesSet.add(todayStr); // 確保今天一定會顯示
   const sortedDates = Array.from(datesSet).sort();
 
   const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -181,12 +168,8 @@ function renderTimeline() {
     const dayNum = d.getDate();
     const isToday = (dateVal === todayStr);
 
-    let dayItems = datedLogs.filter(i => i.date === dateVal);
-    if (!showCompleted) {
-      dayItems = dayItems.filter(i => !isItemDone(i.status));
-    }
-
-    const pendingCount = dayItems.filter(i => !isItemDone(i.status)).length;
+    const dayItems = datedLogs.filter(i => i.date === dateVal);
+    const pendingCount = dayItems.length;
 
     const dayBlock = document.createElement('div');
     dayBlock.className = `day-block ${isToday ? 'is-today' : ''}`;
@@ -205,7 +188,7 @@ function renderTimeline() {
 
     const cardList = dayBlock.querySelector('.day-card-list');
     if (dayItems.length === 0 && isToday) {
-      cardList.innerHTML = `<div style="font-size:0.8rem; color:#94a3b8; padding:4px 0;">今日無事項</div>`;
+      cardList.innerHTML = `<div style="font-size:0.8rem; color:#94a3b8; padding:4px 0;">今日無待辦事項 🎉</div>`;
     } else {
       dayItems.forEach(item => cardList.appendChild(createTaskCard(item)));
     }
@@ -215,9 +198,8 @@ function renderTimeline() {
 }
 
 function createTaskCard(item) {
-  const isDone = isItemDone(item.status);
   const card = document.createElement('div');
-  card.className = `task-card type-${item.type} ${isDone ? 'done' : ''}`;
+  card.className = `task-card type-${item.type}`;
   
   card.innerHTML = `
     <div class="task-info">
@@ -225,57 +207,45 @@ function createTaskCard(item) {
       ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
     </div>
     <div class="task-actions">
-      <button class="btn-circle" onclick="toggleStatus('${item.id}')" title="切換狀態">${isDone ? '✓' : '○'}</button>
+      <button class="btn-circle" onclick="toggleStatus('${item.id}')" title="標示完成">○</button>
       <button class="btn-circle" onclick="openEditModal('${item.id}')" title="編輯">✏️</button>
     </div>
   `;
   return card;
 }
 
-/* Backlog 未有日期工作 Modal 控制 */
-function updateBacklogBadge() {
-  const count = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status)).length;
-  document.getElementById('backlogBadgeCount').textContent = count;
+/* ---------------- 1. ⚠️ 逾期工作 Modal ---------------- */
+function openOverdueModal() {
+  renderOverdueModal();
+  document.getElementById('overdueModal').style.display = 'flex';
 }
-
-function openBacklogModal() {
-  renderBacklogModal();
-  document.getElementById('backlogModal').style.display = 'flex';
+function closeOverdueModal() {
+  document.getElementById('overdueModal').style.display = 'none';
 }
-
-function closeBacklogModal() {
-  document.getElementById('backlogModal').style.display = 'none';
-}
-
-function renderBacklogModal() {
-  const body = document.getElementById('backlogModalBody');
+function renderOverdueModal() {
+  const body = document.getElementById('overdueModalBody');
   body.innerHTML = '';
-  
-  const showCompleted = document.getElementById('showCompleted').checked;
-  const backlogItems = allLogs.filter(i => {
-    if (i.date && i.date.trim() !== '') return false;
-    if (!showCompleted && isItemDone(i.status)) return false;
-    return true;
-  });
 
-  if (backlogItems.length === 0) {
-    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">目前沒有未有日期的工作 🎉</div>`;
+  const items = allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status))
+                       .sort((a,b) => b.date.localeCompare(a.date));
+
+  if (items.length === 0) {
+    body.innerHTML = `<div style="text-align:center; color:#059669; padding:20px 0; font-weight:bold;">✅ 目前沒有逾期的工作！</div>`;
     return;
   }
 
-  backlogItems.forEach(item => {
-    const isDone = isItemDone(item.status);
+  items.forEach(item => {
     const row = document.createElement('div');
-    row.style.cssText = `background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px; ${isDone ? 'opacity:0.5;' : ''}`;
-    
+    row.style.cssText = `background:#fff5f5; border:1px solid #fca5a5; border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px;`;
     row.innerHTML = `
       <div style="flex:1; min-width:0;">
-        <div style="font-weight:bold; font-size:0.85rem; ${isDone ? 'text-decoration:line-through;' : ''}">${item.content}</div>
+        <div style="font-size:0.72rem; color:#dc2626; font-weight:bold;">📅 逾期日期：${item.date}</div>
+        <div style="font-weight:bold; font-size:0.85rem; color:#0f172a;">${item.content}</div>
         ${item.remarks ? `<div style="font-size:0.75rem; color:#64748b;">${item.remarks}</div>` : ''}
       </div>
       <div style="display:flex; gap:4px; align-items:center;">
-        <button onclick="assignToToday('${item.id}')" style="background:#e0f2fe; color:#0284c7; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; font-weight:bold;">移至今天</button>
-        <button onclick="toggleStatus('${item.id}')" style="background:#f1f5f9; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">${isDone ? '✓' : '待辦'}</button>
+        <button onclick="assignToToday('${item.id}')" style="background:#0284c7; color:#fff; border:none; padding:5px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; font-weight:bold;">移至今天</button>
+        <button onclick="toggleStatus('${item.id}')" style="background:#f1f5f9; border:1px solid #cbd5e1; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">完成</button>
         <button onclick="openEditModal('${item.id}')" style="background:none; border:none; cursor:pointer; font-size:0.85rem;">✏️</button>
       </div>
     `;
@@ -283,18 +253,113 @@ function renderBacklogModal() {
   });
 }
 
+/* ---------------- 2. 📥 未有日期工作 (Backlog) Modal ---------------- */
+function openBacklogModal() {
+  renderBacklogModal();
+  document.getElementById('backlogModal').style.display = 'flex';
+}
+function closeBacklogModal() {
+  document.getElementById('backlogModal').style.display = 'none';
+}
+function renderBacklogModal() {
+  const body = document.getElementById('backlogModalBody');
+  body.innerHTML = '';
+
+  const items = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status));
+
+  if (items.length === 0) {
+    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">目前沒有未有日期的工作 🎉</div>`;
+    return;
+  }
+
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.style.cssText = `background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px;`;
+    row.innerHTML = `
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:bold; font-size:0.85rem;">${item.content}</div>
+        ${item.remarks ? `<div style="font-size:0.75rem; color:#64748b;">${item.remarks}</div>` : ''}
+      </div>
+      <div style="display:flex; gap:4px; align-items:center;">
+        <button onclick="assignToToday('${item.id}')" style="background:#e0f2fe; color:#0284c7; border:none; padding:5px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; font-weight:bold;">移至今天</button>
+        <button onclick="toggleStatus('${item.id}')" style="background:#f1f5f9; border:1px solid #cbd5e1; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">完成</button>
+        <button onclick="openEditModal('${item.id}')" style="background:none; border:none; cursor:pointer; font-size:0.85rem;">✏️</button>
+      </div>
+    `;
+    body.appendChild(row);
+  });
+}
+
+/* ---------------- 3. ✅ 已完成工作 Modal ---------------- */
+function openCompletedModal() {
+  renderCompletedModal();
+  document.getElementById('completedModal').style.display = 'flex';
+}
+function closeCompletedModal() {
+  document.getElementById('completedModal').style.display = 'none';
+}
+function renderCompletedModal() {
+  const body = document.getElementById('completedModalBody');
+  body.innerHTML = '';
+
+  const items = allLogs.filter(i => isItemDone(i.status))
+                       .sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+
+  if (items.length === 0) {
+    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">尚無已完成的事項</div>`;
+    return;
+  }
+
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.style.cssText = `background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px; opacity:0.85;`;
+    row.innerHTML = `
+      <div style="flex:1; min-width:0;">
+        ${item.date ? `<div style="font-size:0.72rem; color:#166534;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; color:#7e22ce;">📥 無日期</div>`}
+        <div style="font-weight:bold; font-size:0.85rem; text-decoration:line-through; color:#334155;">${item.content}</div>
+        ${item.remarks ? `<div style="font-size:0.75rem; color:#64748b;">${item.remarks}</div>` : ''}
+      </div>
+      <div style="display:flex; gap:4px; align-items:center;">
+        <button onclick="toggleStatus('${item.id}')" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem; font-weight:bold;">↺ 還原</button>
+        <button onclick="openEditModal('${item.id}')" style="background:none; border:none; cursor:pointer; font-size:0.85rem;">✏️</button>
+      </div>
+    `;
+    body.appendChild(row);
+  });
+}
+
+/* 快捷操作：移至今天 */
 function assignToToday(id) {
   const target = allLogs.find(l => l.id === id);
   if (!target) return;
   target.date = todayStr;
   
-  renderTimeline();
-  updateBacklogBadge();
-  renderBacklogModal();
+  refreshAllViews();
   syncToSheet('editLog', { id: target.id, oldContent: target.content, date: target.date, type: target.type, content: target.content, remarks: target.remarks });
 }
 
-/* 表單 Modal 操作 */
+/* 狀態切換：完成 / 待辦 */
+function toggleStatus(id) {
+  const target = allLogs.find(l => l.id === id);
+  if (!target) return;
+
+  const newStatus = isItemDone(target.status) ? 'Pending' : '完成';
+  target.status = newStatus;
+
+  refreshAllViews();
+  syncToSheet('toggleLog', { id: target.id, content: target.content, status: newStatus });
+}
+
+/* 重新整理所有視圖與 Modals */
+function refreshAllViews() {
+  renderTimeline();
+  updateAllBadges();
+  if (document.getElementById('overdueModal').style.display === 'flex') renderOverdueModal();
+  if (document.getElementById('backlogModal').style.display === 'flex') renderBacklogModal();
+  if (document.getElementById('completedModal').style.display === 'flex') renderCompletedModal();
+}
+
+/* 表單 Modal 操作 (新增/編輯) */
 function openAddModal() {
   document.getElementById('modalFormTitle').textContent = '➕ 新增事項';
   document.getElementById('modalItemId').value = '';
@@ -335,7 +400,6 @@ function handleFormSubmit(e) {
   if (!content) return;
 
   if (id) {
-    // 編輯
     const target = allLogs.find(l => l.id === id);
     if (target) {
       const oldContent = target.content;
@@ -343,7 +407,6 @@ function handleFormSubmit(e) {
       syncToSheet('editLog', { id, oldContent, date, type, content, remarks });
     }
   } else {
-    // 新增
     const newId = 'L' + new Date().getTime();
     const newItem = { id: newId, date, type, content, status: 'Pending', remarks };
     allLogs.push(newItem);
@@ -351,9 +414,7 @@ function handleFormSubmit(e) {
   }
 
   closeItemModal();
-  renderTimeline();
-  updateBacklogBadge();
-  if (document.getElementById('backlogModal').style.display === 'flex') renderBacklogModal();
+  refreshAllViews();
 }
 
 function deleteCurrentItem() {
@@ -368,23 +429,7 @@ function deleteCurrentItem() {
   }
 
   closeItemModal();
-  renderTimeline();
-  updateBacklogBadge();
-  if (document.getElementById('backlogModal').style.display === 'flex') renderBacklogModal();
-}
-
-function toggleStatus(id) {
-  const target = allLogs.find(l => l.id === id);
-  if (!target) return;
-
-  const newStatus = isItemDone(target.status) ? 'Pending' : '完成';
-  target.status = newStatus;
-
-  renderTimeline();
-  updateBacklogBadge();
-  if (document.getElementById('backlogModal').style.display === 'flex') renderBacklogModal();
-
-  syncToSheet('toggleLog', { id: target.id, content: target.content, status: newStatus });
+  refreshAllViews();
 }
 
 function syncToSheet(action, paramsObj) {
