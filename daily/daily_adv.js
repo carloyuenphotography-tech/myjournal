@@ -133,6 +133,37 @@ function parseLogs(rows) {
   });
 }
 
+/* ⚡ Rapid Logging 快速新增處理 */
+function handleQuickSubmit(e) {
+  e.preventDefault();
+  const type = document.getElementById('quickType').value;
+  const isBacklog = document.getElementById('quickIsBacklog').checked;
+  const content = document.getElementById('quickContent').value.trim();
+
+  if (!content) return;
+
+  const newId = 'L' + new Date().getTime();
+  const targetDate = isBacklog ? '' : todayStr;
+
+  const newItem = {
+    id: newId,
+    date: targetDate,
+    type: type,
+    content: content,
+    status: 'Pending',
+    remarks: ''
+  };
+
+  allLogs.push(newItem);
+
+  // 清空輸入欄
+  document.getElementById('quickContent').value = '';
+  document.getElementById('quickIsBacklog').checked = false;
+
+  refreshAllViews();
+  syncToSheet('addLog', { id: newId, date: targetDate, type: type, content: content, status: 'Pending', remarks: '' });
+}
+
 /* 判斷狀態的輔助函式 */
 function isItemDone(status) {
   return status === '完成' || status === 'Done';
