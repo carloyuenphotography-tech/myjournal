@@ -1,1 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學校日曆管理系統 Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 120px);
+            min-height: 600px;
+        }
+        .iframe-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans h-screen flex flex-col">
 
+    <!-- 頂部導航欄 -->
+    <header class="bg-blue-800 text-white shadow-md px-6 py-4 flex flex-wrap justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <i class="fa-solid me-2 fa-calendar-days text-2xl"></i>
+            <h1 class="text-xl font-bold tracking-wide">學校日曆中心 (School Calendar Hub)</h1>
+        </div>
+        
+        <!-- 檢視模式切換按鈕組 -->
+        <div class="flex items-center space-x-2 mt-2 sm:mt-0 bg-blue-900/50 p-1 rounded-lg">
+            <button onclick="changeView('MONTH')" id="btn-MONTH" class="view-btn px-3 py-1.5 rounded text-sm font-medium transition bg-white text-blue-900 shadow">
+                <i class="fa-regular fa-calendar-multiselect mr-1"></i> 月檢視
+            </button>
+            <button onclick="changeView('WEEK')" id="btn-WEEK" class="view-btn px-3 py-1.5 rounded text-sm font-medium transition hover:bg-blue-700 text-white">
+                <i class="fa-solid fa-calendar-week mr-1"></i> 週檢視
+            </button>
+            <button onclick="changeView('AGENDA')" id="btn-AGENDA" class="view-btn px-3 py-1.5 rounded text-sm font-medium transition hover:bg-blue-700 text-white">
+                <i class="fa-solid fa-list-ul mr-1"></i> 活動日程表
+            </button>
+        </div>
+    </header>
+
+    <!-- 主要內容區域 -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- 左側側邊欄：日曆選擇器 -->
+        <aside class="w-80 bg-white border-r border-gray-200 flex flex-col justify-between shadow-sm flex-shrink-0">
+            <div class="p-4 overflow-y-auto">
+                
+                <!-- 快速模式切換：單選 vs 多選疊加 -->
+                <div class="mb-4 pb-3 border-b border-gray-200">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">模式選擇</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <button onclick="setSelectMode('single')" id="mode-single" class="py-1.5 px-2 text-center rounded border border-blue-600 bg-blue-50 text-blue-700 font-medium">
+                            快速切換 (單選)
+                        </button>
+                        <button onclick="setSelectMode('multi')" id="mode-multi" class="py-1.5 px-2 text-center rounded border border-gray-300 text-gray-600 hover:bg-gray-50">
+                            多圖層疊加 (多選)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 快捷操作區 -->
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-sm font-semibold text-gray-700">日曆清單 (<span id="selected-count">0</span>)</span>
+                    <div class="space-x-1 text-xs">
+                        <button onclick="selectAll()" class="text-blue-600 hover:underline">全選</button>
+                        <span class="text-gray-300">|</span>
+                        <button onclick="deselectAll()" class="text-gray-500 hover:underline">清空</button>
+                    </div>
+                </div>
+
+                <!-- 日曆列表 (動態生成) -->
+                <div id="calendar-list" class="space-y-2">
+                    <!-- JS 動態渲染卡片 -->
+                </div>
+            </div>
+
+            <!-- 底部提示 -->
+            <div class="p-4 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
+                <i class="fa-solid fa-circle-info text-blue-500 mr-1"></i>
+                預設時區：Asia/Hong_Kong
+            </div>
+        </aside>
+
+        <!-- 右側：Google Calendar Iframe 顯示區 -->
+        <main class="flex-1 p-4 bg-gray-100 overflow-y-auto">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden iframe-container">
+                <iframe id="calendar-iframe" src="" frameborder="0" scrolling="no"></iframe>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 設定傳入的 10 個 Google Calendar 資料與標籤（顏色及自訂名稱可修改）
+        const calendars = [
+            { id: "web.wfjlps.edu.hk_2485p4jjuu500r6f20gma501ec@group.calendar.google.com", name: "學校日曆 1", color: "%23039BE5" },
+            { id: "c_ucd12eh3httfdpg6lfgr2tec74@group.calendar.google.com", name: "會議/活動日曆 2", color: "%2333B679" },
+            { id: "c_dm3er794a4jv0gab9pb091v3bg@group.calendar.google.com", name: "學校日曆 3", color: "%238E24AA" },
+            { id: "web.wfjlps.edu.hk_3p3oblk5mfpbqtrd7gp5qrjrrc@group.calendar.google.com", name: "學校日曆 4", color: "%23E67C73" },
+            { id: "web.wfjlps.edu.hk_j89bamk6okif63f7hhrnk8ud10@group.calendar.google.com", name: "學校日曆 5", color: "%23F6BF26" },
+            { id: "web.wfjlps.edu.hk_urqs6sqnpkkk5nri04negmk2bo@group.calendar.google.com", name: "學校日曆 6", color: "%23F4511E" },
+            { id: "c_f0ca09f528a71907bad26e8de0517ac1abd680a74a7e693da27ad6af459bc143@group.calendar.google.com", name: "學校日曆 7", color: "%230B8043" },
+            { id: "zh-tw.hong_kong.official%23holiday@group.v.calendar.google.com", name: "香港公眾假期", color: "%23D50000" },
+            { id: "c_c6be7024bc10d194cce582bbe72917435152722346dcc7e4a8fdd51c8217533e@group.calendar.google.com", name: "學校日曆 9", color: "%233F51B5" },
+            { id: "web.wfjlps.edu.hk_5g3lg8dcpkgom699ihqebiihso@group.calendar.google.com", name: "學校日曆 10", color: "%23616161" }
+        ];
+
+        let currentView = 'MONTH'; // 預設視角: MONTH, WEEK, AGENDA
+        let selectMode = 'single'; // 預設模式: single (單選快速切換) 或 multi (多選疊加)
+        let selectedCalendarIds = new Set([calendars[0].id]); // 預設勾選第一個日曆
+
+        // 初始化渲染列表
+        function initCalendarList() {
+            const listContainer = document.getElementById('calendar-list');
+            listContainer.innerHTML = '';
+
+            calendars.forEach((cal, index) => {
+                const isChecked = selectedCalendarIds.has(cal.id);
+                const decodedColor = decodeURIComponent(cal.color);
+
+                const item = document.createElement('div');
+                item.className = `flex items-center justify-between p-2.5 rounded-lg border transition cursor-pointer hover:bg-gray-50 ${isChecked ? 'border-blue-300 bg-blue-50/30' : 'border-gray-200'}`;
+                item.onclick = (e) => handleCalendarClick(cal.id, e);
+
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3 truncate">
+                        <span class="w-3.5 h-3.5 rounded-full flex-shrink-0" style="background-color: ${decodedColor}"></span>
+                        <span class="text-sm font-medium text-gray-800 truncate">${cal.name}</span>
+                    </div>
+                    <input type="${selectMode === 'single' ? 'radio' : 'checkbox'}" 
+                           name="calendar-option" 
+                           value="${cal.id}" 
+                           ${isChecked ? 'checked' : ''} 
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded pointer-events-none">
+                `;
+                listContainer.appendChild(item);
+            });
+
+            document.getElementById('selected-count').innerText = selectedCalendarIds.size;
+            updateIframe();
+        }
+
+        // 點擊日曆項目的邏輯
+        function handleCalendarClick(calId, event) {
+            if (selectMode === 'single') {
+                selectedCalendarIds.clear();
+                selectedCalendarIds.add(calId);
+            } else {
+                if (selectedCalendarIds.has(calId)) {
+                    // 確保至少保留一個
+                    if (selectedCalendarIds.size > 1) {
+                        selectedCalendarIds.delete(calId);
+                    }
+                } else {
+                    selectedCalendarIds.add(calId);
+                }
+            }
+            initCalendarList();
+        }
+
+        // 切換單選/多選模式
+        function setSelectMode(mode) {
+            selectMode = mode;
+            const singleBtn = document.getElementById('mode-single');
+            const multiBtn = document.getElementById('mode-multi');
+
+            if (mode === 'single') {
+                singleBtn.className = "py-1.5 px-2 text-center rounded border border-blue-600 bg-blue-50 text-blue-700 font-medium";
+                multiBtn.className = "py-1.5 px-2 text-center rounded border border-gray-300 text-gray-600 hover:bg-gray-50";
+                
+                // 保留目前選中的第一個
+                const firstSelected = Array.from(selectedCalendarIds)[0] || calendars[0].id;
+                selectedCalendarIds.clear();
+                selectedCalendarIds.add(firstSelected);
+            } else {
+                multiBtn.className = "py-1.5 px-2 text-center rounded border border-blue-600 bg-blue-50 text-blue-700 font-medium";
+                singleBtn.className = "py-1.5 px-2 text-center rounded border border-gray-300 text-gray-600 hover:bg-gray-50";
+            }
+            initCalendarList();
+        }
+
+        // 全選 (多選模式下)
+        function selectAll() {
+            setSelectMode('multi');
+            calendars.forEach(c => selectedCalendarIds.add(c.id));
+            initCalendarList();
+        }
+
+        // 清空 (只留第一個)
+        function deselectAll() {
+            selectedCalendarIds.clear();
+            selectedCalendarIds.add(calendars[0].id);
+            initCalendarList();
+        }
+
+        // 切換檢視模式 (月/週/日程)
+        function changeView(mode) {
+            currentView = mode;
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.className = "view-btn px-3 py-1.5 rounded text-sm font-medium transition hover:bg-blue-700 text-white";
+            });
+            
+            const activeBtn = document.getElementById(`btn-${mode}`);
+            if (activeBtn) {
+                activeBtn.className = "view-btn px-3 py-1.5 rounded text-sm font-medium transition bg-white text-blue-900 shadow";
+            }
+
+            updateIframe();
+        }
+
+        // 動態生成 Google Calendar Iframe URL
+        function updateIframe() {
+            const baseUrl = "https://calendar.google.com/calendar/u/0/embed";
+            const queryParams = [
+                `ctz=Asia/Hong_Kong`,
+                `mode=${currentView}`,
+                `showTitle=0`,      // 隱藏預設標題（已由 WebApp Header 替代）
+                `showNav=1`,        // 顯示切換月份按鈕
+                `showDate=1`,       // 顯示日期
+                `showPrint=0`,      // 隱藏列印按鈕
+                `showTabs=0`,       // 隱藏原生的檢視 Tab（改用頂部美化按鈕）
+                `showCalendars=0`,  // 隱藏原生的側邊欄選單
+                `showTz=1`          // 顯示時區
+            ];
+
+            // 組合所有已選擇的日曆 src 及對應顏色
+            calendars.forEach(cal => {
+                if (selectedCalendarIds.has(cal.id)) {
+                    queryParams.push(`src=${encodeURIComponent(cal.id)}`);
+                    queryParams.push(`color=${cal.color}`);
+                }
+            });
+
+            const finalUrl = `${baseUrl}?${queryParams.join('&')}`;
+            document.getElementById('calendar-iframe').src = finalUrl;
+        }
+
+        // 頁面載入完成後初始化
+        window.onload = function() {
+            initCalendarList();
+        };
+    </script>
+</body>
+</html>
