@@ -11,15 +11,25 @@ function getTodayString() {
 let todayStr = getTodayString();
 
 function initGoogleSignIn() {
-  if (typeof CONFIG !== 'undefined' && CONFIG.GOOGLE_CLIENT_ID) {
+  const container = document.getElementById("googleSignInContainer");
+  
+  // 若 DOM 尚未完全載入，等待DOMContentLoaded後再執行
+  if (!container) {
+    document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+    return;
+  }
+
+  if (typeof CONFIG !== 'undefined' && CONFIG.GOOGLE_CLIENT_ID && window.google) {
     google.accounts.id.initialize({
       client_id: CONFIG.GOOGLE_CLIENT_ID,
       callback: handleCredentialResponse
     });
     google.accounts.id.renderButton(
-      document.getElementById("googleSignInContainer"),
-      { theme: "outline", size: "large" }
+      container,
+      { theme: "outline", size: "large", type: "standard" }
     );
+  } else if (typeof CONFIG === 'undefined' || !CONFIG.GOOGLE_CLIENT_ID) {
+    container.innerHTML = '<div style="color:#ef4444; font-size:0.8rem;">❌ 讀取失敗：缺少 config.js 或 GOOGLE_CLIENT_ID</div>';
   }
 }
 
