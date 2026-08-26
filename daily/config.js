@@ -1,7 +1,7 @@
 const CONFIG = {
   // 🔑 必須保留這兩個，否則 Google 登入會失效
   GOOGLE_CLIENT_ID: "972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com",
-  GAS_URL: "https://script.google.com/macros/s/AKfycbxkwB3tjRWDQV0ZBV87e2ExqBduxpSEibkbfkX01WASG-JOY3ycBB6vKUt9Mvm6NTQ/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbywHCkU0ZgkX4fjJoMZ5a3P4ajFJZ3ufduIkZabGkC3aOmIhzi50CeUqO5yerBfz31q/exec",
 
   // 📊 各分頁的 Sheet ID 設定
   MAIN_SHEET_ID: '1q3NLPoGG8qr33knDt6REdLM8-GVrarzSercPLrjKSbo',
@@ -34,6 +34,7 @@ const CONFIG = {
     FT: 'https://script.google.com/macros/s/AKfycbwnpWBweDBZoEvHukGHitf0yq3ycBLfF_YpYTCsPhgz-H5snw9rfgEdgGIv7sbMETyVYA/exec',
     PROJECTS: 'https://script.google.com/macros/s/AKfycby2i-JNjupBPLaWuASqnUmezJRwUdQNBT2Gzsi27r1TW9kcdb-DaMwnsrYZqdv2VBhU/exec', 
     MONTHLY: 'https://script.google.com/macros/s/AKfycbxN5EhMdY4pR-EXtKmA3S2F8ysifhFQtYz_kHRrxtkQ9pDxbzFBWLjL3ePSN_l7oUq6/exec',
-    PROCEDURES: 'https://script.google.com/macros/s/AKfycbxN5EhMdY4pR-EXtKmA3S2F8ysifhFQtYz_kHRrxtkQ9pDxbzFBWLjL3ePSN_l7oUq6/exec'
+    PROCEDURES: 'https://script.google.com/macros/s/AKfycbxN5EhMdY4pR-EXtKmA3S2F8ysifhFQtYz_kHRrxtkQ9pDxbzFBWLjL3ePSN_l7oUq6/exec',
+    DAILY_RECURRING: 'https://script.google.com/macros/s/AKfycbywHCkU0ZgkX4fjJoMZ5a3P4ajFJZ3ufduIkZabGkC3aOmIhzi50CeUqO5yerBfz31q/exec'
   }
 };
