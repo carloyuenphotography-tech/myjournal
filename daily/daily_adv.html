@@ -187,7 +187,33 @@
       .btn-bubble .btn-text { display: none; }
       .btn-bubble { padding: 5px 9px; font-size: 0.85rem; }
     }
+    
+/* 1. 桌面端擴大 Modal 寬度 */
+@media (min-width: 768px) {
+  .modal-content {
+    max-width: 680px !important; /* 原本約 450px，調寬至 680px */
+    padding: 24px !important;
+  }
 
+  /* 桌面端將「日期」與「類型」放同一行，節省垂直空間 */
+  .form-row-inline {
+    display: flex;
+    gap: 16px;
+  }
+  .form-row-inline .form-group {
+    flex: 1;
+  }
+}
+
+/* 2. 備註欄位（Textarea）尺寸優化 */
+.modal-content textarea {
+  min-height: 200px; /* 約等於 9-10 行高度 */
+  line-height: 1.5;
+  font-size: 14px;
+  resize: vertical; /* 允許使用者有需要時自行拉大 */
+  font-family: inherit;
+}
+    
     /* 📱 WebApp Standalone 縮小設定 */
     @media all and (display-mode: standalone) {
       body { padding: 4px; }
