@@ -60,12 +60,10 @@ function initializeApp() {
   document.getElementById('authOverlay').style.display = 'none';
   document.getElementById('mainContainer').style.display = 'block';
 
-  // 🔄 進入頁面時發送指令觸發後端重覆事項自動檢查
   triggerRecurringCheck();
   loadLogsData();
 }
 
-/* 呼叫 Apps Script 執行重覆事項檢查 */
 function triggerRecurringCheck() {
   const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
   if (apiUrl) {
@@ -123,10 +121,91 @@ function loadLogsData() {
     complete: (results) => {
       allLogs = parseLogs(results.data);
       showStatus('');
+      
+      // 前端即時算牌檢查，確保重覆事項秒速顯示
+      checkFrontendRecurring();
       refreshAllViews();
     },
     error: () => showStatus('❌ 讀取失敗，請確認 Google Sheet 公開權限', '#ef4444')
   });
+}
+
+/* ⚡ 前端重覆事項即時檢查機制 (解決 CSV 延遲問題) */
+function checkFrontendRecurring() {
+  const sheetId = CONFIG.DAILY_SHEET_ID;
+  const recGid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_RECURRING : null;
+  if (!sheetId || !recGid) return;
+
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${recGid}&t=${new Date().getTime()}`;
+
+  Papa.parse(csvUrl, {
+    download: true, header: true, skipEmptyLines: true,
+    complete: (results) => {
+      if (!results.data) return;
+      const today = new Date();
+      let added = false;
+
+      results.data.forEach((r, idx) => {
+        const v = Object.values(r);
+        const frequency = (r.Frequency || r.frequency || v[3] || '').trim();
+        const content = (r.Content || r.content || v[1] || '').trim();
+        const type = (r.Type || r.type || v[2] || 'Task').trim();
+        const dayParam = String(r.DayParam || r.dayParam || v[4] || '').trim();
+        const remarks = (r.Remarks || r.remarks || v[6] || '').trim();
+
+        if (!frequency || !content) return;
+
+        const targetDateStr = calcTargetDate(frequency, dayParam, today);
+        if (!targetDateStr) return;
+
+        // 比對是否已存在
+        const exists = allLogs.some(log => log.content === content && log.date === targetDateStr);
+
+        if (!exists) {
+          const newId = 'L' + new Date().getTime() + '_' + idx;
+          const newItem = { id: newId, date: targetDateStr, type, content, status: 'Pending', remarks };
+          allLogs.push(newItem);
+          added = true;
+
+          // 同步給 Google Sheet
+          syncToSheet('addLog', { id: newId, date: targetDateStr, type, content, status: 'Pending', remarks });
+        }
+      });
+
+      if (added) {
+        refreshAllViews();
+      }
+    }
+  });
+}
+
+function calcTargetDate(frequency, dayParam, today) {
+  const year = today.getFullYear();
+  const month = today.getMonth();
+
+  if (frequency === 'MONTHLY_END') {
+    const d = new Date(year, month + 1, 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  if (frequency === 'MONTHLY_DAY') {
+    const day = parseInt(dayParam || '1', 10);
+    const d = new Date(year, month, day);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  if (frequency === 'QUARTERLY_END') {
+    const qEndMonths = [2, 5, 8, 11];
+    let qMonth = qEndMonths.find(m => m >= month);
+    let qYear = year;
+    if (qMonth === undefined) { qMonth = 2; qYear = year + 1; }
+    const d = new Date(qYear, qMonth + 1, 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  if (frequency === 'YEARLY') {
+    if (!dayParam || !dayParam.includes('-')) return null;
+    const [mStr, dStr] = dayParam.split('-');
+    return `${year}-${String(mStr).padStart(2, '0')}-${String(dStr).padStart(2, '0')}`;
+  }
+  return null;
 }
 
 function parseLogs(rows) {
@@ -134,7 +213,7 @@ function parseLogs(rows) {
   return rows.map((r, i) => {
     const v = Object.values(r);
     return {
-      id: r.ID || r.id || v[0] || `L_${i}`,
+      id: String(r.ID || r.id || v[0] || `L_${i}`),
       date: (r.Date || r.date || v[1] || '').trim(),
       type: r.Type || r.type || v[2] || 'Task',
       content: r.Content || r.content || v[3] || '',
@@ -144,7 +223,6 @@ function parseLogs(rows) {
   });
 }
 
-/* ⚡ Rapid Logging 快速新增處理 */
 function handleQuickSubmit(e) {
   e.preventDefault();
   const type = document.getElementById('quickType').value;
@@ -174,7 +252,6 @@ function handleQuickSubmit(e) {
   syncToSheet('addLog', { id: newId, date: targetDate, type, content, status: 'Pending', remarks: '' });
 }
 
-/* 輔助判斷 */
 function isItemDone(status) {
   return status === '完成' || status === 'Done';
 }
@@ -187,7 +264,6 @@ function isNoteType(type) {
   return type === '筆記' || type === 'Note';
 }
 
-/* 🎨 解析 Hashtag Class */
 function getTagClasses(item) {
   const text = ((item.content || '') + ' ' + (item.remarks || '')).toLowerCase();
   const classes = [];
@@ -201,7 +277,6 @@ function getTagClasses(item) {
   return classes.join(' ');
 }
 
-/* 更新頂部 Bubbles 氣泡數字 */
 function updateAllBadges() {
   const overdueCount = allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type)).length;
   const backlogCount = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type)).length;
@@ -214,7 +289,6 @@ function updateAllBadges() {
   document.getElementById('archivedBadgeCount').textContent = archivedCount;
 }
 
-/* 📅 渲染每日時間軸 (包含跨月 Sticky 標題) */
 function renderTimeline() {
   const container = document.getElementById('timelineContainer');
   container.innerHTML = '';
@@ -296,7 +370,10 @@ function createTaskCard(item) {
   const card = document.createElement('div');
   const tagClass = getTagClasses(item);
   card.className = `task-card type-${item.type} ${tagClass}`;
-  card.onclick = () => openEditModal(item.id);
+  card.onclick = (e) => {
+    e.stopPropagation();
+    openEditModal(item.id);
+  };
   
   card.innerHTML = `
     <div class="task-info">
@@ -307,7 +384,6 @@ function createTaskCard(item) {
   return card;
 }
 
-/* Modals 渲染邏輯 */
 function openOverdueModal() {
   renderOverdueModal();
   document.getElementById('overdueModal').style.display = 'flex';
@@ -410,7 +486,7 @@ function renderCompletedModal() {
 }
 
 function archiveItem(id) {
-  const target = allLogs.find(l => l.id === id);
+  const target = allLogs.find(l => String(l.id) === String(id));
   if (!target) return;
 
   target.status = 'Archived';
@@ -456,7 +532,7 @@ function renderArchivedModal() {
 }
 
 function unarchiveItem(id) {
-  const target = allLogs.find(l => l.id === id);
+  const target = allLogs.find(l => String(l.id) === String(id));
   if (!target) return;
 
   target.status = 'Pending';
@@ -465,7 +541,7 @@ function unarchiveItem(id) {
 }
 
 function assignToToday(id) {
-  const target = allLogs.find(l => l.id === id);
+  const target = allLogs.find(l => String(l.id) === String(id));
   if (!target) return;
   target.date = todayStr;
   
@@ -494,8 +570,9 @@ function openAddModal() {
   document.getElementById('itemModal').style.display = 'flex';
 }
 
+/* 🎯 修正點擊開啟 Modal 邏輯 (強效字串比對) */
 function openEditModal(id) {
-  const target = allLogs.find(l => l.id === id);
+  const target = allLogs.find(l => String(l.id) === String(id));
   if (!target) return;
 
   document.getElementById('modalFormTitle').textContent = '✏️ 編輯 / 操作事項';
@@ -526,7 +603,7 @@ function updateModalButtonsState(targetItem) {
     return;
   }
 
-  const target = targetItem || allLogs.find(l => l.id === id);
+  const target = targetItem || allLogs.find(l => String(l.id) === String(id));
   btnDelete.style.display = 'inline-block';
   
   btnArchive.style.display = 'inline-block';
@@ -573,7 +650,7 @@ function toggleDoneFromModal() {
   const id = document.getElementById('modalItemId').value;
   if (!id) return;
 
-  const target = allLogs.find(l => l.id === id);
+  const target = allLogs.find(l => String(l.id) === String(id));
   if (!target) return;
 
   const newStatus = isItemDone(target.status) ? 'Pending' : '完成';
@@ -607,7 +684,7 @@ function handleFormSubmit(e) {
   if (!content) return;
 
   if (id) {
-    const target = allLogs.find(l => l.id === id);
+    const target = allLogs.find(l => String(l.id) === String(id));
     if (target) {
       const oldContent = target.content;
       target.date = date; target.type = type; target.content = content; target.remarks = remarks;
@@ -628,7 +705,7 @@ function deleteCurrentItem() {
   const id = document.getElementById('modalItemId').value;
   if (!id || !confirm('確定要刪除這筆事項嗎？')) return;
 
-  const idx = allLogs.findIndex(l => l.id === id);
+  const idx = allLogs.findIndex(l => String(l.id) === String(id));
   if (idx !== -1) {
     const target = allLogs[idx];
     allLogs.splice(idx, 1);
