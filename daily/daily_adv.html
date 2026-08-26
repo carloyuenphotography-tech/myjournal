@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>⚡ 進化版速記時間軸 - Daily Adv</title>
+  <title>⚡ 寸陰流光 - Daily Adv</title>
   
   <!-- 設定檔與外部套件 -->
   <script src="config.js"></script>
@@ -65,36 +65,42 @@
     .btn-backlog { background: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
     .btn-overdue { background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
     .btn-completed { background: #f0fdf4; color: #166534; border-color: #86efac; }
-    .today-btn { background: var(--primary); color: #fff; border: none; padding: 6px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+    
+    /* 回今天按鈕（向上箭嘴） */
+    .today-btn {
+      background: var(--primary); color: #fff; border: none; width: 32px; height: 32px;
+      border-radius: 50%; font-weight: bold; cursor: pointer; font-size: 0.9rem;
+      display: flex; align-items: center; justify-content: center;
+    }
 
     .badge-pill {
       background: rgba(0,0,0,0.15); color: inherit; padding: 1px 7px;
       border-radius: 10px; font-size: 0.72rem;
     }
 
-    /* ⚡ Rapid Logging 快速輸入區塊 */
+    /* ⚡ Rapid Logging 快速輸入區塊 (兩行式結構) */
     .quick-input-card {
       background: #f8fafc;
       border: 1px solid var(--border-color);
       border-radius: 10px;
-      padding: 8px 10px;
+      padding: 10px;
       margin-top: 10px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
     .quick-input-row { display: flex; gap: 6px; align-items: center; }
     .quick-input-row select {
       padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color);
-      font-size: 0.9rem; font-weight: bold; background: #fff; width: 48px; text-align: center;
+      font-size: 0.95rem; font-weight: bold; background: #fff; width: 44px; text-align: center;
     }
     .quick-input-row input[type="text"] {
       flex: 1; min-width: 0; padding: 6px 10px; border-radius: 6px;
       border: 1px solid var(--border-color); font-size: 0.85rem;
     }
     .btn-add-quick {
-      background: var(--primary); color: #fff; border: none; padding: 6px 12px;
-      border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; white-space: nowrap;
+      background: var(--primary); color: #fff; border: none; padding: 5px 14px;
+      border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.82rem; white-space: nowrap;
     }
 
     /* 時間軸 (Timeline Layout) */
@@ -123,7 +129,7 @@
       display: inline-flex; align-items: center; gap: 6px; width: fit-content;
     }
 
-    /* 預設事項卡片樣式 (改為可點擊風格) */
+    /* 預設事項卡片樣式 */
     .task-card {
       background: #38bdf8; color: #fff; border-radius: 8px; padding: 10px 12px;
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
@@ -147,7 +153,7 @@
     .task-title { font-weight: bold; font-size: 0.88rem; line-height: 1.35; word-break: break-word; }
     .task-remarks { font-size: 0.75rem; opacity: 0.9; margin-top: 2px; }
 
-    /* Modal 對話框樣式修復 (避免頂部文字遮擋) */
+    /* Modal 對話框樣式修復 (加強頂部 Padding 解決遮擋) */
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.45); display: none; justify-content: center; align-items: center;
@@ -155,18 +161,18 @@
     }
     .modal-card {
       background: #fff; border-radius: 16px; width: 100%; max-width: 460px;
-      padding: 22px 18px 18px 18px; max-height: 85vh; display: flex; flex-direction: column;
+      padding: 26px 18px 18px 18px; max-height: 80vh; display: flex; flex-direction: column;
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
     .modal-header {
       font-size: 1rem; font-weight: bold; margin-bottom: 12px;
       display: flex; justify-content: space-between; align-items: center;
-      padding-top: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;
+      padding-top: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);
     }
     .modal-body { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     .modal-actions-bar {
       display: flex; justify-content: space-between; align-items: center;
-      margin-top: 14px; pt-2; flex-wrap: wrap; gap: 6px;
+      margin-top: 14px; flex-wrap: wrap; gap: 6px;
     }
 
     .fab-btn {
@@ -176,21 +182,21 @@
       display: flex; align-items: center; justify-content: center; z-index: 900;
     }
 
-    /* 📱 手機或小螢幕下隱藏 Bubble 文字，僅留 Emoji 及數字 */
+    /* 📱 手機屏極簡隱藏文字 */
     @media (max-width: 520px) {
       .btn-bubble .btn-text { display: none; }
       .btn-bubble { padding: 5px 9px; font-size: 0.85rem; }
     }
 
-    /* 📱 WebApp 全螢幕 (Standalone) 專屬縮小設定 */
+    /* 📱 WebApp Standalone 縮小設定 */
     @media all and (display-mode: standalone) {
       body { padding: 4px; }
       .container { padding: 8px; border-radius: 8px; }
       .header-bar { padding-bottom: 8px; gap: 6px; }
       .title-group { font-size: 0.95rem; }
       .btn-bubble { padding: 4px 8px; font-size: 0.8rem; }
-      .today-btn { padding: 4px 10px; font-size: 0.75rem; }
-      .quick-input-card { padding: 6px; gap: 4px; }
+      .today-btn { width: 28px; height: 28px; font-size: 0.8rem; }
+      .quick-input-card { padding: 6px; gap: 6px; }
       .quick-input-row input[type="text"] { padding: 4px 8px; font-size: 0.8rem; }
       .btn-add-quick { padding: 4px 10px; font-size: 0.8rem; }
       .day-date-col { width: 42px; }
@@ -208,7 +214,7 @@
   <!-- Google 登入驗證 -->
   <div id="authOverlay" class="auth-overlay">
     <div class="auth-card">
-      <h3 style="margin-top:0;">⚡ 速記清單 Adv</h3>
+      <h3 style="margin-top:0;">⚡ 日軌浮光</h3>
       <p style="color:#64748b; font-size:0.85rem;">請先驗證 Google 帳號</p>
       <div id="googleSignInContainer" style="display:flex; justify-content:center; min-height:40px;"></div>
     </div>
@@ -216,7 +222,8 @@
 
   <div class="container" id="mainContainer">
     <div class="header-bar">
-      <div class="title-group">⚡ 每日事項時間軸</div>
+      <!-- 詩意標題 -->
+      <div class="title-group">✨ 寸陰流光</div>
       <div class="top-actions">
         <button class="btn-bubble btn-overdue" onclick="openOverdueModal()">
           ⚠️ <span class="btn-text">逾期工作</span> <span id="overdueBadgeCount" class="badge-pill">0</span>
@@ -230,24 +237,27 @@
         <button class="btn-bubble" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openArchivedModal()">
           📦 <span class="btn-text">典藏庫</span> <span id="archivedBadgeCount" class="badge-pill">0</span>
         </button>
-        <button class="today-btn" onclick="scrollToToday()">回今天</button>
+        <!-- 向上箭嘴按鈕 -->
+        <button class="today-btn" onclick="scrollToToday()" title="回今天">⬆️</button>
       </div>
     </div>
 
-    <!-- ⚡ Rapid Logging 快速輸入欄 (符號化選單) -->
+    <!-- ⚡ Rapid Logging 快速輸入區 (兩行佈局) -->
     <form class="quick-input-card" onsubmit="handleQuickSubmit(event)">
+      <!-- 第一行：類別 + 輸入內容 -->
       <div class="quick-input-row">
         <select id="quickType">
           <option value="Task">•</option>
           <option value="Event">o</option>
           <option value="筆記">-</option>
         </select>
-        <label style="font-size:0.78rem; color:#64748b; display:flex; align-items:center; gap:4px; margin-left:auto; cursor:pointer;">
+        <input type="text" id="quickContent" placeholder="⚡ 快速記下... (#sch #family)" required>
+      </div>
+      <!-- 第二行：無日期 Backlog + 新增按鈕 -->
+      <div class="quick-input-row" style="justify-content: space-between;">
+        <label style="font-size:0.78rem; color:#64748b; display:flex; align-items:center; gap:4px; cursor:pointer;">
           <input type="checkbox" id="quickIsBacklog"> 無日期 (Backlog)
         </label>
-      </div>
-      <div class="quick-input-row">
-        <input type="text" id="quickContent" placeholder="⚡ 快速記下... (#sch #family)" required>
         <button type="submit" class="btn-add-quick">新增</button>
       </div>
     </form>
@@ -261,7 +271,7 @@
   <!-- 懸浮新增按鈕 -->
   <button class="fab-btn" onclick="openAddModal()">＋</button>
 
-  <!-- 1. ⚠️ 逾期工作 Modal -->
+  <!-- Modals -->
   <div id="overdueModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -272,7 +282,6 @@
     </div>
   </div>
 
-  <!-- 2. 📥 未有日期工作 Modal -->
   <div id="backlogModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -283,7 +292,6 @@
     </div>
   </div>
 
-  <!-- 3. ✅ 已完成工作 Modal -->
   <div id="completedModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -294,7 +302,6 @@
     </div>
   </div>
 
-  <!-- 4. 📦 典藏庫 Modal -->
   <div id="archivedModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -305,7 +312,6 @@
     </div>
   </div>
 
-  <!-- 5. ✏️ 編輯 / 操作對話框 Modal -->
   <div id="itemModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -338,6 +344,7 @@
             <button type="button" id="btnArchive" onclick="archiveFromModal()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">📦 典藏</button>
           </div>
           <div style="display:flex; gap:6px;">
+            <button type="button" id="btnAssignTodayModal" onclick="assignToTodayFromModal()" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">📅 移至今天</button>
             <button type="button" id="btnToggleDoneModal" onclick="toggleDoneFromModal()" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">✅ 完成</button>
             <button type="button" onclick="closeItemModal()" style="background:#f1f5f9; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;">取消</button>
             <button type="submit" style="background:var(--primary); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">儲存</button>
