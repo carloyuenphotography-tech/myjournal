@@ -202,7 +202,42 @@ function updateAllBadges() {
   document.getElementById('completedBadgeCount').textContent = completedCount;
   document.getElementById('archivedBadgeCount').textContent = archivedCount;
 }
+function renderMemos() {
+  const listContainer = document.getElementById('memoList');
+  listContainer.innerHTML = '';
 
+  let lastMonthYear = ''; // 用來比對月份是否切換
+
+  filtered.forEach(memo => {
+    // 假設 memo.date 格式為 "2026-09-02"
+    const dateObj = new Date(memo.date);
+    if (!isNaN(dateObj)) {
+      const year = dateObj.getFullYear();
+      const monthNum = dateObj.getMonth() + 1; // 1-12
+      const monthKey = `${year}-${monthNum}`;
+
+      // 1. 若發現跨月份（或是第一筆），自動插入 Sticky 月份標題
+      if (monthKey !== lastMonthYear) {
+        lastMonthYear = monthKey;
+
+        // 轉換英文月份名稱 (例如: September)
+        const monthNameEN = dateObj.toLocaleString('en-US', { month: 'long' });
+
+        const monthHeader = document.createElement('div');
+        monthHeader.className = 'month-divider';
+        monthHeader.innerHTML = `
+          <span class="month-text">📅 ${monthNum} 月 ${monthNameEN}</span>
+          <span class="year-badge">${year} 年</span>
+        `;
+        listContainer.appendChild(monthHeader);
+      }
+    }
+
+    // 2. 正常渲染每一個 Memo 卡片 (保持你原本的卡片 HTML)
+    const card = createMemoCardElement(memo); 
+    listContainer.appendChild(card);
+  });
+}
 /* 📅 渲染每日時間軸 */
 function renderTimeline() {
   const container = document.getElementById('timelineContainer');
