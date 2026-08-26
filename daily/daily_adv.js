@@ -190,7 +190,7 @@ function getTagClasses(item) {
   return classes.join(' ');
 }
 
-/* 更新頂部 Bubbles 氣泡數字 (筆記不計算入待辦/完成) */
+/* 更新頂部 Bubbles 氣泡數字 */
 function updateAllBadges() {
   const overdueCount = allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type)).length;
   const backlogCount = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type)).length;
@@ -229,7 +229,6 @@ function renderTimeline() {
     else if (isTomorrow) weekdayDisplay = '明天';
 
     const dayItems = datedLogs.filter(i => i.date === dateVal);
-    // 計算未完成 Task/Event 數量
     const pendingCount = dayItems.filter(i => !isNoteType(i.type)).length;
 
     const dayBlock = document.createElement('div');
@@ -274,7 +273,7 @@ function createTaskCard(item) {
   return card;
 }
 
-/* 1. ⚠️ 逾期工作 Modal */
+/* 1. ⚠️ 逾期工作 Modal (點擊卡片開啟編輯) */
 function openOverdueModal() {
   renderOverdueModal();
   document.getElementById('overdueModal').style.display = 'flex';
@@ -296,21 +295,20 @@ function renderOverdueModal() {
 
   items.forEach(item => {
     const row = document.createElement('div');
-    row.style.cssText = `background:#fff5f5; border:1px solid #fca5a5; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer;`;
+    row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
     row.onclick = () => openEditModal(item.id);
     row.innerHTML = `
-      <div style="flex:1; min-width:0;">
-        <div style="font-size:0.72rem; color:#dc2626; font-weight:bold;">📅 逾期日期：${item.date}</div>
-        <div style="font-weight:bold; font-size:0.85rem; color:#0f172a;">${item.content}</div>
-        ${item.remarks ? `<div style="font-size:0.75rem; color:#64748b;">${item.remarks}</div>` : ''}
+      <div class="task-info">
+        <div style="font-size:0.72rem; opacity:0.85; font-weight:bold;">📅 逾期日期：${item.date}</div>
+        <div class="task-title">${item.content}</div>
+        ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
       </div>
-      <button onclick="event.stopPropagation(); assignToToday('${item.id}')" style="background:#0284c7; color:#fff; border:none; padding:6px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold;">移至今天</button>
     `;
     body.appendChild(row);
   });
 }
 
-/* 2. 📥 未有日期工作 Modal */
+/* 2. 📥 未有日期工作 Modal (點擊卡片開啟編輯) */
 function openBacklogModal() {
   renderBacklogModal();
   document.getElementById('backlogModal').style.display = 'flex';
@@ -331,20 +329,19 @@ function renderBacklogModal() {
 
   items.forEach(item => {
     const row = document.createElement('div');
-    row.style.cssText = `background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer;`;
+    row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
     row.onclick = () => openEditModal(item.id);
     row.innerHTML = `
-      <div style="flex:1; min-width:0;">
-        <div style="font-weight:bold; font-size:0.85rem;">${item.content}</div>
-        ${item.remarks ? `<div style="font-size:0.75rem; color:#64748b;">${item.remarks}</div>` : ''}
+      <div class="task-info">
+        <div class="task-title">${item.content}</div>
+        ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
       </div>
-      <button onclick="event.stopPropagation(); assignToToday('${item.id}')" style="background:#e0f2fe; color:#0284c7; border:none; padding:6px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:bold;">移至今天</button>
     `;
     body.appendChild(row);
   });
 }
 
-/* 3. ✅ 已完成工作 Modal */
+/* 3. ✅ 已完成工作 Modal (點擊卡片開啟編輯) */
 function openCompletedModal() {
   renderCompletedModal();
   document.getElementById('completedModal').style.display = 'flex';
@@ -366,21 +363,21 @@ function renderCompletedModal() {
 
   items.forEach(item => {
     const row = document.createElement('div');
-    row.style.cssText = `background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer;`;
+    row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+    row.style.opacity = '0.85';
     row.onclick = () => openEditModal(item.id);
     row.innerHTML = `
-      <div style="flex:1; min-width:0;">
-        ${item.date ? `<div style="font-size:0.72rem; color:#166534;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; color:#7e22ce;">📥 無日期</div>`}
-        <div style="font-weight:bold; font-size:0.85rem; text-decoration:line-through; color:#334155;">${item.content}</div>
-        ${item.remarks ? `<div style="font-size:0.75rem; color:#64748b;">${item.remarks}</div>` : ''}
+      <div class="task-info">
+        ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
+        <div class="task-title" style="text-decoration:line-through;">${item.content}</div>
+        ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
       </div>
-      <button onclick="event.stopPropagation(); archiveItem('${item.id}')" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:bold;">📦 典藏</button>
     `;
     body.appendChild(row);
   });
 }
 
-/* 4. 📦 典藏庫 Modal */
+/* 4. 📦 典藏庫 Modal (點擊卡片開啟編輯) */
 function archiveItem(id) {
   const target = allLogs.find(l => l.id === id);
   if (!target) return;
@@ -413,15 +410,15 @@ function renderArchivedModal() {
 
   items.forEach(item => {
     const row = document.createElement('div');
-    row.style.cssText = `background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer; opacity:0.85;`;
+    row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+    row.style.opacity = '0.75';
     row.onclick = () => openEditModal(item.id);
     row.innerHTML = `
-      <div style="flex:1; min-width:0;">
-        ${item.date ? `<div style="font-size:0.72rem; color:#64748b;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; color:#7e22ce;">📥 無日期</div>`}
-        <div style="font-weight:bold; font-size:0.85rem; color:#475569;">${item.content}</div>
-        ${item.remarks ? `<div style="font-size:0.75rem; color:#94a3b8;">${item.remarks}</div>` : ''}
+      <div class="task-info">
+        ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
+        <div class="task-title">${item.content}</div>
+        ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
       </div>
-      <button onclick="event.stopPropagation(); unarchiveItem('${item.id}')" style="background:#e0f2fe; color:#0284c7; border:none; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:bold;">↺ 取消典藏</button>
     `;
     body.appendChild(row);
   });
@@ -482,29 +479,45 @@ function openEditModal(id) {
   document.getElementById('itemModal').style.display = 'flex';
 }
 
-/* 根據當前編輯的事項動態更新 Modal 按鈕顯示與文字 */
+/* 動態調配 Modal 內部的按鈕組合 */
 function updateModalButtonsState(targetItem) {
   const id = document.getElementById('modalItemId').value;
   const currentType = document.getElementById('modalType').value;
   
   const btnDelete = document.getElementById('btnDelete');
   const btnArchive = document.getElementById('btnArchive');
+  const btnAssignToday = document.getElementById('btnAssignTodayModal');
   const btnToggleDone = document.getElementById('btnToggleDoneModal');
 
   if (!id) {
-    // 新增模式
     btnDelete.style.display = 'none';
     btnArchive.style.display = 'none';
+    btnAssignToday.style.display = 'none';
     btnToggleDone.style.display = 'none';
     return;
   }
 
-  // 編輯模式
   const target = targetItem || allLogs.find(l => l.id === id);
   btnDelete.style.display = 'inline-block';
+  
+  // 典藏按鈕
   btnArchive.style.display = 'inline-block';
+  if (target && isItemArchived(target.status)) {
+    btnArchive.textContent = '↺ 取消典藏';
+    btnArchive.onclick = () => { unarchiveItem(id); closeItemModal(); };
+  } else {
+    btnArchive.textContent = '📦 典藏';
+    btnArchive.onclick = () => archiveFromModal();
+  }
 
-  // 筆記 (Note) 不顯示完成按鈕
+  // 移至今天按鈕
+  if (target && target.date !== todayStr && !isItemDone(target.status)) {
+    btnAssignToday.style.display = 'inline-block';
+  } else {
+    btnAssignToday.style.display = 'none';
+  }
+
+  // 筆記 (Note) 隱藏「完成」按鈕
   if (isNoteType(currentType)) {
     btnToggleDone.style.display = 'none';
   } else {
@@ -521,6 +534,13 @@ function updateModalButtonsState(targetItem) {
       btnToggleDone.style.borderColor = '#86efac';
     }
   }
+}
+
+function assignToTodayFromModal() {
+  const id = document.getElementById('modalItemId').value;
+  if (!id) return;
+  assignToToday(id);
+  closeItemModal();
 }
 
 function toggleDoneFromModal() {
