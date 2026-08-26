@@ -153,7 +153,7 @@
     .task-title { font-weight: bold; font-size: 0.88rem; line-height: 1.35; word-break: break-word; }
     .task-remarks { font-size: 0.75rem; opacity: 0.9; margin-top: 2px; }
 
-    /* Modal 對話框樣式修復 (加強頂部 Padding 解決遮擋) */
+    /* Modal 對話框樣式 */
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.45); display: none; justify-content: center; align-items: center;
@@ -161,7 +161,7 @@
     }
     .modal-card {
       background: #fff; border-radius: 16px; width: 100%; max-width: 460px;
-      padding: 26px 18px 18px 18px; max-height: 80vh; display: flex; flex-direction: column;
+      padding: 26px 18px 18px 18px; max-height: 85vh; display: flex; flex-direction: column;
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
     .modal-header {
@@ -187,63 +187,62 @@
       .btn-bubble .btn-text { display: none; }
       .btn-bubble { padding: 5px 9px; font-size: 0.85rem; }
     }
-    
-/* 1. 桌面端擴大 Modal 寬度 */
-@media (min-width: 768px) {
-  .modal-content {
-    max-width: 680px !important; /* 原本約 450px，調寬至 680px */
-    padding: 24px !important;
-  }
 
-  /* 桌面端將「日期」與「類型」放同一行，節省垂直空間 */
-  .form-row-inline {
-    display: flex;
-    gap: 16px;
-  }
-  .form-row-inline .form-group {
-    flex: 1;
-  }
-}
+    /* 1. 桌面端擴大 Modal 寬度與並排佈局 */
+    @media (min-width: 768px) {
+      .modal-card {
+        max-width: 680px !important;
+        padding: 24px !important;
+      }
 
-/* 2. 備註欄位（Textarea）尺寸優化 */
-.modal-content textarea {
-  min-height: 200px; /* 約等於 9-10 行高度 */
-  line-height: 1.5;
-  font-size: 14px;
-  resize: vertical; /* 允許使用者有需要時自行拉大 */
-  font-family: inherit;
-}
+      .form-row-inline {
+        display: flex;
+        gap: 16px;
+      }
+      .form-row-inline label {
+        flex: 1;
+      }
+    }
 
-    /* 黏性月份分隔標題 */
-.month-divider {
-  position: sticky;
-  top: 0; /* 若頂部有固定 Header，可設定為 header 的高度，如 top: 60px */
-  z-index: 100;
-  background: rgba(248, 250, 252, 0.92); /* 半透明背景 */
-  backdrop-filter: blur(8px); /* 毛玻璃效果 */
-  padding: 8px 12px;
-  margin: 16px 0 10px 0;
-  border-bottom: 2px solid #cbd5e1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+    /* 2. 備註欄位 (Textarea) 尺寸優化 (約 8-10 行) */
+    .modal-card textarea {
+      min-height: 180px;
+      line-height: 1.5;
+      font-size: 14px;
+      resize: vertical;
+      font-family: inherit;
+      margin-top: 4px;
+    }
 
-.month-divider .month-text {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1e293b;
-  letter-spacing: 0.5px;
-}
+    /* 3. 黏性月份分隔標題 */
+    .month-divider {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(248, 250, 252, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 8px 12px;
+      margin: 12px 0 6px 0;
+      border-bottom: 2px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-.month-divider .year-badge {
-  background-color: #e2e8f0;
-  color: #475569;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
+    .month-divider .month-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .month-divider .year-badge {
+      background-color: #e2e8f0;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
     
     /* 📱 WebApp Standalone 縮小設定 */
     @media all and (display-mode: standalone) {
@@ -377,22 +376,24 @@
       </div>
       <form id="itemForm" onsubmit="handleFormSubmit(event)">
         <input type="hidden" id="modalItemId">
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          <label style="font-size:0.8rem; font-weight:bold;">日期 (留空轉為「未有日期」)：
-            <input type="date" id="modalDate" style="width:100%; padding:6px; margin-top:2px;">
-          </label>
-          <label style="font-size:0.8rem; font-weight:bold;">類型：
-            <select id="modalType" style="width:100%; padding:6px; margin-top:2px;" onchange="updateModalButtonsState()">
-              <option value="Task">Task (任務)</option>
-              <option value="Event">Event (事件)</option>
-              <option value="筆記">筆記 (Note)</option>
-            </select>
-          </label>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div class="form-row-inline">
+            <label style="font-size:0.8rem; font-weight:bold;">日期 (留空轉為「未有日期」)：
+              <input type="date" id="modalDate" style="width:100%; padding:6px; margin-top:4px;">
+            </label>
+            <label style="font-size:0.8rem; font-weight:bold;">類型：
+              <select id="modalType" style="width:100%; padding:6px; margin-top:4px;" onchange="updateModalButtonsState()">
+                <option value="Task">Task (任務)</option>
+                <option value="Event">Event (事件)</option>
+                <option value="筆記">筆記 (Note)</option>
+              </select>
+            </label>
+          </div>
           <label style="font-size:0.8rem; font-weight:bold;">內容：
-            <input type="text" id="modalContent" required style="width:100%; padding:6px; margin-top:2px;">
+            <input type="text" id="modalContent" required style="width:100%; padding:6px; margin-top:4px;">
           </label>
           <label style="font-size:0.8rem; font-weight:bold;">備註 (Remarks)：
-            <textarea id="modalRemarks" rows="2" style="width:100%; padding:6px; margin-top:2px;"></textarea>
+            <textarea id="modalRemarks" style="width:100%; padding:6px;" placeholder="可輸入多行詳細備註..."></textarea>
           </label>
         </div>
         <div class="modal-actions-bar">
