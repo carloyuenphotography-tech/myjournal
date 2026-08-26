@@ -121,8 +121,8 @@ function loadLogsData() {
     complete: (results) => {
       allLogs = parseLogs(results.data);
       showStatus('');
-      
-      // 前端即時算牌檢查，確保重覆事項秒速顯示
+
+      // 前端動態比對與補齊重覆事項
       checkFrontendRecurring();
       refreshAllViews();
     },
@@ -130,7 +130,18 @@ function loadLogsData() {
   });
 }
 
-/* ⚡ 前端重覆事項即時檢查機制 (解決 CSV 延遲問題) */
+/* 輔助函式：忽略欄位順序與大小寫提取屬性 */
+function getProp(obj, keyNames) {
+  if (!obj) return '';
+  for (let k of Object.keys(obj)) {
+    if (keyNames.includes(k.trim().toLowerCase())) {
+      return obj[k];
+    }
+  }
+  return '';
+}
+
+/* ⚡ 前端重覆事項即時檢查機制 (解決 CSV 延遲與欄位位移問題) */
 function checkFrontendRecurring() {
   const sheetId = CONFIG.DAILY_SHEET_ID;
   const recGid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_RECURRING : null;
@@ -146,28 +157,26 @@ function checkFrontendRecurring() {
       let added = false;
 
       results.data.forEach((r, idx) => {
-        const v = Object.values(r);
-        const frequency = (r.Frequency || r.frequency || v[3] || '').trim();
-        const content = (r.Content || r.content || v[1] || '').trim();
-        const type = (r.Type || r.type || v[2] || 'Task').trim();
-        const dayParam = String(r.DayParam || r.dayParam || v[4] || '').trim();
-        const remarks = (r.Remarks || r.remarks || v[6] || '').trim();
+        const frequency = String(getProp(r, ['frequency', '頻率']) || '').trim();
+        const content = String(getProp(r, ['content', '內容', '事項']) || '').trim();
+        const type = String(getProp(r, ['type', '類型']) || 'Task').trim();
+        const dayParam = String(getProp(r, ['dayparam', '日期參數', 'day']) || '').trim();
+        const remarks = String(getProp(r, ['remarks', '備註']) || '').trim();
 
         if (!frequency || !content) return;
 
         const targetDateStr = calcTargetDate(frequency, dayParam, today);
         if (!targetDateStr) return;
 
-        // 比對是否已存在
+        // 比對是否已在清單中
         const exists = allLogs.some(log => log.content === content && log.date === targetDateStr);
 
         if (!exists) {
-          const newId = 'L' + new Date().getTime() + '_' + idx;
+          const newId = 'L_REC_' + new Date().getTime() + '_' + idx;
           const newItem = { id: newId, date: targetDateStr, type, content, status: 'Pending', remarks };
           allLogs.push(newItem);
           added = true;
 
-          // 同步給 Google Sheet
           syncToSheet('addLog', { id: newId, date: targetDateStr, type, content, status: 'Pending', remarks });
         }
       });
@@ -211,14 +220,25 @@ function calcTargetDate(frequency, dayParam, today) {
 function parseLogs(rows) {
   if (!rows) return [];
   return rows.map((r, i) => {
-    const v = Object.values(r);
+    const idVal = getProp(r, ['id']);
+    const dateVal = getProp(r, ['date', '日期']);
+    const typeVal = getProp(r, ['type', '類型']);
+    const contentVal = getProp(r, ['content', '內容']);
+    const statusVal = getProp(r, ['status', '狀態']);
+    const remarksVal = getProp(r, ['remarks', '備註']);
+
+    // 確保產生獨立唯一的 ID
+    const finalId = (idVal && String(idVal).trim() !== '') 
+      ? String(idVal).trim() 
+      : `L_${i}_${Math.random().toString(36).substr(2, 5)}`;
+
     return {
-      id: String(r.ID || r.id || v[0] || `L_${i}`),
-      date: (r.Date || r.date || v[1] || '').trim(),
-      type: r.Type || r.type || v[2] || 'Task',
-      content: r.Content || r.content || v[3] || '',
-      status: r.Status || r.status || v[4] || 'Pending',
-      remarks: r.Remarks || r.remarks || v[5] || ''
+      id: finalId,
+      date: String(dateVal || '').trim(),
+      type: String(typeVal || 'Task').trim(),
+      content: String(contentVal || '').trim(),
+      status: String(statusVal || 'Pending').trim(),
+      remarks: String(remarksVal || '').trim()
     };
   });
 }
@@ -294,7 +314,7 @@ function renderTimeline() {
   container.innerHTML = '';
 
   const datedLogs = allLogs.filter(item => item.date && item.date >= todayStr && !isItemDone(item.status) && !isItemArchived(item.status));
-  
+
   const datesSet = new Set(datedLogs.map(i => i.date));
   datesSet.add(todayStr);
   datesSet.add(tomorrowStr);
@@ -366,15 +386,16 @@ function renderTimeline() {
   });
 }
 
+/* 🎯 將 item 物件直接傳給 Modal 處理，確保 100% 觸發彈窗 */
 function createTaskCard(item) {
   const card = document.createElement('div');
   const tagClass = getTagClasses(item);
   card.className = `task-card type-${item.type} ${tagClass}`;
   card.onclick = (e) => {
     e.stopPropagation();
-    openEditModal(item.id);
+    openEditModal(item);
   };
-  
+
   card.innerHTML = `
     <div class="task-info">
       <div class="task-title">${item.content}</div>
@@ -406,7 +427,7 @@ function renderOverdueModal() {
   items.forEach(item => {
     const row = document.createElement('div');
     row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-    row.onclick = () => openEditModal(item.id);
+    row.onclick = () => openEditModal(item);
     row.innerHTML = `
       <div class="task-info">
         <div style="font-size:0.72rem; opacity:0.85; font-weight:bold;">📅 逾期日期：${item.date}</div>
@@ -439,7 +460,7 @@ function renderBacklogModal() {
   items.forEach(item => {
     const row = document.createElement('div');
     row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-    row.onclick = () => openEditModal(item.id);
+    row.onclick = () => openEditModal(item);
     row.innerHTML = `
       <div class="task-info">
         <div class="task-title">${item.content}</div>
@@ -473,7 +494,7 @@ function renderCompletedModal() {
     const row = document.createElement('div');
     row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
     row.style.opacity = '0.85';
-    row.onclick = () => openEditModal(item.id);
+    row.onclick = () => openEditModal(item);
     row.innerHTML = `
       <div class="task-info">
         ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
@@ -519,7 +540,7 @@ function renderArchivedModal() {
     const row = document.createElement('div');
     row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
     row.style.opacity = '0.75';
-    row.onclick = () => openEditModal(item.id);
+    row.onclick = () => openEditModal(item);
     row.innerHTML = `
       <div class="task-info">
         ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
@@ -544,7 +565,7 @@ function assignToToday(id) {
   const target = allLogs.find(l => String(l.id) === String(id));
   if (!target) return;
   target.date = todayStr;
-  
+
   refreshAllViews();
   syncToSheet('editLog', { id: target.id, oldContent: target.content, date: target.date, type: target.type, content: target.content, remarks: target.remarks });
 }
@@ -565,15 +586,24 @@ function openAddModal() {
   document.getElementById('modalType').value = 'Task';
   document.getElementById('modalContent').value = '';
   document.getElementById('modalRemarks').value = '';
-  
+
   updateModalButtonsState();
   document.getElementById('itemModal').style.display = 'flex';
 }
 
-/* 🎯 修正點擊開啟 Modal 邏輯 (強效字串比對) */
-function openEditModal(id) {
-  const target = allLogs.find(l => String(l.id) === String(id));
-  if (!target) return;
+/* 🎯 支援傳入物件或 ID 的雙重保障開窗 */
+function openEditModal(targetOrId) {
+  let target = null;
+  if (typeof targetOrId === 'object' && targetOrId !== null) {
+    target = targetOrId;
+  } else {
+    target = allLogs.find(l => String(l.id) === String(targetOrId));
+  }
+
+  if (!target) {
+    alert('⚠️ 找不到該事項資料');
+    return;
+  }
 
   document.getElementById('modalFormTitle').textContent = '✏️ 編輯 / 操作事項';
   document.getElementById('modalItemId').value = target.id;
@@ -589,7 +619,7 @@ function openEditModal(id) {
 function updateModalButtonsState(targetItem) {
   const id = document.getElementById('modalItemId').value;
   const currentType = document.getElementById('modalType').value;
-  
+
   const btnDelete = document.getElementById('btnDelete');
   const btnArchive = document.getElementById('btnArchive');
   const btnAssignToday = document.getElementById('btnAssignTodayModal');
@@ -605,7 +635,7 @@ function updateModalButtonsState(targetItem) {
 
   const target = targetItem || allLogs.find(l => String(l.id) === String(id));
   btnDelete.style.display = 'inline-block';
-  
+
   btnArchive.style.display = 'inline-block';
   if (target && isItemArchived(target.status)) {
     btnArchive.textContent = '↺ 取消典藏';
