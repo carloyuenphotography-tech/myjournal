@@ -8,7 +8,17 @@ function getTodayString() {
   return `${year}-${month}-${day}`;
 }
 
+function getTomorrowString() {
+  const now = new Date();
+  now.setDate(now.getDate() + 1);
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 let todayStr = getTodayString();
+let tomorrowStr = getTomorrowString();
 
 /* Google 登入驗證 */
 function initGoogleSignIn() {
@@ -29,7 +39,6 @@ function initGoogleSignIn() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  loadNavbar();
   if (typeof CONFIG === 'undefined') {
     showStatus('❌ 找不到 config.js 設定', '#ef4444');
     return;
@@ -91,15 +100,6 @@ function showStatus(text, color = '#0284c7') {
   if (msg) { msg.style.color = color; msg.textContent = text; }
 }
 
-function loadNavbar() {
-  fetch('nav.html')
-    .then(res => res.text())
-    .then(data => {
-      const navContainer = document.getElementById('navbar');
-      if (navContainer) navContainer.innerHTML = data;
-    }).catch(err => console.log('導覽載入失敗', err));
-}
-
 function loadLogsData() {
   const sheetId = CONFIG.DAILY_SHEET_ID;
   const gid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_LOG : '0';
@@ -156,7 +156,6 @@ function handleQuickSubmit(e) {
 
   allLogs.push(newItem);
 
-  // 清空輸入欄
   document.getElementById('quickContent').value = '';
   document.getElementById('quickIsBacklog').checked = false;
 
@@ -164,13 +163,27 @@ function handleQuickSubmit(e) {
   syncToSheet('addLog', { id: newId, date: targetDate, type: type, content: content, status: 'Pending', remarks: '' });
 }
 
-/* 判斷狀態的輔助函式 */
+/* 輔助函式：判斷狀態 */
 function isItemDone(status) {
   return status === '完成' || status === 'Done';
 }
 
 function isItemArchived(status) {
   return status === 'Archived' || status === '已典藏';
+}
+
+/* 🎨 解析內容中的 Hashtag 並回傳 CSS Class */
+function getTagClasses(item) {
+  const text = ((item.content || '') + ' ' + (item.remarks || '')).toLowerCase();
+  const classes = [];
+  if (text.includes('#sch') || text.includes('#學校') || text.includes('#學業')) classes.push('tag-sch');
+  if (text.includes('#family') || text.includes('#家庭') || text.includes('#家')) classes.push('tag-family');
+  if (text.includes('#work') || text.includes('#工作') || text.includes('#辦公')) classes.push('tag-work');
+  if (text.includes('#urgent') || text.includes('#重要') || text.includes('#緊急') || text.includes('🔥')) classes.push('tag-urgent');
+  if (text.includes('#finance') || text.includes('#買') || text.includes('#購物')) classes.push('tag-finance');
+  if (text.includes('#health') || text.includes('#健康') || text.includes('#運動')) classes.push('tag-health');
+  if (text.includes('#personal') || text.includes('#個人')) classes.push('tag-personal');
+  return classes.join(' ');
 }
 
 /* 更新頂部 Bubbles 氣泡數字 */
@@ -186,7 +199,7 @@ function updateAllBadges() {
   document.getElementById('archivedBadgeCount').textContent = archivedCount;
 }
 
-/* 渲染每日時間軸 (排除已完成與已典藏) */
+/* 📅 渲染每日時間軸 (含今天、明天標示) */
 function renderTimeline() {
   const container = document.getElementById('timelineContainer');
   container.innerHTML = '';
@@ -194,7 +207,8 @@ function renderTimeline() {
   const datedLogs = allLogs.filter(item => item.date && item.date >= todayStr && !isItemDone(item.status) && !isItemArchived(item.status));
   
   const datesSet = new Set(datedLogs.map(i => i.date));
-  datesSet.add(todayStr);
+  datesSet.add(todayStr); // 確保今天與明天皆在列表
+  datesSet.add(tomorrowStr);
   const sortedDates = Array.from(datesSet).sort();
 
   const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -204,17 +218,22 @@ function renderTimeline() {
     const weekdayStr = weekdays[d.getDay()];
     const dayNum = d.getDate();
     const isToday = (dateVal === todayStr);
+    const isTomorrow = (dateVal === tomorrowStr);
+
+    let weekdayDisplay = weekdayStr;
+    if (isToday) weekdayDisplay = '今天';
+    else if (isTomorrow) weekdayDisplay = '明天';
 
     const dayItems = datedLogs.filter(i => i.date === dateVal);
     const pendingCount = dayItems.length;
 
     const dayBlock = document.createElement('div');
-    dayBlock.className = `day-block ${isToday ? 'is-today' : ''}`;
+    dayBlock.className = `day-block ${isToday ? 'is-today' : ''} ${isTomorrow ? 'is-tomorrow' : ''}`;
     if (isToday) dayBlock.id = 'todayBlock';
 
     dayBlock.innerHTML = `
       <div class="day-date-col">
-        <span class="day-weekday">${weekdayStr}</span>
+        <span class="day-weekday">${weekdayDisplay}</span>
         <span class="day-number">${dayNum}</span>
       </div>
       <div class="day-content-col">
@@ -224,8 +243,8 @@ function renderTimeline() {
     `;
 
     const cardList = dayBlock.querySelector('.day-card-list');
-    if (dayItems.length === 0 && isToday) {
-      cardList.innerHTML = `<div style="font-size:0.8rem; color:#94a3b8; padding:4px 0;">今日無待辦事項 🎉</div>`;
+    if (dayItems.length === 0) {
+      cardList.innerHTML = `<div style="font-size:0.8rem; color:#94a3b8; padding:4px 0;">無待辦事項 🎉</div>`;
     } else {
       dayItems.forEach(item => cardList.appendChild(createTaskCard(item)));
     }
@@ -236,7 +255,8 @@ function renderTimeline() {
 
 function createTaskCard(item) {
   const card = document.createElement('div');
-  card.className = `task-card type-${item.type}`;
+  const tagClass = getTagClasses(item);
+  card.className = `task-card type-${item.type} ${tagClass}`;
   
   card.innerHTML = `
     <div class="task-info">
@@ -424,7 +444,7 @@ function unarchiveItem(id) {
   syncToSheet('toggleLog', { id: target.id, content: target.content, status: '完成' });
 }
 
-/* 通用快捷操作與 Modal 表單處理 */
+/* 快捷操作與 Modal 表單 */
 function assignToToday(id) {
   const target = allLogs.find(l => l.id === id);
   if (!target) return;
