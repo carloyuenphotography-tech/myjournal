@@ -213,6 +213,37 @@
   resize: vertical; /* 允許使用者有需要時自行拉大 */
   font-family: inherit;
 }
+
+    /* 黏性月份分隔標題 */
+.month-divider {
+  position: sticky;
+  top: 0; /* 若頂部有固定 Header，可設定為 header 的高度，如 top: 60px */
+  z-index: 100;
+  background: rgba(248, 250, 252, 0.92); /* 半透明背景 */
+  backdrop-filter: blur(8px); /* 毛玻璃效果 */
+  padding: 8px 12px;
+  margin: 16px 0 10px 0;
+  border-bottom: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.month-divider .month-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: 0.5px;
+}
+
+.month-divider .year-badge {
+  background-color: #e2e8f0;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
     
     /* 📱 WebApp Standalone 縮小設定 */
     @media all and (display-mode: standalone) {
