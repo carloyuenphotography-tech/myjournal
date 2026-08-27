@@ -1,7 +1,7 @@
 const CONFIG = {
   // 🔑 必須保留這兩個，否則 Google 登入會失效
   GOOGLE_CLIENT_ID: "972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com",
-  GAS_URL: "https://script.google.com/macros/s/AKfycbw1K18vb1w5080Ux1yYcOtAr3ac3-W3V5i7QwvHogzJhOABZS9HjZ9L-lPqb3l9PmJK/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec",
 
   // 📊 各分頁的 Sheet ID 設定
   DAILY_SHEET_ID: '1RQAj3owFnsEn53UZ41EPUErIFJBywJvvW9BKMOUCquI',
@@ -19,8 +19,8 @@ const CONFIG = {
   },
 
   API_URLS: {
-    DAILY: 'https://script.google.com/macros/s/AKfycbw1K18vb1w5080Ux1yYcOtAr3ac3-W3V5i7QwvHogzJhOABZS9HjZ9L-lPqb3l9PmJK/exec',
-    MONTHLY: 'https://script.google.com/macros/s/AKfycbw1K18vb1w5080Ux1yYcOtAr3ac3-W3V5i7QwvHogzJhOABZS9HjZ9L-lPqb3l9PmJK/exec',
-    DAILY_RECURRING: 'https://script.google.com/macros/s/AKfycbw1K18vb1w5080Ux1yYcOtAr3ac3-W3V5i7QwvHogzJhOABZS9HjZ9L-lPqb3l9PmJK/exec'
+    DAILY: 'https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec',
+    MONTHLY: 'https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec',
+    DAILY_RECURRING: https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec'
   }
 };
