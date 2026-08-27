@@ -88,6 +88,8 @@
       overflow-x: auto;
       gap: 6px;
       padding-bottom: 4px;
+      position: relative;
+      z-index: 200; /* 確保懸浮與點擊優先權 */
     }
     .sidebar-categories::-webkit-scrollbar { height: 4px; }
     .sidebar-categories::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -114,6 +116,7 @@
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.15s ease;
+      user-select: none;
     }
     .cat-btn:hover { background: #e2e8f0; color: #0f172a; }
     .cat-btn.active {
@@ -248,7 +251,7 @@
       .btn-bubble { padding: 5px 9px; font-size: 0.85rem; }
     }
 
-    /* 🖥️ 桌面端：左側 TaskBoard 分類選單 + 右側橫向 TasksBoard 看板 */
+    /* 🖥️ 桌面端修正：提升左側選單的 z-index 確保點擊無阻擋 */
     @media (min-width: 900px) {
       .container {
         max-width: 100% !important; padding: 20px;
@@ -261,7 +264,7 @@
         gap: 20px;
       }
 
-      /* 左側分類 Sidebar */
+      /* 關鍵修復：給左側欄明確的 z-index 與置頂層級 */
       .sidebar-categories {
         width: 200px;
         flex-shrink: 0;
@@ -273,6 +276,7 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         position: sticky;
         top: 16px;
+        z-index: 200;
       }
       .sidebar-title {
         display: block;
@@ -296,7 +300,6 @@
         box-shadow: none;
       }
 
-      /* 右側看板 Container */
       .timeline-container {
         display: flex;
         flex-direction: row;
@@ -386,17 +389,17 @@
     <!-- 🗂️ App 主體佈局 (包含左側分類選單 + 右側主內容) -->
     <div class="app-body-layout">
       
-      <!-- 🗂️ 分類選單 / TaskBoard 轉換器 -->
+      <!-- 🗂️ 分類選單 / TaskBoard 轉換器 (加入 type="button" 避開事件衝突) -->
       <aside class="sidebar-categories">
         <div class="sidebar-title">看板分類</div>
-        <button class="cat-btn active" data-cat="all" onclick="setCategoryFilter('all')">✨ 全部事項</button>
-        <button class="cat-btn" data-cat="sch" onclick="setCategoryFilter('sch')">🏫 學校 / 學業</button>
-        <button class="cat-btn" data-cat="family" onclick="setCategoryFilter('family')">🏠 家庭 / 家</button>
-        <button class="cat-btn" data-cat="work" onclick="setCategoryFilter('work')">💼 工作 / 辦公</button>
-        <button class="cat-btn" data-cat="urgent" onclick="setCategoryFilter('urgent')">🔥 重要 / 緊急</button>
-        <button class="cat-btn" data-cat="finance" onclick="setCategoryFilter('finance')">💰 財務 / 購物</button>
-        <button class="cat-btn" data-cat="health" onclick="setCategoryFilter('health')">🌿 健康 / 運動</button>
-        <button class="cat-btn" data-cat="personal" onclick="setCategoryFilter('personal')">👤 個人</button>
+        <button type="button" class="cat-btn active" data-cat="all" onclick="setCategoryFilter('all')">✨ 全部事項</button>
+        <button type="button" class="cat-btn" data-cat="sch" onclick="setCategoryFilter('sch')">🏫 學校 / 學業</button>
+        <button type="button" class="cat-btn" data-cat="family" onclick="setCategoryFilter('family')">🏠 家庭 / 家</button>
+        <button type="button" class="cat-btn" data-cat="work" onclick="setCategoryFilter('work')">💼 工作 / 辦公</button>
+        <button type="button" class="cat-btn" data-cat="urgent" onclick="setCategoryFilter('urgent')">🔥 重要 / 緊急</button>
+        <button type="button" class="cat-btn" data-cat="finance" onclick="setCategoryFilter('finance')">💰 財務 / 購物</button>
+        <button type="button" class="cat-btn" data-cat="health" onclick="setCategoryFilter('health')">🌿 健康 / 運動</button>
+        <button type="button" class="cat-btn" data-cat="personal" onclick="setCategoryFilter('personal')">👤 個人</button>
       </aside>
 
       <!-- 📋 右側主內容區 -->
