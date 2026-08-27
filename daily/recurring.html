@@ -7,7 +7,7 @@
   
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
-  <script src="recurring.js"></script>
+  <script src="recurring.js?v=2.0"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   
   <style>
@@ -69,11 +69,11 @@
       background: #ffffff; border: 1px solid var(--border-color);
       border-radius: 12px; padding: 12px 16px; display: flex;
       justify-content: space-between; align-items: center; gap: 12px;
-      transition: all 0.15s ease;
+      transition: all 0.15s ease; flex-wrap: wrap;
     }
     .rule-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08); }
 
-    .rule-info { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .rule-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 240px; }
     .rule-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .rule-id { font-size: 0.75rem; font-weight: bold; background: #e0f2fe; color: #0284c7; padding: 2px 6px; border-radius: 4px; }
     .rule-freq { font-size: 0.75rem; font-weight: bold; background: #fef08a; color: #713f12; padding: 2px 6px; border-radius: 4px; }
@@ -81,10 +81,11 @@
     .rule-title { font-weight: bold; font-size: 0.95rem; }
     .rule-details { font-size: 0.78rem; color: #64748b; }
 
-    .rule-actions { display: flex; gap: 6px; }
+    .rule-actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .btn-sm {
-      padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; cursor: pointer; font-weight: bold; border: none;
+      padding: 6px 10px; font-size: 0.78rem; border-radius: 6px; cursor: pointer; font-weight: bold; border: none;
     }
+    .btn-gen { background: #8b5cf6; color: #ffffff; }
     .btn-edit { background: #e0f2fe; color: #0284c7; }
     .btn-del { background: #fee2e2; color: #ef4444; }
 
@@ -122,7 +123,10 @@
         <a href="daily_adv.html" class="btn-action btn-secondary">⬅️ 返回主頁</a>
         <span>🔄 重複事項管理 (Recurring Rules)</span>
       </div>
-      <button class="btn-action" onclick="openAddModal()">➕ 新增重複規則</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn-action" style="background:#8b5cf6;" onclick="generateAllRulesNow()">⚡ 即時生成今天符合待辦</button>
+        <button class="btn-action" onclick="openAddModal()">➕ 新增重複規則</button>
+      </div>
     </div>
 
     <div id="statusMessage" style="font-size:0.8rem; color:var(--primary); margin:10px 0 0 0;">⏳ 載入中...</div>
