@@ -11,6 +11,7 @@ const CATEGORIES = [
   { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',    bg: '#1E1542', color: '#C5BCDE' }
 ];
 
+
 let allLogs = [];
 let currentCategoryFilter = 'all';
 
@@ -396,7 +397,6 @@ function updateAllBadges() {
   document.getElementById('archivedBadgeCount').textContent = archivedCount;
 }
 
-/* 💾 本地記憶體排序記錄管理 */
 function saveDayOrder(dateStr, cardIds) {
   try {
     const savedOrders = JSON.parse(localStorage.getItem('daily_card_orders') || '{}');
@@ -467,7 +467,6 @@ function renderTimeline() {
 
     let dayItems = filteredLogs.filter(i => i.date === dateVal);
 
-    // 🎯 套用儲存好的自訂排序
     const savedOrder = getDayOrder(dateVal);
     if (savedOrder && Array.isArray(savedOrder)) {
       dayItems.sort((a, b) => {
@@ -514,18 +513,19 @@ function createTaskCard(item) {
   const tagClass = getTagClasses(item);
   card.className = `task-card type-${item.type} ${tagClass}`;
   card.dataset.id = item.id;
-  card.onclick = (e) => { e.stopPropagation(); openEditModal(item); };
+  card.onclick = (e) => {
+    e.stopPropagation();
+    openEditModal(item);
+  };
 
   let displayTitle = item.content;
   let locationBadgeHtml = '';
 
-  // 🎯 自動解析 @地點(時間) 或 @地點，例如 @學校(08:00-16:00) 或 @學校
   const match = displayTitle.match(/@([^\s#(\[]+)(?:\((.*?)\))?/);
   if (match) {
-    const locText = match[1];     // 地點：學校
-    const timeText = match[2];    // 時間：08:00-16:00 (若無則為 undefined)
+    const locText = match[1];
+    const timeText = match[2];
 
-    // 從標題移除 @語法，保持標題潔淨
     displayTitle = displayTitle.replace(/@[^\s#]+(\(.*?\))?/, '').trim();
 
     locationBadgeHtml = `
@@ -545,6 +545,28 @@ function createTaskCard(item) {
     <div class="drag-handle" title="拖曳排序" onclick="event.stopPropagation()">⋮⋮</div>
   `;
   return card;
+}
+
+function initSortable() {
+  if (typeof Sortable === 'undefined') return;
+
+  const lists = document.querySelectorAll('.day-card-list');
+  lists.forEach(list => {
+    new Sortable(list, {
+      handle: '.drag-handle',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: function (evt) {
+        const dateStr = evt.from.dataset.date;
+        if (!dateStr) return;
+
+        const currentCardIds = Array.from(evt.from.children)
+                                    .map(card => card.dataset.id)
+                                    .filter(Boolean);
+        saveDayOrder(dateStr, currentCardIds);
+      }
+    });
+  });
 }
 
 function sortReverseChronological(items) {
@@ -760,7 +782,16 @@ function archiveItem(id) {
 
   target.status = 'Archived';
   refreshAllViews();
-  syncToSheet('toggleLog', { id: target.id, content: target.content, status: 'Archived' });
+  // ⚡ 補齊 complete 參數
+  syncToSheet('toggleLog', { 
+    id: target.id, 
+    content: target.content, 
+    oldContent: target.content,
+    date: target.date,
+    type: target.type,
+    remarks: target.remarks,
+    status: 'Archived' 
+  });
 }
 
 function openArchivedModal() {
@@ -836,7 +867,16 @@ function unarchiveItem(id) {
 
   target.status = 'Pending';
   refreshAllViews();
-  syncToSheet('toggleLog', { id: target.id, content: target.content, status: 'Pending' });
+  // ⚡ 補齊 complete 參數
+  syncToSheet('toggleLog', { 
+    id: target.id, 
+    content: target.content, 
+    oldContent: target.content,
+    date: target.date,
+    type: target.type,
+    remarks: target.remarks,
+    status: 'Pending' 
+  });
 }
 
 function assignToToday(id) {
@@ -845,7 +885,7 @@ function assignToToday(id) {
   target.date = todayStr;
 
   refreshAllViews();
-  syncToSheet('editLog', { id: target.id, oldContent: target.content, date: target.date, type: target.type, content: target.content, remarks: target.remarks });
+  syncToSheet('editLog', { id: target.id, oldContent: target.content, date: target.date, type: target.type, content: target.content, remarks: target.remarks, status: target.status });
 }
 
 function refreshAllViews() {
@@ -960,6 +1000,7 @@ function assignToTodayFromModal() {
   closeItemModal();
 }
 
+/* ⚡ 修正：點擊完成時發送完整欄位資料給 Apps Script */
 function toggleDoneFromModal() {
   const id = document.getElementById('modalItemId').value;
   if (!id) return;
@@ -972,7 +1013,17 @@ function toggleDoneFromModal() {
 
   closeItemModal();
   refreshAllViews();
-  syncToSheet('toggleLog', { id: target.id, content: target.content, status: newStatus });
+
+  // 傳送包含 oldContent、date、type、status 等全量參數
+  syncToSheet('toggleLog', { 
+    id: target.id, 
+    content: target.content, 
+    oldContent: target.content,
+    date: target.date,
+    type: target.type,
+    remarks: target.remarks,
+    status: newStatus 
+  });
 }
 
 function archiveFromModal() {
@@ -1002,7 +1053,7 @@ function handleFormSubmit(e) {
     if (target) {
       const oldContent = target.content;
       target.date = date; target.type = type; target.content = content; target.remarks = remarks;
-      syncToSheet('editLog', { id, oldContent, date, type, content, remarks });
+      syncToSheet('editLog', { id, oldContent, date, type, content, remarks, status: target.status });
     }
   } else {
     const newId = 'L' + new Date().getTime();
