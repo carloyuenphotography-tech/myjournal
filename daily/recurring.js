@@ -90,9 +90,11 @@ function loadRecurringData() {
   const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${recGid}&t=${new Date().getTime()}`;
 
   Papa.parse(csvUrl, {
-    download: true, header: true, skipEmptyLines: true,
+    download: true,
+    header: false, // ⚡ 改用陣列讀取，以精確相容雙層標題列
+    skipEmptyLines: true,
     complete: (results) => {
-      allRules = parseRecurringRows(results.data);
+      allRules = parseRecurringArrayRows(results.data);
       showStatus('');
       renderRulesList();
     },
@@ -100,19 +102,47 @@ function loadRecurringData() {
   });
 }
 
-function parseRecurringRows(rows) {
-  if (!rows) return [];
-  return rows.map((r, idx) => {
-    return {
-      id: String(getProp(r, ['id', '唯一編號']) || '').trim() || `R${String(idx + 1).padStart(3, '0')}`,
-      content: String(getProp(r, ['content', '內容', '事項', '事項名稱']) || '').trim(),
-      type: String(getProp(r, ['type', '類型']) || 'Task').trim(),
-      frequency: String(getProp(r, ['frequency', '頻率', '頻率規則']) || 'DAILY').trim().toUpperCase(),
-      dayParam: String(getProp(r, ['dayparam', '日期參數', '自訂日期']) || '').trim(),
-      lastGenerated: String(getProp(r, ['lastgenerated', '最後產生日期']) || '').trim(),
-      remarks: String(getProp(r, ['remarks', '備註']) || '').trim()
-    };
-  }).filter(r => r.content !== '');
+function parseRecurringArrayRows(rows) {
+  if (!rows || rows.length === 0) return [];
+
+  // 自動尋找包含 "ID" 或 "Content" 的英文標題列 (Row 2)
+  let headerIndex = -1;
+  for (let i = 0; i < Math.min(rows.length, 5); i++) {
+    const rowStr = rows[i].join(',').toLowerCase();
+    if (rowStr.includes('content') || rowStr.includes('id')) {
+      headerIndex = i;
+      break;
+    }
+  }
+
+  if (headerIndex === -1) return [];
+
+  const headers = rows[headerIndex].map(h => String(h).trim().toLowerCase());
+  const idIdx = headers.findIndex(h => h === 'id' || h.includes('id'));
+  const contentIdx = headers.findIndex(h => h === 'content' || h.includes('content') || h.includes('事項'));
+  const typeIdx = headers.findIndex(h => h === 'type' || h.includes('type'));
+  const freqIdx = headers.findIndex(h => h === 'frequency' || h.includes('frequency'));
+  const dayIdx = headers.findIndex(h => h === 'dayparam' || h.includes('dayparam'));
+  const lastIdx = headers.findIndex(h => h === 'lastgenerated' || h.includes('lastgenerated'));
+  const remIdx = headers.findIndex(h => h === 'remarks' || h.includes('remarks') || h.includes('備註'));
+
+  const rules = [];
+  for (let i = headerIndex + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const content = contentIdx !== -1 && r[contentIdx] ? String(r[contentIdx]).trim() : '';
+    if (!content) continue;
+
+    rules.push({
+      id: idIdx !== -1 && r[idIdx] ? String(r[idIdx]).trim() : `R${String(i).padStart(3, '0')}`,
+      content: content,
+      type: typeIdx !== -1 && r[typeIdx] ? String(r[typeIdx]).trim() : 'Task',
+      frequency: freqIdx !== -1 && r[freqIdx] ? String(r[freqIdx]).trim().toUpperCase() : 'DAILY',
+      dayParam: dayIdx !== -1 && r[dayIdx] ? String(r[dayIdx]).trim() : '',
+      lastGenerated: lastIdx !== -1 && r[lastIdx] ? String(r[lastIdx]).trim() : '',
+      remarks: remIdx !== -1 && r[remIdx] ? String(r[remIdx]).trim() : ''
+    });
+  }
+  return rules;
 }
 
 function renderRulesList() {
