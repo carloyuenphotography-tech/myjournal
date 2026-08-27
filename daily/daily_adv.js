@@ -1,3 +1,15 @@
+/* ⚙️ 中央分類設定集：隨時在這裡修改、新增或刪減分類 */
+const CATEGORIES = [
+  { id: 'all',      name: '✨ 全部事項', tag: '',           bg: '',        color: '' },
+  { id: 'personal', name: '👤 個人',      tag: '#personal', bg: '#f3e8ff', color: '#581c87', isDefault: true },
+  { id: 'sch',      name: '🏫 學校/學業', tag: '#sch',      bg: '#fef08a', color: '#713f12' },
+  { id: 'family',   name: '🏠 家庭/家',   tag: '#family',   bg: '#dcfce7', color: '#14532d' },
+  { id: 'work',     name: '💼 工作/辦公', tag: '#work',     bg: '#e0f2fe', color: '#075985' },
+  { id: 'urgent',   name: '🔥 重要/緊急', tag: '#urgent',   bg: '#ffe4e6', color: '#9f1239' },
+  { id: 'finance',  name: '💰 財務/購物', tag: '#finance',  bg: '#ffedd5', color: '#9a3412' },
+  { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' }
+];
+
 let allLogs = [];
 let currentCategoryFilter = 'all';
 
@@ -39,6 +51,8 @@ function initGoogleSignIn() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  initCategoriesInfrastructure();
+
   if (typeof CONFIG === 'undefined') {
     showStatus('❌ 找不到 config.js 設定', '#ef4444');
     return;
@@ -52,6 +66,54 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   checkLoginStatus();
 });
+
+/* ⚡ 分類架構動態初始化：注入 CSS、產生選單與輸入框選項 */
+function initCategoriesInfrastructure() {
+  // 1. 動態注入 CSS 顏色樣式
+  let styleEl = document.getElementById('dynamicCatStyles');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'dynamicCatStyles';
+    document.head.appendChild(styleEl);
+  }
+  let cssText = '';
+  CATEGORIES.forEach(c => {
+    if (c.id !== 'all' && c.bg) {
+      cssText += `.task-card.tag-${c.id} { background-color: ${c.bg} !important; color: ${c.color} !important; }\n`;
+    }
+  });
+  styleEl.textContent = cssText;
+
+  // 2. 動態渲染 Sidebar 類別按鈕
+  const sidebar = document.getElementById('sidebarCategories');
+  if (sidebar) {
+    sidebar.innerHTML = '<div class="sidebar-title">看板分類</div>';
+    CATEGORIES.forEach(c => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `cat-btn ${c.id === currentCategoryFilter ? 'active' : ''}`;
+      btn.dataset.cat = c.id;
+      btn.onclick = () => setCategoryFilter(c.id);
+      btn.textContent = c.name;
+      sidebar.appendChild(btn);
+    });
+  }
+
+  // 3. 動態渲染快速輸入區的 Category Dropdown (預設選擇「個人」)
+  const quickCatSelect = document.getElementById('quickCategory');
+  if (quickCatSelect) {
+    quickCatSelect.innerHTML = '';
+    CATEGORIES.forEach(c => {
+      if (c.id !== 'all') {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        if (c.isDefault) opt.selected = true;
+        quickCatSelect.appendChild(opt);
+      }
+    });
+  }
+}
 
 function initializeApp() {
   if (window.google && window.google.accounts && window.google.accounts.id) {
@@ -260,14 +322,24 @@ function toggleQuickDateInput(chk) {
   }
 }
 
+/* ⚡ 快速新增：自動附加選擇的分類標籤 */
 function handleQuickSubmit(e) {
   e.preventDefault();
   const type = document.getElementById('quickType').value;
+  const catId = document.getElementById('quickCategory').value;
   const isBacklog = document.getElementById('quickIsBacklog').checked;
-  const content = document.getElementById('quickContent').value.trim();
+  let content = document.getElementById('quickContent').value.trim();
   const quickDateVal = document.getElementById('quickDate').value;
 
   if (!content) return;
+
+  // 找尋對應標籤 (例如 #personal)
+  const targetCatObj = CATEGORIES.find(c => c.id === catId);
+  if (targetCatObj && targetCatObj.tag) {
+    if (!content.toLowerCase().includes(targetCatObj.tag.toLowerCase())) {
+      content += ` ${targetCatObj.tag}`;
+    }
+  }
 
   const newId = 'L' + new Date().getTime();
   const targetDate = isBacklog ? '' : (quickDateVal || todayStr);
@@ -299,23 +371,21 @@ function isItemArchived(status) {
   return status === 'Archived' || status === '已典藏';
 }
 
-/* 🎯 容錯型筆記類型判定 */
 function isNoteType(type) {
   if (!type) return false;
   const t = String(type).trim().toLowerCase();
   return t === '筆記' || t === 'note' || t === '-';
 }
 
+/* 🏷️ 動態比對標籤：根據 CATEGORIES 設定自動解析 */
 function getTagClasses(item) {
   const text = ((item.content || '') + ' ' + (item.remarks || '')).toLowerCase();
   const classes = [];
-  if (text.includes('#sch') || text.includes('#學校') || text.includes('#學業')) classes.push('tag-sch');
-  if (text.includes('#family') || text.includes('#家庭') || text.includes('#家')) classes.push('tag-family');
-  if (text.includes('#work') || text.includes('#工作') || text.includes('#辦公')) classes.push('tag-work');
-  if (text.includes('#urgent') || text.includes('#重要') || text.includes('#緊急') || text.includes('🔥')) classes.push('tag-urgent');
-  if (text.includes('#finance') || text.includes('#買') || text.includes('#購物')) classes.push('tag-finance');
-  if (text.includes('#health') || text.includes('#健康') || text.includes('#運動')) classes.push('tag-health');
-  if (text.includes('#personal') || text.includes('#個人')) classes.push('tag-personal');
+  CATEGORIES.forEach(c => {
+    if (c.tag && text.includes(c.tag.toLowerCase())) {
+      classes.push(`tag-${c.id}`);
+    }
+  });
   return classes.join(' ');
 }
 
@@ -326,7 +396,6 @@ function updateAllBadges() {
   const completedCount = allLogs.filter(i => isItemDone(i.status)).length;
   const archivedCount = allLogs.filter(i => isItemArchived(i.status)).length;
 
-  // 逾期工作按鈕顯示數字 (逾期任務 + 過往筆記)
   document.getElementById('overdueBadgeCount').textContent = overdueCount + pastNotesCount;
   document.getElementById('backlogBadgeCount').textContent = backlogCount;
   document.getElementById('completedBadgeCount').textContent = completedCount;
@@ -441,7 +510,6 @@ function closeOverdueModal() {
   document.getElementById('overdueModal').style.display = 'none';
 }
 
-/* 🎯 核心修復：讓逾期彈窗同時呈現過往筆記，徹底避免隱形 */
 function renderOverdueModal() {
   const body = document.getElementById('overdueModalBody');
   body.innerHTML = '';
