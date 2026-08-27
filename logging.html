@@ -521,5 +521,32 @@
       });
     }
   </script>
+
+<script>
+function loadGlobalNavbar() {
+  fetch('nav.html')
+    .then(res => res.text())
+    .then(data => {
+      const navContainer = document.getElementById('navbar');
+      if (navContainer) {
+        navContainer.innerHTML = data;
+        const currentPath = window.location.pathname.split('/').pop() || 'daily.html';
+        navContainer.querySelectorAll('.nav-btn').forEach(link => {
+          if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+          } else {
+            link.classList.remove('active');
+          }
+        });
+      }
+    }).catch(err => console.error('導覽列載入失敗:', err));
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadGlobalNavbar);
+} else {
+  loadGlobalNavbar();
+}
+</script>
+
 </body>
 </html>

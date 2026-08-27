@@ -41,6 +41,7 @@
     </header>
 
     <main class="flex-grow max-w-4xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4">
+    <div id="navbar" class="nav-tabs"></div>
 
         <!-- Toast Notification -->
         <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center space-x-2 text-xs sm:text-sm">
@@ -207,5 +208,32 @@
     </footer>
 
     <script src="tracker.js"></script>
+
+<script>
+function loadGlobalNavbar() {
+  fetch('nav.html')
+    .then(res => res.text())
+    .then(data => {
+      const navContainer = document.getElementById('navbar');
+      if (navContainer) {
+        navContainer.innerHTML = data;
+        const currentPath = window.location.pathname.split('/').pop() || 'daily.html';
+        navContainer.querySelectorAll('.nav-btn').forEach(link => {
+          if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+          } else {
+            link.classList.remove('active');
+          }
+        });
+      }
+    }).catch(err => console.error('導覽列載入失敗:', err));
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadGlobalNavbar);
+} else {
+  loadGlobalNavbar();
+}
+</script>
+
 </body>
 </html>
