@@ -13,7 +13,7 @@
   <script src="allowed-emails.js"></script>
   <!-- 引入 SortableJS 支援拖曳排序 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-  <!-- 引入 Google 官方 Identity SDK[cite: 1] -->
+  <!-- 引入 Google 官方 Identity SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
@@ -69,31 +69,101 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
+    /* ☰ 三劃抽屜式導覽列樣式 */
+    .nav-bar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 12px 12px 12px;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 16px;
+    }
+    .nav-bar-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--header-bg);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hamburger-btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      font-size: 1.3rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #334155;
+      transition: background 0.2s;
+    }
+    .hamburger-btn:hover { background: #e2e8f0; }
+
+    .nav-drawer {
+      position: fixed;
+      top: 0;
+      right: -280px;
+      width: 280px;
+      height: 100%;
+      background: #ffffff;
+      box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+      z-index: 10000;
+      transition: right 0.3s ease;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .nav-drawer.open { right: 0; }
+
+    .nav-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      font-weight: bold;
+      color: #1e293b;
+    }
+    .nav-drawer-close {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #64748b;
+    }
+
+    .nav-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.4);
+      z-index: 9999;
+      display: none;
+      backdrop-filter: blur(2px);
+    }
+    .nav-overlay.open { display: block; }
+
     .nav-tabs {
       display: flex;
+      flex-direction: column;
       gap: 8px;
-      margin-bottom: 16px;
-      border-bottom: 2px solid var(--border-color);
-      padding-bottom: 8px;
-      overflow-x: auto;
-      white-space: nowrap;
-      -webkit-overflow-scrolling: touch;
     }
-    .nav-tabs::-webkit-scrollbar { display: none; }
-
     .nav-btn {
-      padding: 8px 14px;
-      font-size: 0.88rem;
-      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      border-radius: 8px;
       text-decoration: none;
-      background: #e2e8f0;
-      color: #475569;
+      background: #f1f5f9;
+      color: #334155;
       font-weight: bold;
       transition: all 0.2s ease;
+      display: block;
     }
-    .nav-btn:hover { background: #cbd5e1; }
+    .nav-btn:hover { background: #e2e8f0; }
     .nav-btn.active { background: var(--primary-color); color: #ffffff; }
 
+    /* 今日行程卡片區塊 */
     .today-box {
       background-color: #f0f9ff;
       border: 1px solid #bae6fd;
@@ -137,6 +207,7 @@
 
     .today-card.duty { border-left-color: var(--duty-color); background-color: #fff7ed; }
 
+    /* 當日工作與筆記區塊 (套用 daily_adv 樣式) */
     .daily-box {
       background-color: #f0fdf4;
       border: 1px solid #86efac;
@@ -171,12 +242,12 @@
     }
 
     .btn-date-nav {
-      padding: 2px 8px;
-      font-size: 0.75rem;
+      padding: 3px 8px;
+      font-size: 0.78rem;
       border: 1px solid #a7f3d0;
       background: #ffffff;
       color: #166534;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
     }
@@ -194,28 +265,58 @@
       border-radius: 8px;
       padding: 10px 12px;
       display: flex;
-      flex-direction: column;
-      gap: 6px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-      cursor: grab;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: all 0.15s ease;
     }
-    .daily-card:active { cursor: grabbing; }
+
+    /* 🎨 CATEGORIES 分類動態色彩系統 */
+    .daily-card.tag-personal { background-color: #f3e8ff !important; color: #581c87 !important; border-color: #e9d5ff; }
+    .daily-card.tag-sch      { background-color: #FFE06B !important; color: #38751e !important; border-color: #fef08a; }
+    .daily-card.tag-family   { background-color: #dcfce7 !important; color: #14532d !important; border-color: #bbf7d0; }
+    .daily-card.tag-work     { background-color: #e0f2fe !important; color: #075985 !important; border-color: #bae6fd; }
+    .daily-card.tag-urgent   { background-color: #ffe4e6 !important; color: #9f1239 !important; border-color: #fecdd3; }
+    .daily-card.tag-finance  { background-color: #ffedd5 !important; color: #9a3412 !important; border-color: #fed7aa; }
+    .daily-card.tag-health   { background-color: #ccfbf1 !important; color: #115e59 !important; border-color: #99f6e4; }
+    .daily-card.tag-photo    { background-color: #1E1542 !important; color: #C5BCDE !important; border-color: #2e215e; }
 
     .daily-card-title {
       font-size: 0.92rem;
       font-weight: 700;
-      color: #0f172a;
-      line-height: 1.3;
+      line-height: 1.35;
+      word-break: break-word;
     }
 
     .daily-card-remark {
-      font-size: 0.82rem;
-      color: #475569;
-      display: flex;
-      align-items: flex-start;
-      gap: 4px;
+      font-size: 0.8rem;
+      margin-top: 4px;
+      opacity: 0.9;
       line-height: 1.4;
-      flex-wrap: wrap;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* 📍 地點與時間徽章 */
+    .location-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 6px;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.45);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      width: fit-content;
+      backdrop-filter: blur(2px);
+    }
+    .location-badge .loc-time {
+      padding-left: 4px;
+      border-left: 1px solid rgba(0, 0, 0, 0.15);
+      font-weight: normal;
     }
 
     .badge {
@@ -225,23 +326,24 @@
       font-weight: bold;
       white-space: nowrap;
       display: inline-block;
-      align-self: flex-start;
+      margin-bottom: 4px;
     }
-    .badge.task, .badge.Task { background: #e0e7ff; color: #3730a3; }
-    .badge.event, .badge.Event { background: #fef3c7; color: #92400e; }
-    .badge.note, .badge.Note, .badge.筆記 { background: #f1f5f9; color: #475569; }
+    .badge.task, .badge.Task { background: rgba(0, 0, 0, 0.08); }
+    .badge.event, .badge.Event { background: rgba(0, 0, 0, 0.12); }
+    .badge.note, .badge.Note, .badge.筆記 { background: rgba(0, 0, 0, 0.05); }
 
-    .hashtag {
-      background-color: #eff6ff;
-      color: #2563eb;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 1px 6px;
-      border-radius: 4px;
-      display: inline-block;
-      margin-left: 2px;
+    .drag-handle {
+      cursor: grab;
+      padding: 2px 6px;
+      font-size: 1.1rem;
+      opacity: 0.6;
+      user-select: none;
+      touch-action: none;
     }
+    .drag-handle:active { cursor: grabbing; opacity: 1; }
+    .sortable-ghost { opacity: 0.4; }
 
+    /* 月曆區域與控制列 */
     .calendar-controls {
       display: flex;
       justify-content: space-between;
@@ -332,10 +434,21 @@
     .event-holiday { background-color: #ffe4e6; color: #9f1239; border-left: 3px solid #f43f5e; font-weight: bold; }
     .event-activity { background-color: #fef3c7; color: #92400e; border-left: 3px solid #f59e0b; font-weight: bold; }
 
+    /* 手機版週檢視 (Sunday - Saturday) */
     .calendar-list {
       display: none;
       flex-direction: column;
       gap: 8px;
+    }
+
+    .mobile-week-ctrl {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f1f5f9;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 4px;
     }
 
     .list-day-card {
@@ -372,6 +485,7 @@
     @media (max-width: 639px) {
       .calendar-grid { display: none; }
       .calendar-list { display: flex; }
+      .calendar-controls { display: none; }
     }
 
     #loading { font-size: 0.88rem; color: #0284c7; font-weight: bold; padding: 12px 0; }
@@ -379,6 +493,7 @@
 </head>
 <body>
 
+  <!-- Google 登入遮罩 -->
   <div id="loginOverlay">
     <div class="login-card">
       <h2>📊 校曆與 Dashboard</h2>
@@ -394,9 +509,25 @@
     </div>
   </div>
 
+  <!-- 主內容區塊 -->
   <div id="mainContent" class="container">
-    <div id="navbar" class="nav-tabs"></div>
+    
+    <!-- ☰ 頂部與抽屜式導覽列 -->
+    <div class="nav-bar-header">
+      <div class="nav-bar-title">📊 校曆與 Dashboard</div>
+      <button class="hamburger-btn" onclick="openNavDrawer()">☰選單</button>
+    </div>
 
+    <div id="navOverlay" class="nav-overlay" onclick="closeNavDrawer()"></div>
+    <div id="navDrawer" class="nav-drawer">
+      <div class="nav-drawer-header">
+        <span>🧭 功能選單</span>
+        <button class="nav-drawer-close" onclick="closeNavDrawer()">✕</button>
+      </div>
+      <div id="navbar" class="nav-tabs"></div>
+    </div>
+
+    <!-- 今日排課與當值區塊 -->
     <div class="today-box">
       <div class="today-header">
         <div class="today-title">📌 今日安排 <span id="todayDateStr" style="font-size: 0.85rem; color: #64748b; font-weight: normal;"></span></div>
@@ -407,6 +538,7 @@
       </div>
     </div>
 
+    <!-- 當日工作與筆記區塊 (整合 daily_adv 卡片樣式) -->
     <div class="daily-box">
       <div class="daily-header">
         <div class="daily-title">📌 當日工作與筆記</div>
@@ -421,6 +553,7 @@
       </div>
     </div>
 
+    <!-- 月曆控制項 (桌機版) -->
     <div class="calendar-controls">
       <button class="btn-month" onclick="changeMonth(-1)">◀ 上月</button>
       <select id="monthSelect" onchange="onMonthSelectChange()"></select>
@@ -435,12 +568,27 @@
 
     <div id="loading">⏳ 正在載入校曆與時間表...</div>
 
+    <!-- 桌機版全月網格 -->
     <div id="calendarGrid" class="calendar-grid"></div>
 
+    <!-- 手機版週檢視 (星期日至六) -->
     <div id="calendarList" class="calendar-list"></div>
   </div>
 
   <script>
+    /* ⚙️ 中央分類設定集 */
+    const CATEGORIES = [
+      { id: 'all',      name: '✨ 全部事項', tag: '',           bg: '',        color: '' },
+      { id: 'personal', name: '👤 個人',      tag: '#personal', bg: '#f3e8ff', color: '#581c87', isDefault: true },
+      { id: 'sch',      name: '🏫 學校/學業', tag: '#sch',      bg: '#FFE06B', color: '#38751e' },
+      { id: 'family',   name: '🏠 家庭/家',   tag: '#family',   bg: '#dcfce7', color: '#14532d' },
+      { id: 'work',     name: '💼 工作/辦公', tag: '#work',     bg: '#e0f2fe', color: '#075985' },
+      { id: 'urgent',   name: '🔥 重要/緊急', tag: '#urgent',   bg: '#ffe4e6', color: '#9f1239' },
+      { id: 'finance',  name: '💰 財務/購物', tag: '#finance',  bg: '#ffedd5', color: '#9a3412' },
+      { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' },
+      { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',    bg: '#1E1542', color: '#C5BCDE' }
+    ];
+
     function parseJwt(token) {
       try {
         var base64Url = token.split('.')[1];
@@ -518,6 +666,17 @@
       });
     }
 
+    /* ☰ 抽屜選單控制 */
+    function openNavDrawer() {
+      document.getElementById('navDrawer').classList.add('open');
+      document.getElementById('navOverlay').classList.add('open');
+    }
+
+    function closeNavDrawer() {
+      document.getElementById('navDrawer').classList.remove('open');
+      document.getElementById('navOverlay').classList.remove('open');
+    }
+
     const CSV_URL = 'Sch Calendar-Grid view.csv';
     
     const GOOGLE_SHEET_ID = (typeof CONFIG !== 'undefined' && CONFIG.DAILY_SHEET_ID) ? CONFIG.DAILY_SHEET_ID : '';
@@ -542,6 +701,16 @@
 
     const todayStr = getTodayString();
     let selectedDailyDate = todayStr;
+
+    // 取得指定日期所在的星期日 Date 物件
+    function getSundayDate(d) {
+      const dt = new Date(d);
+      const day = dt.getDay(); // 0 是 星期日
+      const diff = dt.getDate() - day;
+      return new Date(dt.setDate(diff));
+    }
+
+    let currentMobileWeekStart = getSundayDate(new Date());
 
     function loadNavbar() {
       fetch('nav.html')
@@ -626,9 +795,19 @@
       });
     }
 
+    function getTagClass(item) {
+      const text = ((item.parsedContent || '') + ' ' + (item.parsedRemarks || '')).toLowerCase();
+      for (let c of CATEGORIES) {
+        if (c.tag && text.includes(c.tag.toLowerCase())) {
+          return `tag-${c.id}`;
+        }
+      }
+      return '';
+    }
+
     function formatHashtags(text) {
       if (!text) return '';
-      return text.replace(/#([\w\u4e00-\u9fa5]+)/g, '<span class="hashtag">#$1</span>');
+      return text.replace(/#([\w\u4e00-\u9fa5]+)/g, '<span style="font-weight:600; opacity:0.9;">#$1</span>');
     }
 
     function renderDailyLog() {
@@ -652,8 +831,8 @@
       const savedOrder = JSON.parse(localStorage.getItem(`daily_order_${selectedDailyDate}`) || '[]');
       if (savedOrder.length > 0) {
         logs.sort((a, b) => {
-          let indexA = savedOrder.indexOf(a.id);
-          let indexB = savedOrder.indexOf(b.id);
+          let indexA = savedOrder.indexOf(String(a.id));
+          let indexB = savedOrder.indexOf(String(b.id));
           if (indexA === -1) indexA = 9999;
           if (indexB === -1) indexB = 9999;
           return indexA - indexB;
@@ -667,23 +846,43 @@
 
       logs.forEach(item => {
         const type = item.parsedType;
-        const content = item.parsedContent;
+        let displayTitle = item.parsedContent;
         const remarks = item.parsedRemarks;
+        const tagClass = getTagClass(item);
 
         let badgeClass = 'task';
         if (type === '事件' || type === 'Event') badgeClass = 'event';
         if (type === '筆記' || type === 'Note') badgeClass = 'note';
 
+        // 解析 @地點(時間)
+        let locationBadgeHtml = '';
+        const match = displayTitle.match(/@([^\s#(\[]+)(?:\((.*?)\))?/);
+        if (match) {
+          const locText = match[1];
+          const timeText = match[2];
+          displayTitle = displayTitle.replace(/@[^\s#]+(\(.*?\))?/, '').trim();
+          locationBadgeHtml = `
+            <div class="location-badge">
+              📍 ${locText}
+              ${timeText ? `<span class="loc-time">🕒 ${timeText}</span>` : ''}
+            </div>
+          `;
+        }
+
         const div = document.createElement('div');
-        div.className = 'daily-card';
+        div.className = `daily-card ${tagClass}`;
         div.setAttribute('data-id', item.id);
         
         const formattedRemark = formatHashtags(remarks ? remarks.replace(/\n/g, '<br>') : '');
 
         div.innerHTML = `
-          <span class="badge ${badgeClass}">${type}</span>
-          <div class="daily-card-title">${content}</div>
-          ${remarks ? `<div class="daily-card-remark">💬 ${formattedRemark}</div>` : ''}
+          <div style="flex:1; min-width:0;">
+            <span class="badge ${badgeClass}">${type}</span>
+            <div class="daily-card-title">${displayTitle}</div>
+            ${remarks ? `<div class="daily-card-remark">💬 ${formattedRemark}</div>` : ''}
+            ${locationBadgeHtml}
+          </div>
+          <div class="drag-handle" title="拖曳排序" onclick="event.stopPropagation()">⋮⋮</div>
         `;
         container.appendChild(div);
       });
@@ -691,13 +890,14 @@
       // 啟用 SortableJS 並儲存次序至 localStorage
       if (typeof Sortable !== 'undefined') {
         Sortable.create(container, {
+          handle: '.drag-handle',
           animation: 150,
           onEnd: function (evt) {
             const movedItem = logs[evt.oldIndex];
             logs.splice(evt.oldIndex, 1);
             logs.splice(evt.newIndex, 0, movedItem);
 
-            const newOrderIds = logs.map(item => item.id);
+            const newOrderIds = logs.map(item => String(item.id));
             localStorage.setItem(`daily_order_${selectedDailyDate}`, JSON.stringify(newOrderIds));
           }
         });
@@ -802,10 +1002,8 @@
 
     function renderCalendar(ym) {
       const grid = document.getElementById('calendarGrid');
-      const list = document.getElementById('calendarList');
-      if (!grid || !list) return;
+      if (!grid) return;
       grid.innerHTML = '';
-      list.innerHTML = '';
 
       if (!ym) return;
 
@@ -840,30 +1038,76 @@
           if (data.activity) gridContent += `<div class="event-tag event-activity">${data.activity}</div>`;
         }
         grid.appendChild(createCell(`day-cell ${isToday ? 'is-today' : ''}`, gridContent));
-
-        if (data && (data.cycleDay || data.holiday || data.activity || isToday)) {
-          const dayOfWeekText = weekDays[new Date(year, month - 1, day).getDay()];
-          let listHtml = `
-            <div class="list-day-header">
-              <span>${month}月${day}日 (${dayOfWeekText}) ${isToday ? '📌 今日' : ''}</span>
-              ${data.cycleDay && data.cycleDay !== '-' ? `<span class="tag-badge badge-cycle">${data.cycleDay}</span>` : ''}
-            </div>
-            <div class="list-day-events">
-              ${data.holiday ? `<span class="event-tag event-holiday">🚩 ${data.holiday}</span>` : ''}
-              ${data.activity ? `<span class="event-tag event-activity">⭐ ${data.activity}</span>` : ''}
-            </div>
-          `;
-          const listCard = document.createElement('div');
-          listCard.className = `list-day-card ${isToday ? 'is-today' : ''}`;
-          listCard.innerHTML = listHtml;
-          list.appendChild(listCard);
-        }
       }
 
       const totalRendered = startingDayOfWeek + daysInMonth;
       const remainingCells = (7 - (totalRendered % 7)) % 7;
       for (let i = 0; i < remainingCells; i++) {
         grid.appendChild(createCell('day-cell other-month', ''));
+      }
+
+      // 渲染手機版週檢視
+      renderMobileWeekCalendar();
+    }
+
+    /* 📱 手機版週檢視 (星期日至六) */
+    function changeMobileWeek(delta) {
+      currentMobileWeekStart.setDate(currentMobileWeekStart.getDate() + (delta * 7));
+      renderMobileWeekCalendar();
+    }
+
+    function renderMobileWeekCalendar() {
+      const list = document.getElementById('calendarList');
+      if (!list) return;
+      list.innerHTML = '';
+
+      const weekDaysText = ['日', '一', '二', '三', '四', '五', '六'];
+      const startDate = new Date(currentMobileWeekStart);
+
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 6);
+
+      const startStr = `${startDate.getFullYear()}/${startDate.getMonth()+1}/${startDate.getDate()}`;
+      const endStr = `${endDate.getFullYear()}/${endDate.getMonth()+1}/${endDate.getDate()}`;
+
+      // 週導覽列 Header
+      const weekCtrl = document.createElement('div');
+      weekCtrl.className = 'mobile-week-ctrl';
+      weekCtrl.innerHTML = `
+        <button class="btn-date-nav" onclick="changeMobileWeek(-1)">◀ 上週</button>
+        <span style="font-weight:bold; font-size:0.85rem; color:#1e293b;">週檢視 (${startStr} ~ ${endStr})</span>
+        <button class="btn-date-nav" onclick="changeMobileWeek(1)">下週 ▶</button>
+      `;
+      list.appendChild(weekCtrl);
+
+      // 渲染星期日到星期六共 7 天
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dayNum = String(d.getDate()).padStart(2, '0');
+        const fullDateStr = `${y}-${m}-${dayNum}`;
+
+        const data = calendarData[fullDateStr];
+        const isToday = (fullDateStr === todayStr);
+
+        let listHtml = `
+          <div class="list-day-header">
+            <span>${d.getMonth()+1}月${d.getDate()}日 (星期${weekDaysText[i]}) ${isToday ? '📌 今日' : ''}</span>
+            ${data && data.cycleDay && data.cycleDay !== '-' ? `<span class="tag-badge badge-cycle">${data.cycleDay}</span>` : ''}
+          </div>
+          <div class="list-day-events">
+            ${data && data.holiday ? `<span class="event-tag event-holiday">🚩 ${data.holiday}</span>` : ''}
+            ${data && data.activity ? `<span class="event-tag event-activity">⭐ ${data.activity}</span>` : ''}
+            ${(!data || (!data.holiday && !data.activity && (!data.cycleDay || data.cycleDay === '-'))) ? '<span style="color:#94a3b8; font-size:0.75rem;">無特別安排</span>' : ''}
+          </div>
+        `;
+        const listCard = document.createElement('div');
+        listCard.className = `list-day-card ${isToday ? 'is-today' : ''}`;
+        listCard.innerHTML = listHtml;
+        list.appendChild(listCard);
       }
     }
 
