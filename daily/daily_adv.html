@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>⚡ 日軌流光 - Daily Adv</title>
   
-  <script src="daily_adv.js?v=2.0"></script>
+  <!-- 📝 WebApp / PWA / Favicon 📝 圖示設定 -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
+
+  <script src="daily_adv.js?v=2.5"></script>
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -62,12 +66,6 @@
     .btn-backlog { background: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
     .btn-overdue { background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
     .btn-completed { background: #f0fdf4; color: #166534; border-color: #86efac; }
-    
-    .today-btn {
-      background: var(--primary); color: #fff; border: none; width: 32px; height: 32px;
-      border-radius: 50%; font-weight: bold; cursor: pointer; font-size: 0.9rem;
-      display: flex; align-items: center; justify-content: center;
-    }
 
     .badge-pill {
       background: rgba(0,0,0,0.15); color: inherit; padding: 1px 7px;
@@ -200,6 +198,17 @@
       white-space: pre-wrap; word-break: break-word;
     }
 
+    .drag-handle {
+      cursor: grab;
+      padding: 4px 6px;
+      font-size: 1.1rem;
+      opacity: 0.7;
+      user-select: none;
+      touch-action: none;
+    }
+    .drag-handle:active { cursor: grabbing; opacity: 1; }
+    .sortable-ghost { opacity: 0.4; background: #cbd5e1 !important; }
+
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.45); display: none; justify-content: center; align-items: center;
@@ -330,7 +339,6 @@
       .header-bar { padding-bottom: 8px; gap: 6px; }
       .title-group { font-size: 0.95rem; }
       .btn-bubble { padding: 4px 8px; font-size: 0.8rem; }
-      .today-btn { width: 28px; height: 28px; font-size: 0.8rem; }
       .quick-input-card { padding: 6px; gap: 6px; }
       .quick-input-row input[type="text"] { padding: 4px 8px; font-size: 0.8rem; }
       .btn-add-quick { padding: 4px 10px; font-size: 0.8rem; }
@@ -381,7 +389,6 @@
     <div class="header-bar">
       <div class="title-group">✨ 日軌流光</div>
       <div class="top-actions">
-        <!-- 🔄 新增：切換至重複事項管理頁面按鈕 -->
         <a href="recurring.html" class="btn-bubble" style="background:#e0f2fe; color:#0284c7; border-color:#bae6fd;">
           🔄 <span class="btn-text">重複規則</span>
         </a>
@@ -397,7 +404,6 @@
         <button class="btn-bubble" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openArchivedModal()">
           📦 <span class="btn-text">典藏庫</span> <span id="archivedBadgeCount" class="badge-pill">0</span>
         </button>
-        <button class="today-btn" onclick="scrollToToday()" title="回今天">⬆️</button>
       </div>
     </div>
 
@@ -417,7 +423,6 @@
               <option value="Event">o 事件</option>
               <option value="筆記">- 筆記</option>
             </select>
-            <!-- 🏷️ 快速選擇分類 (動態生成，預設為「個人」) -->
             <select id="quickCategory" title="分類"></select>
             <input type="text" id="quickContent" placeholder="⚡ 快速記下事項..." required>
           </div>
@@ -510,7 +515,6 @@
           </label>
         </div>
 
-        <!-- ⚡ Modal 底部完整操作按鈕區 (對應 daily_adv.js 控制) -->
         <div class="modal-actions-bar">
           <div style="display:flex; gap:6px;">
             <button type="button" id="btnDelete" onclick="deleteCurrentItem()" style="background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">🗑️ 刪除</button>

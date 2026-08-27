@@ -1,0 +1,24 @@
+【專案上下文：日軌流光 Daily Adv & Recurring】
+這是一個基於 HTML/CSS/JS + Google Apps Script (GAS) + Google Sheets 的個人看板系統。
+
+現有關鍵架構與不可破壞的規則：
+1. 檔案結構：daily_adv.html/js (主看板)、recurring.html/js (重複規則)、config.js (設定)、allowed-emails.js (白名單)、Code.gs (GAS 後端)。
+2. 資料表架構：Google Sheets 包含兩張工作表——DAILY_LOG (gid=0) 與 DAILY_RECURRING。Row 1 為中文說明，Row 2 為英文標題 (id, content, type, status, remarks...)。
+3. 後端 GAS (Code.gs)：只能有一個 handleRequest 統一處理解析，必須使用 LockService 與 getSheetFuzzy。嚴禁重複定義 doGet。
+4. 前端寫入機制 (syncToSheetAsync)：recurring.js 批量寫入必須保持 async/await 順序佇列 (350ms 間隔)，不可直接用 forEach 併發發送。
+5. 卡片功能與 UI 規範：
+   - 地點語法：支援解析 @地點(時間) 並繪製 location-badge。
+   - 分類 Tag：快速輸入時 #tag 必須寫入 remarks，非 content。
+   - Modal 必須包含完整操作：刪除、典藏/取消典藏、移至今天、完成/還原，且需由 updateModalButtonsState 控制開關。
+
+請在滿足我最新需求的同時，確保上述原有功能與技術細節完整保留。
+
+
+檔案名稱,核心職責,關鍵依賴與機制
+daily_adv.html,主看板視覺介面,響應式佈局、SortableJS 拖曳、動態分類選單、全功能 Modal
+daily_adv.js,主看板邏輯,地點語法解析、分類過濾、狀態管理、Modal 操作（完成/典藏/移至今天/刪除）
+recurring.html,重複規則管理介面,規則列表網格、即時生成操作列 (今天/明天)
+recurring.js,重複規則邏輯,順序佇列寫入 (syncToSheetAsync)、週期日期計算引擎
+config.js,全域共用設定,"DAILY_SHEET_ID, GIDS (DAILY_LOG, DAILY_RECURRING), API_URLS"
+allowed-emails.js,存取控制白名單,限制指定 Google Email 帳號登入
+Code.gs (GAS),後端 API 與觸發器,LockService 併發鎖、getSheetFuzzy 試算表模糊比對、全量 CRUD
