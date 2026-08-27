@@ -191,11 +191,15 @@ function loadLogsData() {
   });
 }
 
+/* ⚡ 模糊比對欄位名稱 */
 function getProp(obj, keyNames) {
   if (!obj) return '';
   for (let k of Object.keys(obj)) {
-    if (keyNames.includes(k.trim().toLowerCase())) {
-      return obj[k];
+    let cleanKey = k.trim().toLowerCase();
+    for (let kn of keyNames) {
+      if (cleanKey === kn || cleanKey.includes(kn)) {
+        return obj[k];
+      }
     }
   }
   return '';
@@ -279,28 +283,31 @@ function calcTargetDate(frequency, dayParam, today) {
   return null;
 }
 
-function parseLogs(rows) {
+function parseRecurringRows(rows) {
   if (!rows) return [];
-  return rows.map((r, i) => {
-    const idVal = getProp(r, ['id']);
-    const dateVal = getProp(r, ['date', '日期']);
+  return rows.map((r, idx) => {
+    const idVal = getProp(r, ['id', '唯一編號']);
+    const contentVal = getProp(r, ['content', '內容', '事項']);
     const typeVal = getProp(r, ['type', '類型']);
-    const contentVal = getProp(r, ['content', '內容']);
-    const statusVal = getProp(r, ['status', '狀態']);
-    const remarksVal = getProp(r, ['remarks', '備註']);
-
-    const finalId = (idVal && String(idVal).trim() !== '') 
-      ? String(idVal).trim() 
-      : `L_${i}_${Math.random().toString(36).substr(2, 5)}`;
+    const freqVal = getProp(r, ['frequency', '頻率']);
+    const dayVal = getProp(r, ['dayparam', '日期', '日']);
+    const lastVal = getProp(r, ['lastgenerated', '最後']);
+    const remVal = getProp(r, ['remarks', '備註']);
 
     return {
-      id: finalId,
-      date: String(dateVal || '').trim(),
-      type: String(typeVal || 'Task').trim(),
+      id: String(idVal || '').trim() || `R${String(idx + 1).padStart(3, '0')}`,
       content: String(contentVal || '').trim(),
-      status: String(statusVal || 'Pending').trim(),
-      remarks: String(remarksVal || '').trim()
+      type: String(typeVal || 'Task').trim(),
+      frequency: String(freqVal || 'DAILY').trim().toUpperCase(),
+      dayParam: String(dayVal || '').trim(),
+      lastGenerated: String(lastVal || '').trim(),
+      remarks: String(remVal || '').trim()
     };
+  }).filter(r => {
+    // ⚡ 自動過濾空白列以及表格原本的第 2 列英文標題 (Content / ID)
+    const c = r.content.toLowerCase();
+    const id = r.id.toLowerCase();
+    return c !== '' && c !== 'content' && id !== 'id';
   });
 }
 
