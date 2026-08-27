@@ -2,15 +2,14 @@
 const CATEGORIES = [
   { id: 'all',      name: '✨ 全部事項', tag: '',           bg: '',        color: '' },
   { id: 'personal', name: '👤 個人',      tag: '#personal', bg: '#f3e8ff', color: '#581c87', isDefault: true },
-  { id: 'sch',      name: '🏫 學校/學業', tag: '#sch',      bg: '#FFE06B', color: '#38751e' },
+  { id: 'sch',      name: '🏫 學校/學業', tag: '#sch',      bg: '#fef08a', color: '#713f12' },
   { id: 'family',   name: '🏠 家庭/家',   tag: '#family',   bg: '#dcfce7', color: '#14532d' },
   { id: 'work',     name: '💼 工作/辦公', tag: '#work',     bg: '#e0f2fe', color: '#075985' },
   { id: 'urgent',   name: '🔥 重要/緊急', tag: '#urgent',   bg: '#ffe4e6', color: '#9f1239' },
   { id: 'finance',  name: '💰 財務/購物', tag: '#finance',  bg: '#ffedd5', color: '#9a3412' },
   { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' },
-  { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',    bg: '#1E1542', color: '#C5BCDE' }
+  { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',   bg: '#f0f9ff', color: '#0369a1' }
 ];
-
 
 let allLogs = [];
 let currentCategoryFilter = 'all';
@@ -236,6 +235,14 @@ function setCategoryFilter(category) {
   refreshAllViews();
 }
 
+function toggleQuickDateInput(chk) {
+  const dt = document.getElementById('quickDate');
+  if (dt) {
+    dt.disabled = chk.checked;
+    dt.style.opacity = chk.checked ? '0.4' : '1';
+  }
+}
+
 function handleQuickSubmit(e) {
   e.preventDefault();
   const type = document.getElementById('quickType').value;
@@ -268,6 +275,7 @@ function handleQuickSubmit(e) {
 
   document.getElementById('quickContent').value = '';
   document.getElementById('quickIsBacklog').checked = false;
+  toggleQuickDateInput(document.getElementById('quickIsBacklog'));
 
   refreshAllViews();
   syncToSheet('addLog', { id: newId, date: targetDate, type, content, status: 'Pending', remarks: remarks });
@@ -300,14 +308,31 @@ function getTagClasses(item) {
 
 function updateAllBadges() {
   const overdueCount = allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type)).length;
+  const pastNotesCount = allLogs.filter(i => i.date && i.date < todayStr && !isItemArchived(i.status) && isNoteType(i.type)).length;
   const backlogCount = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status)).length;
   const completedCount = allLogs.filter(i => isItemDone(i.status)).length;
   const archivedCount = allLogs.filter(i => isItemArchived(i.status)).length;
 
-  if (document.getElementById('overdueBadgeCount')) document.getElementById('overdueBadgeCount').textContent = overdueCount;
+  if (document.getElementById('overdueBadgeCount')) document.getElementById('overdueBadgeCount').textContent = overdueCount + pastNotesCount;
   if (document.getElementById('backlogBadgeCount')) document.getElementById('backlogBadgeCount').textContent = backlogCount;
   if (document.getElementById('completedBadgeCount')) document.getElementById('completedBadgeCount').textContent = completedCount;
   if (document.getElementById('archivedBadgeCount')) document.getElementById('archivedBadgeCount').textContent = archivedCount;
+}
+
+/* ⚡ LocalStorage 儲存卡片拖曳順序 */
+function saveDayOrder(dateStr, cardIds) {
+  try {
+    const savedOrders = JSON.parse(localStorage.getItem('daily_card_orders') || '{}');
+    savedOrders[dateStr] = cardIds;
+    localStorage.setItem('daily_card_orders', JSON.stringify(savedOrders));
+  } catch (e) {}
+}
+
+function getDayOrder(dateStr) {
+  try {
+    const savedOrders = JSON.parse(localStorage.getItem('daily_card_orders') || '{}');
+    return savedOrders[dateStr] || null;
+  } catch (e) { return null; }
 }
 
 function renderTimeline() {
@@ -342,6 +367,19 @@ function renderTimeline() {
     else if (isTomorrow) weekdayDisplay = '明天';
 
     let dayItems = filteredLogs.filter(i => i.date === dateVal);
+
+    // 套用拖曳順序
+    const savedOrder = getDayOrder(dateVal);
+    if (savedOrder && Array.isArray(savedOrder)) {
+      dayItems.sort((a, b) => {
+        let idxA = savedOrder.indexOf(String(a.id));
+        let idxB = savedOrder.indexOf(String(b.id));
+        if (idxA === -1) idxA = 999;
+        if (idxB === -1) idxB = 999;
+        return idxA - idxB;
+      });
+    }
+
     const pendingCount = dayItems.filter(i => !isNoteType(i.type)).length;
 
     const dayBlock = document.createElement('div');
@@ -368,6 +406,31 @@ function renderTimeline() {
     }
 
     container.appendChild(dayBlock);
+  });
+
+  initSortable();
+}
+
+/* ⚡ 初始化 SortableJS 拖曳排序 */
+function initSortable() {
+  if (typeof Sortable === 'undefined') return;
+
+  const lists = document.querySelectorAll('.day-card-list');
+  lists.forEach(list => {
+    new Sortable(list, {
+      handle: '.drag-handle',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: function (evt) {
+        const dateStr = evt.from.dataset.date;
+        if (!dateStr) return;
+
+        const currentCardIds = Array.from(evt.from.children)
+                                    .map(card => card.dataset.id)
+                                    .filter(Boolean);
+        saveDayOrder(dateStr, currentCardIds);
+      }
+    });
   });
 }
 
@@ -405,12 +468,290 @@ function createTaskCard(item) {
   return card;
 }
 
+function sortReverseChronological(items) {
+  return items.sort((a, b) => {
+    const dateA = a.date || '';
+    const dateB = b.date || '';
+    if (dateA !== dateB) return dateB.localeCompare(dateA);
+    return String(b.id).localeCompare(String(a.id));
+  });
+}
+
+/* ⚡ Modal 開啟/對話框視窗渲染 */
+
+function openOverdueModal() {
+  renderOverdueModal();
+  document.getElementById('overdueModal').style.display = 'flex';
+}
+function closeOverdueModal() {
+  document.getElementById('overdueModal').style.display = 'none';
+}
+
+function renderOverdueModal() {
+  const body = document.getElementById('overdueModalBody');
+  if (!body) return;
+  body.innerHTML = '';
+
+  const overdueTasks = sortReverseChronological(
+    allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type))
+  );
+  const pastNotes = sortReverseChronological(
+    allLogs.filter(i => i.date && i.date < todayStr && !isItemArchived(i.status) && isNoteType(i.type))
+  );
+
+  if (overdueTasks.length === 0 && pastNotes.length === 0) {
+    body.innerHTML = `<div style="text-align:center; color:#059669; padding:20px 0; font-weight:bold;">✅ 目前沒有逾期工作或過往筆記！</div>`;
+    return;
+  }
+
+  if (overdueTasks.length > 0) {
+    const tEl = document.createElement('div');
+    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#991b1b; margin-bottom:6px;";
+    tEl.textContent = "⚠️ 逾期任務與事件";
+    body.appendChild(tEl);
+
+    overdueTasks.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.onclick = () => { closeOverdueModal(); openEditModal(item); };
+      row.innerHTML = `
+        <div class="task-info">
+          <div style="font-size:0.72rem; opacity:0.85; font-weight:bold;">📅 日期：${item.date}</div>
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  if (pastNotes.length > 0) {
+    const nEl = document.createElement('div');
+    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
+    nEl.textContent = "📝 過往筆記 (Past Notes)";
+    body.appendChild(nEl);
+
+    pastNotes.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.onclick = () => { closeOverdueModal(); openEditModal(item); };
+      row.innerHTML = `
+        <div class="task-info">
+          <div style="font-size:0.72rem; opacity:0.85; font-weight:bold;">📅 日期：${item.date}</div>
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+}
+
+function openBacklogModal() {
+  renderBacklogModal();
+  document.getElementById('backlogModal').style.display = 'flex';
+}
+function closeBacklogModal() {
+  document.getElementById('backlogModal').style.display = 'none';
+}
+
+function renderBacklogModal() {
+  const body = document.getElementById('backlogModalBody');
+  if (!body) return;
+  body.innerHTML = '';
+
+  const items = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status));
+  const tasks = sortReverseChronological(items.filter(i => !isNoteType(i.type)));
+  const notes = sortReverseChronological(items.filter(i => isNoteType(i.type)));
+
+  if (tasks.length === 0 && notes.length === 0) {
+    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">目前沒有未有日期的工作與筆記 🎉</div>`;
+    return;
+  }
+
+  if (tasks.length > 0) {
+    const tEl = document.createElement('div');
+    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#7e22ce; margin-bottom:6px;";
+    tEl.textContent = "☑️ 未有日期任務與事件";
+    body.appendChild(tEl);
+
+    tasks.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.onclick = () => { closeBacklogModal(); openEditModal(item); };
+      row.innerHTML = `
+        <div class="task-info">
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  if (notes.length > 0) {
+    const nEl = document.createElement('div');
+    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
+    nEl.textContent = "📝 未有日期筆記";
+    body.appendChild(nEl);
+
+    notes.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.onclick = () => { closeBacklogModal(); openEditModal(item); };
+      row.innerHTML = `
+        <div class="task-info">
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+}
+
+function openCompletedModal() {
+  renderCompletedModal();
+  document.getElementById('completedModal').style.display = 'flex';
+}
+function closeCompletedModal() {
+  document.getElementById('completedModal').style.display = 'none';
+}
+
+function renderCompletedModal() {
+  const body = document.getElementById('completedModalBody');
+  if (!body) return;
+  body.innerHTML = '';
+
+  const items = allLogs.filter(i => isItemDone(i.status));
+  const tasks = sortReverseChronological(items.filter(i => !isNoteType(i.type)));
+  const notes = sortReverseChronological(items.filter(i => isNoteType(i.type)));
+
+  if (tasks.length === 0 && notes.length === 0) {
+    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">尚無已完成的事項</div>`;
+    return;
+  }
+
+  if (tasks.length > 0) {
+    const tEl = document.createElement('div');
+    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#166534; margin-bottom:6px;";
+    tEl.textContent = "✅ 已完成任務與事件";
+    body.appendChild(tEl);
+
+    tasks.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.style.opacity = '0.85';
+      row.onclick = () => { closeCompletedModal(); openEditModal(item); };
+      row.innerHTML = `
+        <div class="task-info">
+          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
+          <div class="task-title" style="text-decoration:line-through;">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  if (notes.length > 0) {
+    const nEl = document.createElement('div');
+    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
+    nEl.textContent = "📝 已完成筆記";
+    body.appendChild(nEl);
+
+    notes.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.style.opacity = '0.85';
+      row.onclick = () => { closeCompletedModal(); openEditModal(item); };
+      row.innerHTML = `
+        <div class="task-info">
+          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
+          <div class="task-title" style="text-decoration:line-through;">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+}
+
+function openArchivedModal() {
+  renderArchivedModal();
+  document.getElementById('archivedModal').style.display = 'flex';
+}
+function closeArchivedModal() {
+  document.getElementById('archivedModal').style.display = 'none';
+}
+
+function renderArchivedModal() {
+  const body = document.getElementById('archivedModalBody');
+  if (!body) return;
+  body.innerHTML = '';
+
+  const items = allLogs.filter(i => isItemArchived(i.status));
+  const tasks = sortReverseChronological(items.filter(i => !isNoteType(i.type)));
+  const notes = sortReverseChronological(items.filter(i => isNoteType(i.type)));
+
+  if (tasks.length === 0 && notes.length === 0) {
+    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">典藏庫為空</div>`;
+    return;
+  }
+
+  if (tasks.length > 0) {
+    const tEl = document.createElement('div');
+    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin-bottom:6px;";
+    tEl.textContent = "📦 典藏任務與事件";
+    body.appendChild(tEl);
+
+    tasks.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.style.opacity = '0.75';
+      row.onclick = () => { closeArchivedModal(); openEditModal(item); };
+      row.innerHTML = `
+        <div class="task-info">
+          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  if (notes.length > 0) {
+    const nEl = document.createElement('div');
+    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
+    nEl.textContent = "📝 典藏筆記";
+    body.appendChild(nEl);
+
+    notes.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.style.opacity = '0.75';
+      row.onclick = () => { closeArchivedModal(); openEditModal(item); };
+      row.innerHTML = `
+        <div class="task-info">
+          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+}
+
 function refreshAllViews() {
   renderTimeline();
   updateAllBadges();
+  if (document.getElementById('overdueModal')?.style.display === 'flex') renderOverdueModal();
+  if (document.getElementById('backlogModal')?.style.display === 'flex') renderBacklogModal();
+  if (document.getElementById('completedModal')?.style.display === 'flex') renderCompletedModal();
+  if (document.getElementById('archivedModal')?.style.display === 'flex') renderArchivedModal();
 }
-
-/* ⚡ Modal 開啟/編輯/按鈕狀態控制 */
 
 function openAddModal(presetDate) {
   document.getElementById('modalFormTitle').textContent = '➕ 新增事項';
@@ -454,7 +795,6 @@ function updateModalButtonsState(targetItem) {
   const btnAssignToday = document.getElementById('btnAssignTodayModal');
   const btnToggleDone = document.getElementById('btnToggleDoneModal');
 
-  // 若為「新增」模式，隱藏所有操作按鈕
   if (!id) {
     if (btnDelete) btnDelete.style.display = 'none';
     if (btnArchive) btnArchive.style.display = 'none';
@@ -465,10 +805,8 @@ function updateModalButtonsState(targetItem) {
 
   const target = targetItem || allLogs.find(l => String(l.id) === String(id));
 
-  // 1. 刪除按鈕
   if (btnDelete) btnDelete.style.display = 'inline-block';
 
-  // 2. 典藏按鈕
   if (btnArchive) {
     btnArchive.style.display = 'inline-block';
     if (target && isItemArchived(target.status)) {
@@ -480,7 +818,6 @@ function updateModalButtonsState(targetItem) {
     }
   }
 
-  // 3. 排至今天按鈕
   if (btnAssignToday) {
     if (target && target.date !== todayStr && !isItemDone(target.status)) {
       btnAssignToday.style.display = 'inline-block';
@@ -489,7 +826,6 @@ function updateModalButtonsState(targetItem) {
     }
   }
 
-  // 4. 完成 / 還原按鈕
   if (btnToggleDone) {
     if (isNoteType(currentType)) {
       btnToggleDone.style.display = 'none';
@@ -509,8 +845,6 @@ function updateModalButtonsState(targetItem) {
     }
   }
 }
-
-/* ⚡ Modal 操作按鈕觸發函式 */
 
 function toggleDoneFromModal() {
   const id = document.getElementById('modalItemId').value;
@@ -555,6 +889,24 @@ function archiveFromModal() {
     type: target.type,
     remarks: target.remarks,
     status: 'Archived' 
+  });
+}
+
+function unarchiveItem(id) {
+  const target = allLogs.find(l => String(l.id) === String(id));
+  if (!target) return;
+
+  target.status = 'Pending';
+  refreshAllViews();
+
+  syncToSheet('toggleLog', { 
+    id: target.id, 
+    content: target.content, 
+    oldContent: target.content,
+    date: target.date,
+    type: target.type,
+    remarks: target.remarks,
+    status: 'Pending' 
   });
 }
 
