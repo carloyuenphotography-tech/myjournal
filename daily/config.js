@@ -19,8 +19,8 @@ const CONFIG = {
   },
 
   API_URLS: {
-    DAILY: 'https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec',
-    MONTHLY: 'https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec',
-    DAILY_RECURRING: 'https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec'
+    DAILY: 'https://script.google.com/macros/s/AKfycbxS1fG-eaufphO6PH2KRpSSyf8Dx8sLjYBRn_u6P6AWM51Bp8-qaJVW-xmbeC5klbKI/exec',
+    MONTHLY: 'https://script.google.com/macros/s/AKfycbxS1fG-eaufphO6PH2KRpSSyf8Dx8sLjYBRn_u6P6AWM51Bp8-qaJVW-xmbeC5klbKI/exec',
+    DAILY_RECURRING: 'https://script.google.com/macros/s/AKfycbxS1fG-eaufphO6PH2KRpSSyf8Dx8sLjYBRn_u6P6AWM51Bp8-qaJVW-xmbeC5klbKI/exec'
   }
 };
