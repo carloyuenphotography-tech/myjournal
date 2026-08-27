@@ -1,5 +1,5 @@
 let allLogs = [];
-let currentCategoryFilter = 'all'; // 預設篩選所有分類
+let currentCategoryFilter = 'all';
 
 function getTodayString() {
   const now = new Date();
@@ -240,11 +240,8 @@ function parseLogs(rows) {
   });
 }
 
-/* 🗂️ 設定分類篩選器 */
 function setCategoryFilter(category) {
   currentCategoryFilter = category;
-  
-  // 更新按鈕高亮狀態
   document.querySelectorAll('.cat-btn').forEach(btn => {
     if (btn.dataset.cat === category) {
       btn.classList.add('active');
@@ -252,7 +249,6 @@ function setCategoryFilter(category) {
       btn.classList.remove('active');
     }
   });
-
   refreshAllViews();
 }
 
@@ -303,8 +299,11 @@ function isItemArchived(status) {
   return status === 'Archived' || status === '已典藏';
 }
 
+/* 🎯 容錯型筆記類型判定 */
 function isNoteType(type) {
-  return type === '筆記' || type === 'Note';
+  if (!type) return false;
+  const t = String(type).trim().toLowerCase();
+  return t === '筆記' || t === 'note' || t === '-';
 }
 
 function getTagClasses(item) {
@@ -322,24 +321,24 @@ function getTagClasses(item) {
 
 function updateAllBadges() {
   const overdueCount = allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type)).length;
-  const backlogCount = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type)).length;
+  const pastNotesCount = allLogs.filter(i => i.date && i.date < todayStr && !isItemArchived(i.status) && isNoteType(i.type)).length;
+  const backlogCount = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status)).length;
   const completedCount = allLogs.filter(i => isItemDone(i.status)).length;
   const archivedCount = allLogs.filter(i => isItemArchived(i.status)).length;
 
-  document.getElementById('overdueBadgeCount').textContent = overdueCount;
+  // 逾期工作按鈕顯示數字 (逾期任務 + 過往筆記)
+  document.getElementById('overdueBadgeCount').textContent = overdueCount + pastNotesCount;
   document.getElementById('backlogBadgeCount').textContent = backlogCount;
   document.getElementById('completedBadgeCount').textContent = completedCount;
   document.getElementById('archivedBadgeCount').textContent = archivedCount;
 }
 
-/* 📅 渲染每日時間軸 (加入分類篩選邏輯) */
 function renderTimeline() {
   const container = document.getElementById('timelineContainer');
   container.innerHTML = '';
 
   const datedLogs = allLogs.filter(item => item.date && item.date >= todayStr && !isItemDone(item.status) && !isItemArchived(item.status));
 
-  // 根據選擇的分類進行過濾
   let filteredLogs = datedLogs;
   if (currentCategoryFilter !== 'all') {
     filteredLogs = datedLogs.filter(item => getTagClasses(item).includes(`tag-${currentCategoryFilter}`));
@@ -441,31 +440,64 @@ function openOverdueModal() {
 function closeOverdueModal() {
   document.getElementById('overdueModal').style.display = 'none';
 }
+
+/* 🎯 核心修復：讓逾期彈窗同時呈現過往筆記，徹底避免隱形 */
 function renderOverdueModal() {
   const body = document.getElementById('overdueModalBody');
   body.innerHTML = '';
 
-  const items = allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type))
-                       .sort((a,b) => b.date.localeCompare(a.date));
+  const overdueTasks = allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type))
+                              .sort((a,b) => b.date.localeCompare(a.date));
 
-  if (items.length === 0) {
-    body.innerHTML = `<div style="text-align:center; color:#059669; padding:20px 0; font-weight:bold;">✅ 目前沒有逾期的工作！</div>`;
+  const pastNotes = allLogs.filter(i => i.date && i.date < todayStr && !isItemArchived(i.status) && isNoteType(i.type))
+                           .sort((a,b) => b.date.localeCompare(a.date));
+
+  if (overdueTasks.length === 0 && pastNotes.length === 0) {
+    body.innerHTML = `<div style="text-align:center; color:#059669; padding:20px 0; font-weight:bold;">✅ 目前沒有逾期工作或過往筆記！</div>`;
     return;
   }
 
-  items.forEach(item => {
-    const row = document.createElement('div');
-    row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-    row.onclick = () => openEditModal(item);
-    row.innerHTML = `
-      <div class="task-info">
-        <div style="font-size:0.72rem; opacity:0.85; font-weight:bold;">📅 逾期日期：${item.date}</div>
-        <div class="task-title">${item.content}</div>
-        ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-      </div>
-    `;
-    body.appendChild(row);
-  });
+  if (overdueTasks.length > 0) {
+    const tEl = document.createElement('div');
+    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#991b1b; margin-bottom:6px;";
+    tEl.textContent = "⚠️ 逾期任務與事件";
+    body.appendChild(tEl);
+
+    overdueTasks.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.onclick = () => openEditModal(item);
+      row.innerHTML = `
+        <div class="task-info">
+          <div style="font-size:0.72rem; opacity:0.85; font-weight:bold;">📅 日期：${item.date}</div>
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  if (pastNotes.length > 0) {
+    const nEl = document.createElement('div');
+    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
+    nEl.textContent = "📝 過往筆記 (Past Notes)";
+    body.appendChild(nEl);
+
+    pastNotes.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.onclick = () => openEditModal(item);
+      row.innerHTML = `
+        <div class="task-info">
+          <div style="font-size:0.72rem; opacity:0.85; font-weight:bold;">📅 日期：${item.date}</div>
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
 }
 
 function openBacklogModal() {
@@ -479,10 +511,10 @@ function renderBacklogModal() {
   const body = document.getElementById('backlogModalBody');
   body.innerHTML = '';
 
-  const items = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type));
+  const items = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status));
 
   if (items.length === 0) {
-    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">目前沒有未有日期的工作 🎉</div>`;
+    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">目前沒有未有日期的工作與筆記 🎉</div>`;
     return;
   }
 
