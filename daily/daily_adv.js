@@ -20,7 +20,6 @@ function getTomorrowString() {
 let todayStr = getTodayString();
 let tomorrowStr = getTomorrowString();
 
-/* Google 登入驗證 */
 function initGoogleSignIn() {
   const container = document.getElementById("googleSignInContainer");
   if (!container) {
@@ -59,6 +58,10 @@ function initializeApp() {
   }
   document.getElementById('authOverlay').style.display = 'none';
   document.getElementById('mainContainer').style.display = 'block';
+
+  // 初始化快速新增區的日期（預設為今天）
+  const quickDateInput = document.getElementById('quickDate');
+  if (quickDateInput) quickDateInput.value = todayStr;
 
   triggerRecurringCheck();
   loadLogsData();
@@ -121,8 +124,6 @@ function loadLogsData() {
     complete: (results) => {
       allLogs = parseLogs(results.data);
       showStatus('');
-
-      // 前端動態比對與補齊重覆事項
       checkFrontendRecurring();
       refreshAllViews();
     },
@@ -130,7 +131,6 @@ function loadLogsData() {
   });
 }
 
-/* 輔助函式：忽略欄位順序與大小寫提取屬性 */
 function getProp(obj, keyNames) {
   if (!obj) return '';
   for (let k of Object.keys(obj)) {
@@ -141,7 +141,6 @@ function getProp(obj, keyNames) {
   return '';
 }
 
-/* ⚡ 前端重覆事項即時檢查機制 (解決 CSV 延遲與欄位位移問題) */
 function checkFrontendRecurring() {
   const sheetId = CONFIG.DAILY_SHEET_ID;
   const recGid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_RECURRING : null;
@@ -168,7 +167,6 @@ function checkFrontendRecurring() {
         const targetDateStr = calcTargetDate(frequency, dayParam, today);
         if (!targetDateStr) return;
 
-        // 比對是否已在清單中
         const exists = allLogs.some(log => log.content === content && log.date === targetDateStr);
 
         if (!exists) {
@@ -227,7 +225,6 @@ function parseLogs(rows) {
     const statusVal = getProp(r, ['status', '狀態']);
     const remarksVal = getProp(r, ['remarks', '備註']);
 
-    // 確保產生獨立唯一的 ID
     const finalId = (idVal && String(idVal).trim() !== '') 
       ? String(idVal).trim() 
       : `L_${i}_${Math.random().toString(36).substr(2, 5)}`;
@@ -243,16 +240,27 @@ function parseLogs(rows) {
   });
 }
 
+/* 切換無日期 Checkbox 控制日期輸入框狀態 */
+function toggleQuickDateInput(chk) {
+  const dt = document.getElementById('quickDate');
+  if (dt) {
+    dt.disabled = chk.checked;
+    dt.style.opacity = chk.checked ? '0.4' : '1';
+  }
+}
+
+/* ⚡ Rapid Logging 快速新增 (支援指定日期) */
 function handleQuickSubmit(e) {
   e.preventDefault();
   const type = document.getElementById('quickType').value;
   const isBacklog = document.getElementById('quickIsBacklog').checked;
   const content = document.getElementById('quickContent').value.trim();
+  const quickDateVal = document.getElementById('quickDate').value;
 
   if (!content) return;
 
   const newId = 'L' + new Date().getTime();
-  const targetDate = isBacklog ? '' : todayStr;
+  const targetDate = isBacklog ? '' : (quickDateVal || todayStr);
 
   const newItem = {
     id: newId,
@@ -267,6 +275,7 @@ function handleQuickSubmit(e) {
 
   document.getElementById('quickContent').value = '';
   document.getElementById('quickIsBacklog').checked = false;
+  toggleQuickDateInput(document.getElementById('quickIsBacklog'));
 
   refreshAllViews();
   syncToSheet('addLog', { id: newId, date: targetDate, type, content, status: 'Pending', remarks: '' });
@@ -386,7 +395,6 @@ function renderTimeline() {
   });
 }
 
-/* 🎯 將 item 物件直接傳給 Modal 處理，確保 100% 觸發彈窗 */
 function createTaskCard(item) {
   const card = document.createElement('div');
   const tagClass = getTagClasses(item);
@@ -591,7 +599,6 @@ function openAddModal() {
   document.getElementById('itemModal').style.display = 'flex';
 }
 
-/* 🎯 支援傳入物件或 ID 的雙重保障開窗 */
 function openEditModal(targetOrId) {
   let target = null;
   if (typeof targetOrId === 'object' && targetOrId !== null) {
@@ -615,8 +622,6 @@ function openEditModal(targetOrId) {
   updateModalButtonsState(target);
   document.getElementById('itemModal').style.display = 'flex';
 }
-
-// ... [前面保留] ...
 
 function updateModalButtonsState(targetItem) {
   const id = document.getElementById('modalItemId')?.value;
@@ -677,8 +682,6 @@ function updateModalButtonsState(targetItem) {
     }
   }
 }
-
-// ... [其餘部分保持不變] ...
 
 function assignToTodayFromModal() {
   const id = document.getElementById('modalItemId').value;
