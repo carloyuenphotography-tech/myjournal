@@ -1,4 +1,5 @@
 let allLogs = [];
+let currentCategoryFilter = 'all'; // 預設篩選所有分類
 
 function getTodayString() {
   const now = new Date();
@@ -59,7 +60,6 @@ function initializeApp() {
   document.getElementById('authOverlay').style.display = 'none';
   document.getElementById('mainContainer').style.display = 'block';
 
-  // 初始化快速新增區的日期（預設為今天）
   const quickDateInput = document.getElementById('quickDate');
   if (quickDateInput) quickDateInput.value = todayStr;
 
@@ -240,7 +240,22 @@ function parseLogs(rows) {
   });
 }
 
-/* 切換無日期 Checkbox 控制日期輸入框狀態 */
+/* 🗂️ 設定分類篩選器 */
+function setCategoryFilter(category) {
+  currentCategoryFilter = category;
+  
+  // 更新按鈕高亮狀態
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    if (btn.dataset.cat === category) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  refreshAllViews();
+}
+
 function toggleQuickDateInput(chk) {
   const dt = document.getElementById('quickDate');
   if (dt) {
@@ -249,7 +264,6 @@ function toggleQuickDateInput(chk) {
   }
 }
 
-/* ⚡ Rapid Logging 快速新增 (支援指定日期) */
 function handleQuickSubmit(e) {
   e.preventDefault();
   const type = document.getElementById('quickType').value;
@@ -318,13 +332,20 @@ function updateAllBadges() {
   document.getElementById('archivedBadgeCount').textContent = archivedCount;
 }
 
+/* 📅 渲染每日時間軸 (加入分類篩選邏輯) */
 function renderTimeline() {
   const container = document.getElementById('timelineContainer');
   container.innerHTML = '';
 
   const datedLogs = allLogs.filter(item => item.date && item.date >= todayStr && !isItemDone(item.status) && !isItemArchived(item.status));
 
-  const datesSet = new Set(datedLogs.map(i => i.date));
+  // 根據選擇的分類進行過濾
+  let filteredLogs = datedLogs;
+  if (currentCategoryFilter !== 'all') {
+    filteredLogs = datedLogs.filter(item => getTagClasses(item).includes(`tag-${currentCategoryFilter}`));
+  }
+
+  const datesSet = new Set(filteredLogs.map(i => i.date));
   datesSet.add(todayStr);
   datesSet.add(tomorrowStr);
   const sortedDates = Array.from(datesSet).sort();
@@ -366,7 +387,7 @@ function renderTimeline() {
     if (isToday) weekdayDisplay = '今天';
     else if (isTomorrow) weekdayDisplay = '明天';
 
-    const dayItems = datedLogs.filter(i => i.date === dateVal);
+    const dayItems = filteredLogs.filter(i => i.date === dateVal);
     const pendingCount = dayItems.filter(i => !isNoteType(i.type)).length;
 
     const dayBlock = document.createElement('div');
