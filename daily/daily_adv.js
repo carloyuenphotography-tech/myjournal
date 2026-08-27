@@ -7,8 +7,7 @@ const CATEGORIES = [
   { id: 'work',     name: '💼 工作/辦公', tag: '#work',     bg: '#e0f2fe', color: '#075985' },
   { id: 'urgent',   name: '🔥 重要/緊急', tag: '#urgent',   bg: '#ffe4e6', color: '#9f1239' },
   { id: 'finance',  name: '💰 財務/購物', tag: '#finance',  bg: '#ffedd5', color: '#9a3412' },
-  { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' },
-  { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',   bg: '#f0f9ff', color: '#0369a1' }
+  { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' }
 ];
 
 let allLogs = [];
@@ -476,12 +475,17 @@ function renderTimeline() {
 
     container.appendChild(dayBlock);
   });
+
+  // 初始化 Sortable 拖曳排序功能
+  initSortable();
 }
 
+/* 🎯 右方加入 drag-handle 拖曳圖示 */
 function createTaskCard(item) {
   const card = document.createElement('div');
   const tagClass = getTagClasses(item);
   card.className = `task-card type-${item.type} ${tagClass}`;
+  card.dataset.id = item.id;
   card.onclick = (e) => {
     e.stopPropagation();
     openEditModal(item);
@@ -492,11 +496,28 @@ function createTaskCard(item) {
       <div class="task-title">${item.content}</div>
       ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
     </div>
+    <div class="drag-handle" title="拖曳排序" onclick="event.stopPropagation()">⋮⋮</div>
   `;
   return card;
 }
 
-/* 通用輔助：時序倒序排序（日期近/最新 ID 在前） */
+/* ⚡ 初始化 SortableJS：啟用拖曳手柄機制 */
+function initSortable() {
+  if (typeof Sortable === 'undefined') return;
+
+  const lists = document.querySelectorAll('.day-card-list');
+  lists.forEach(list => {
+    new Sortable(list, {
+      handle: '.drag-handle', // 僅點擊圖示時觸發拖曳
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: function (evt) {
+        // 可在此擴充把最新順序同步回 Google Sheet
+      }
+    });
+  });
+}
+
 function sortReverseChronological(items) {
   return items.sort((a, b) => {
     const dateA = a.date || '';
@@ -584,7 +605,6 @@ function closeBacklogModal() {
   document.getElementById('backlogModal').style.display = 'none';
 }
 
-/* 📥 未有日期彈窗：分開分類 + 倒序排列 */
 function renderBacklogModal() {
   const body = document.getElementById('backlogModalBody');
   body.innerHTML = '';
@@ -647,7 +667,6 @@ function closeCompletedModal() {
   document.getElementById('completedModal').style.display = 'none';
 }
 
-/* ✅ 已完成彈窗：分開分類 + 倒序排列 */
 function renderCompletedModal() {
   const body = document.getElementById('completedModalBody');
   body.innerHTML = '';
@@ -724,7 +743,6 @@ function closeArchivedModal() {
   document.getElementById('archivedModal').style.display = 'none';
 }
 
-/* 📦 典藏庫彈窗：分開分類 + 倒序排列 */
 function renderArchivedModal() {
   const body = document.getElementById('archivedModalBody');
   body.innerHTML = '';
