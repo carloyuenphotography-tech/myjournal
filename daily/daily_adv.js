@@ -117,8 +117,8 @@ function initializeApp() {
   if (window.google && window.google.accounts && window.google.accounts.id) {
     window.google.accounts.id.cancel();
   }
-  document.getElementById('authOverlay').style.display = 'none';
-  document.getElementById('mainContainer').style.display = 'block';
+  if (document.getElementById('authOverlay')) document.getElementById('authOverlay').style.display = 'none';
+  if (document.getElementById('mainContainer')) document.getElementById('mainContainer').style.display = 'block';
 
   const quickDateInput = document.getElementById('quickDate');
   if (quickDateInput) quickDateInput.value = todayStr;
@@ -161,8 +161,8 @@ function parseJwt(token) {
 function checkLoginStatus() {
   if (sessionStorage.getItem('google_user')) initializeApp();
   else {
-    document.getElementById('authOverlay').style.display = 'flex';
-    document.getElementById('mainContainer').style.display = 'none';
+    if (document.getElementById('authOverlay')) document.getElementById('authOverlay').style.display = 'flex';
+    if (document.getElementById('mainContainer')) document.getElementById('mainContainer').style.display = 'none';
   }
 }
 
@@ -410,6 +410,8 @@ function refreshAllViews() {
   updateAllBadges();
 }
 
+/* ⚡ Modal 開啟/編輯/按鈕狀態控制 */
+
 function openAddModal(presetDate) {
   document.getElementById('modalFormTitle').textContent = '➕ 新增事項';
   document.getElementById('modalItemId').value = '';
@@ -418,10 +420,20 @@ function openAddModal(presetDate) {
   document.getElementById('modalContent').value = '';
   document.getElementById('modalRemarks').value = '';
 
+  updateModalButtonsState();
   document.getElementById('itemModal').style.display = 'flex';
 }
 
-function openEditModal(target) {
+function openEditModal(targetOrId) {
+  let target = null;
+  if (typeof targetOrId === 'object' && targetOrId !== null) {
+    target = targetOrId;
+  } else {
+    target = allLogs.find(l => String(l.id) === String(targetOrId));
+  }
+
+  if (!target) return;
+
   document.getElementById('modalFormTitle').textContent = '✏️ 編輯 / 操作事項';
   document.getElementById('modalItemId').value = target.id;
   document.getElementById('modalDate').value = target.date || '';
@@ -429,7 +441,158 @@ function openEditModal(target) {
   document.getElementById('modalContent').value = target.content;
   document.getElementById('modalRemarks').value = target.remarks || '';
 
+  updateModalButtonsState(target);
   document.getElementById('itemModal').style.display = 'flex';
+}
+
+function updateModalButtonsState(targetItem) {
+  const id = document.getElementById('modalItemId')?.value;
+  const currentType = document.getElementById('modalType')?.value;
+
+  const btnDelete = document.getElementById('btnDelete');
+  const btnArchive = document.getElementById('btnArchive');
+  const btnAssignToday = document.getElementById('btnAssignTodayModal');
+  const btnToggleDone = document.getElementById('btnToggleDoneModal');
+
+  // 若為「新增」模式，隱藏所有操作按鈕
+  if (!id) {
+    if (btnDelete) btnDelete.style.display = 'none';
+    if (btnArchive) btnArchive.style.display = 'none';
+    if (btnAssignToday) btnAssignToday.style.display = 'none';
+    if (btnToggleDone) btnToggleDone.style.display = 'none';
+    return;
+  }
+
+  const target = targetItem || allLogs.find(l => String(l.id) === String(id));
+
+  // 1. 刪除按鈕
+  if (btnDelete) btnDelete.style.display = 'inline-block';
+
+  // 2. 典藏按鈕
+  if (btnArchive) {
+    btnArchive.style.display = 'inline-block';
+    if (target && isItemArchived(target.status)) {
+      btnArchive.textContent = '↺ 取消典藏';
+      btnArchive.onclick = () => { unarchiveItem(id); closeItemModal(); };
+    } else {
+      btnArchive.textContent = '📦 典藏';
+      btnArchive.onclick = () => archiveFromModal();
+    }
+  }
+
+  // 3. 排至今天按鈕
+  if (btnAssignToday) {
+    if (target && target.date !== todayStr && !isItemDone(target.status)) {
+      btnAssignToday.style.display = 'inline-block';
+    } else {
+      btnAssignToday.style.display = 'none';
+    }
+  }
+
+  // 4. 完成 / 還原按鈕
+  if (btnToggleDone) {
+    if (isNoteType(currentType)) {
+      btnToggleDone.style.display = 'none';
+    } else {
+      btnToggleDone.style.display = 'inline-block';
+      if (target && isItemDone(target.status)) {
+        btnToggleDone.textContent = '↺ 還原待辦';
+        btnToggleDone.style.background = '#e0f2fe';
+        btnToggleDone.style.color = '#0284c7';
+        btnToggleDone.style.borderColor = '#bae6fd';
+      } else {
+        btnToggleDone.textContent = '✅ 標示完成';
+        btnToggleDone.style.background = '#dcfce7';
+        btnToggleDone.style.color = '#15803d';
+        btnToggleDone.style.borderColor = '#86efac';
+      }
+    }
+  }
+}
+
+/* ⚡ Modal 操作按鈕觸發函式 */
+
+function toggleDoneFromModal() {
+  const id = document.getElementById('modalItemId').value;
+  if (!id) return;
+
+  const target = allLogs.find(l => String(l.id) === String(id));
+  if (!target) return;
+
+  const newStatus = isItemDone(target.status) ? 'Pending' : '完成';
+  target.status = newStatus;
+
+  closeItemModal();
+  refreshAllViews();
+
+  syncToSheet('toggleLog', { 
+    id: target.id, 
+    content: target.content, 
+    oldContent: target.content,
+    date: target.date,
+    type: target.type,
+    remarks: target.remarks,
+    status: newStatus 
+  });
+}
+
+function archiveFromModal() {
+  const id = document.getElementById('modalItemId').value;
+  if (!id) return;
+
+  const target = allLogs.find(l => String(l.id) === String(id));
+  if (!target) return;
+
+  target.status = 'Archived';
+  closeItemModal();
+  refreshAllViews();
+
+  syncToSheet('toggleLog', { 
+    id: target.id, 
+    content: target.content, 
+    oldContent: target.content,
+    date: target.date,
+    type: target.type,
+    remarks: target.remarks,
+    status: 'Archived' 
+  });
+}
+
+function assignToTodayFromModal() {
+  const id = document.getElementById('modalItemId').value;
+  if (!id) return;
+
+  const target = allLogs.find(l => String(l.id) === String(id));
+  if (!target) return;
+
+  target.date = todayStr;
+  closeItemModal();
+  refreshAllViews();
+
+  syncToSheet('editLog', { 
+    id: target.id, 
+    oldContent: target.content, 
+    date: todayStr, 
+    type: target.type, 
+    content: target.content, 
+    remarks: target.remarks, 
+    status: target.status 
+  });
+}
+
+function deleteCurrentItem() {
+  const id = document.getElementById('modalItemId').value;
+  if (!id || !confirm('確定要刪除這筆事項嗎？')) return;
+
+  const idx = allLogs.findIndex(l => String(l.id) === String(id));
+  if (idx !== -1) {
+    const target = allLogs[idx];
+    allLogs.splice(idx, 1);
+    syncToSheet('deleteLog', { id: target.id, content: target.content });
+  }
+
+  closeItemModal();
+  refreshAllViews();
 }
 
 function closeItemModal() {
