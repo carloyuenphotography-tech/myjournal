@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>⚡ 日軌流光 - Daily Adv</title>
   
-  <!-- 找到這行，加上 ?v=1.1 -->
-  <script src="daily_adv.js?v=1.6"></script>
+  <script src="daily_adv.js?v=2.0"></script>
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -56,7 +55,7 @@
     .btn-bubble {
       border-radius: 20px; padding: 6px 12px; font-size: 0.8rem; font-weight: bold;
       cursor: pointer; display: inline-flex; align-items: center; gap: 4px; border: 1px solid transparent;
-      transition: all 0.2s;
+      transition: all 0.2s; text-decoration: none;
     }
     .btn-bubble:hover { opacity: 0.85; transform: translateY(-1px); }
 
@@ -343,28 +342,29 @@
       .task-remarks { font-size: 0.7rem; }
       .timeline-container { gap: 10px; margin-top: 10px; }
     }
-/* 📍 地點與時間組合徽章 */
-.location-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  padding: 3px 8px;
-  background: rgba(255, 255, 255, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  width: fit-content;
-  backdrop-filter: blur(4px);
-}
 
-.location-badge .loc-time {
-  padding-left: 6px;
-  border-left: 1px solid rgba(255, 255, 255, 0.4);
-  opacity: 0.9;
-  font-weight: normal;
-}
+    /* 📍 地點與時間組合徽章 */
+    .location-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      padding: 3px 8px;
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      width: fit-content;
+      backdrop-filter: blur(4px);
+    }
+
+    .location-badge .loc-time {
+      padding-left: 6px;
+      border-left: 1px solid rgba(255, 255, 255, 0.4);
+      opacity: 0.9;
+      font-weight: normal;
+    }
   </style>
 </head>
 <body>
@@ -381,6 +381,10 @@
     <div class="header-bar">
       <div class="title-group">✨ 日軌流光</div>
       <div class="top-actions">
+        <!-- 🔄 新增：切換至重複事項管理頁面按鈕 -->
+        <a href="recurring.html" class="btn-bubble" style="background:#e0f2fe; color:#0284c7; border-color:#bae6fd;">
+          🔄 <span class="btn-text">重複規則</span>
+        </a>
         <button class="btn-bubble btn-overdue" onclick="openOverdueModal()">
           ⚠️ <span class="btn-text">逾期工作</span> <span id="overdueBadgeCount" class="badge-pill">0</span>
         </button>
@@ -476,6 +480,7 @@
     </div>
   </div>
 
+  <!-- ✏️ 編輯 / 操作事項 Modal -->
   <div id="itemModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -504,13 +509,15 @@
             <textarea id="modalRemarks" style="width:100%; padding:6px;" placeholder="可輸入詳細備註..."></textarea>
           </label>
         </div>
+
+        <!-- ⚡ Modal 底部完整操作按鈕區 (對應 daily_adv.js 控制) -->
         <div class="modal-actions-bar">
           <div style="display:flex; gap:6px;">
             <button type="button" id="btnDelete" onclick="deleteCurrentItem()" style="background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">🗑️ 刪除</button>
             <button type="button" id="btnArchive" onclick="archiveFromModal()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">📦 典藏</button>
           </div>
           <div style="display:flex; gap:6px;">
-            <button type="button" id="btnAssignTodayModal" onclick="assignToTodayFromModal()" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">📅 移至今天</button>
+            <button type="button" id="btnAssignTodayModal" onclick="assignToTodayFromModal()" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">📅 排至今天</button>
             <button type="button" id="btnToggleDoneModal" onclick="toggleDoneFromModal()" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">✅ 完成</button>
             <button type="button" onclick="closeItemModal()" style="background:#f1f5f9; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;">取消</button>
             <button type="submit" style="background:var(--primary); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">儲存</button>
