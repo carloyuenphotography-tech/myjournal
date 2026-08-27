@@ -1,4 +1,4 @@
-/* ⚙️ 中央分類設定集：隨時在這裡修改、新增或刪減分類 */
+/* ⚙️ 中央分類設定集 */
 const CATEGORIES = [
   { id: 'all',      name: '✨ 全部事項', tag: '',           bg: '',        color: '' },
   { id: 'personal', name: '👤 個人',      tag: '#personal', bg: '#f3e8ff', color: '#581c87', isDefault: true },
@@ -67,9 +67,7 @@ window.addEventListener('DOMContentLoaded', () => {
   checkLoginStatus();
 });
 
-/* ⚡ 分類架構動態初始化：注入 CSS、產生選單與輸入框選項 */
 function initCategoriesInfrastructure() {
-  // 1. 動態注入 CSS 顏色樣式
   let styleEl = document.getElementById('dynamicCatStyles');
   if (!styleEl) {
     styleEl = document.createElement('style');
@@ -84,7 +82,6 @@ function initCategoriesInfrastructure() {
   });
   styleEl.textContent = cssText;
 
-  // 2. 動態渲染 Sidebar 類別按鈕
   const sidebar = document.getElementById('sidebarCategories');
   if (sidebar) {
     sidebar.innerHTML = '<div class="sidebar-title">看板分類</div>';
@@ -99,7 +96,6 @@ function initCategoriesInfrastructure() {
     });
   }
 
-  // 3. 動態渲染快速輸入區的 Category Dropdown (預設選擇「個人」)
   const quickCatSelect = document.getElementById('quickCategory');
   if (quickCatSelect) {
     quickCatSelect.innerHTML = '';
@@ -322,7 +318,6 @@ function toggleQuickDateInput(chk) {
   }
 }
 
-/* ⚡ 快速新增：自動附加選擇的分類標籤 */
 function handleQuickSubmit(e) {
   e.preventDefault();
   const type = document.getElementById('quickType').value;
@@ -333,7 +328,6 @@ function handleQuickSubmit(e) {
 
   if (!content) return;
 
-  // 找尋對應標籤 (例如 #personal)
   const targetCatObj = CATEGORIES.find(c => c.id === catId);
   if (targetCatObj && targetCatObj.tag) {
     if (!content.toLowerCase().includes(targetCatObj.tag.toLowerCase())) {
@@ -377,7 +371,6 @@ function isNoteType(type) {
   return t === '筆記' || t === 'note' || t === '-';
 }
 
-/* 🏷️ 動態比對標籤：根據 CATEGORIES 設定自動解析 */
 function getTagClasses(item) {
   const text = ((item.content || '') + ' ' + (item.remarks || '')).toLowerCase();
   const classes = [];
@@ -502,6 +495,18 @@ function createTaskCard(item) {
   return card;
 }
 
+/* 通用輔助：時序倒序排序（日期近/最新 ID 在前） */
+function sortReverseChronological(items) {
+  return items.sort((a, b) => {
+    const dateA = a.date || '';
+    const dateB = b.date || '';
+    if (dateA !== dateB) {
+      return dateB.localeCompare(dateA);
+    }
+    return String(b.id).localeCompare(String(a.id));
+  });
+}
+
 function openOverdueModal() {
   renderOverdueModal();
   document.getElementById('overdueModal').style.display = 'flex';
@@ -514,11 +519,13 @@ function renderOverdueModal() {
   const body = document.getElementById('overdueModalBody');
   body.innerHTML = '';
 
-  const overdueTasks = allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type))
-                              .sort((a,b) => b.date.localeCompare(a.date));
+  const overdueTasks = sortReverseChronological(
+    allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type))
+  );
 
-  const pastNotes = allLogs.filter(i => i.date && i.date < todayStr && !isItemArchived(i.status) && isNoteType(i.type))
-                           .sort((a,b) => b.date.localeCompare(a.date));
+  const pastNotes = sortReverseChronological(
+    allLogs.filter(i => i.date && i.date < todayStr && !isItemArchived(i.status) && isNoteType(i.type))
+  );
 
   if (overdueTasks.length === 0 && pastNotes.length === 0) {
     body.innerHTML = `<div style="text-align:center; color:#059669; padding:20px 0; font-weight:bold;">✅ 目前沒有逾期工作或過往筆記！</div>`;
@@ -575,29 +582,60 @@ function openBacklogModal() {
 function closeBacklogModal() {
   document.getElementById('backlogModal').style.display = 'none';
 }
+
+/* 📥 未有日期彈窗：分開分類 + 倒序排列 */
 function renderBacklogModal() {
   const body = document.getElementById('backlogModalBody');
   body.innerHTML = '';
 
   const items = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status));
+  const tasks = sortReverseChronological(items.filter(i => !isNoteType(i.type)));
+  const notes = sortReverseChronological(items.filter(i => isNoteType(i.type)));
 
-  if (items.length === 0) {
+  if (tasks.length === 0 && notes.length === 0) {
     body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">目前沒有未有日期的工作與筆記 🎉</div>`;
     return;
   }
 
-  items.forEach(item => {
-    const row = document.createElement('div');
-    row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-    row.onclick = () => openEditModal(item);
-    row.innerHTML = `
-      <div class="task-info">
-        <div class="task-title">${item.content}</div>
-        ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-      </div>
-    `;
-    body.appendChild(row);
-  });
+  if (tasks.length > 0) {
+    const tEl = document.createElement('div');
+    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#7e22ce; margin-bottom:6px;";
+    tEl.textContent = "☑️ 未有日期任務與事件";
+    body.appendChild(tEl);
+
+    tasks.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.onclick = () => openEditModal(item);
+      row.innerHTML = `
+        <div class="task-info">
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  if (notes.length > 0) {
+    const nEl = document.createElement('div');
+    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
+    nEl.textContent = "📝 未有日期筆記";
+    body.appendChild(nEl);
+
+    notes.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.onclick = () => openEditModal(item);
+      row.innerHTML = `
+        <div class="task-info">
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
 }
 
 function openCompletedModal() {
@@ -607,32 +645,64 @@ function openCompletedModal() {
 function closeCompletedModal() {
   document.getElementById('completedModal').style.display = 'none';
 }
+
+/* ✅ 已完成彈窗：分開分類 + 倒序排列 */
 function renderCompletedModal() {
   const body = document.getElementById('completedModalBody');
   body.innerHTML = '';
 
-  const items = allLogs.filter(i => isItemDone(i.status))
-                       .sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+  const items = allLogs.filter(i => isItemDone(i.status));
+  const tasks = sortReverseChronological(items.filter(i => !isNoteType(i.type)));
+  const notes = sortReverseChronological(items.filter(i => isNoteType(i.type)));
 
-  if (items.length === 0) {
+  if (tasks.length === 0 && notes.length === 0) {
     body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">尚無已完成的事項</div>`;
     return;
   }
 
-  items.forEach(item => {
-    const row = document.createElement('div');
-    row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-    row.style.opacity = '0.85';
-    row.onclick = () => openEditModal(item);
-    row.innerHTML = `
-      <div class="task-info">
-        ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
-        <div class="task-title" style="text-decoration:line-through;">${item.content}</div>
-        ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-      </div>
-    `;
-    body.appendChild(row);
-  });
+  if (tasks.length > 0) {
+    const tEl = document.createElement('div');
+    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#166534; margin-bottom:6px;";
+    tEl.textContent = "✅ 已完成任務與事件";
+    body.appendChild(tEl);
+
+    tasks.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.style.opacity = '0.85';
+      row.onclick = () => openEditModal(item);
+      row.innerHTML = `
+        <div class="task-info">
+          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
+          <div class="task-title" style="text-decoration:line-through;">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  if (notes.length > 0) {
+    const nEl = document.createElement('div');
+    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
+    nEl.textContent = "📝 已完成筆記";
+    body.appendChild(nEl);
+
+    notes.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.style.opacity = '0.85';
+      row.onclick = () => openEditModal(item);
+      row.innerHTML = `
+        <div class="task-info">
+          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
+          <div class="task-title" style="text-decoration:line-through;">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
 }
 
 function archiveItem(id) {
@@ -653,32 +723,63 @@ function closeArchivedModal() {
   document.getElementById('archivedModal').style.display = 'none';
 }
 
+/* 📦 典藏庫彈窗：分開分類 + 倒序排列 */
 function renderArchivedModal() {
   const body = document.getElementById('archivedModalBody');
   body.innerHTML = '';
 
-  const items = allLogs.filter(i => isItemArchived(i.status))
-                       .sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+  const items = allLogs.filter(i => isItemArchived(i.status));
+  const tasks = sortReverseChronological(items.filter(i => !isNoteType(i.type)));
+  const notes = sortReverseChronological(items.filter(i => isNoteType(i.type)));
 
-  if (items.length === 0) {
+  if (tasks.length === 0 && notes.length === 0) {
     body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">典藏庫為空</div>`;
     return;
   }
 
-  items.forEach(item => {
-    const row = document.createElement('div');
-    row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-    row.style.opacity = '0.75';
-    row.onclick = () => openEditModal(item);
-    row.innerHTML = `
-      <div class="task-info">
-        ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
-        <div class="task-title">${item.content}</div>
-        ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-      </div>
-    `;
-    body.appendChild(row);
-  });
+  if (tasks.length > 0) {
+    const tEl = document.createElement('div');
+    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin-bottom:6px;";
+    tEl.textContent = "📦 典藏任務與事件";
+    body.appendChild(tEl);
+
+    tasks.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.style.opacity = '0.75';
+      row.onclick = () => openEditModal(item);
+      row.innerHTML = `
+        <div class="task-info">
+          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  if (notes.length > 0) {
+    const nEl = document.createElement('div');
+    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
+    nEl.textContent = "📝 典藏筆記";
+    body.appendChild(nEl);
+
+    notes.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
+      row.style.opacity = '0.75';
+      row.onclick = () => openEditModal(item);
+      row.innerHTML = `
+        <div class="task-info">
+          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
+          <div class="task-title">${item.content}</div>
+          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(row);
+    });
+  }
 }
 
 function unarchiveItem(id) {
