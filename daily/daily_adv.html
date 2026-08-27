@@ -48,6 +48,87 @@
       display: none;
     }
 
+    /* ☰ 三劃抽屜式導覽列樣式 */
+    .hamburger-btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      font-size: 1.3rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #334155;
+      transition: background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hamburger-btn:hover { background: #e2e8f0; }
+
+    .nav-drawer {
+      position: fixed;
+      top: 0;
+      right: -280px;
+      width: 280px;
+      height: 100%;
+      background: #ffffff;
+      box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+      z-index: 10000;
+      transition: right 0.3s ease;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .nav-drawer.open { right: 0; }
+
+    .nav-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      font-weight: bold;
+      color: #1e293b;
+    }
+    .nav-drawer-close {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #64748b;
+    }
+
+    .nav-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.4);
+      z-index: 9999;
+      display: none;
+      backdrop-filter: blur(2px);
+    }
+    .nav-overlay.open { display: block; }
+
+    .nav-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .nav-btn {
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      text-decoration: none;
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: bold;
+      transition: all 0.2s ease;
+      display: block;
+    }
+    .nav-btn:hover { background: #e2e8f0; }
+    .nav-btn.active { background: var(--primary); color: #ffffff; }
+
     .header-bar {
       display: flex; justify-content: space-between; align-items: center;
       flex-wrap: wrap; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);
@@ -373,53 +454,6 @@
       opacity: 0.9;
       font-weight: normal;
     }
-        }
-
-    /* ☰ 三劃抽屜式導覽列樣式 */
-    .nav-bar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 12px 12px 12px;
-      border-bottom: 2px solid var(--border-color);
-      margin-bottom: 16px;
-    }
-    .nav-bar-title {
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: var(--header-bg);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .hamburger-btn {
-      background: #f1f5f9;
-      border: 1px solid var(--border-color);
-      font-size: 1.3rem;
-      padding: 4px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      color: #334155;
-      transition: background 0.2s;
-    }
-    .hamburger-btn:hover { background: #e2e8f0; }
-
-    .nav-drawer {
-      position: fixed;
-      top: 0;
-      right: -280px;
-      width: 280px;
-      height: 100%;
-      background: #ffffff;
-      box-shadow: -4px 0 15px rgba(0,0,0,0.15);
-      z-index: 10000;
-      transition: right 0.3s ease;
-      padding: 20px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow-y: auto;
-    }
   </style>
 </head>
 <body>
@@ -431,12 +465,10 @@
       <div id="googleSignInContainer" style="display:flex; justify-content:center; min-height:40px;"></div>
     </div>
   </div>
-<!-- ☰ 頂部與抽屜式導覽列 -->
-    <div class="nav-bar-header">
-      <div class="nav-bar-title">📊 校曆與 Dashboard</div>
-      <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
-    </div>
 
+  <div class="container" id="mainContainer">
+    
+    <!-- ☰ 抽屜式導覽列與遮罩 -->
     <div id="navOverlay" class="nav-overlay" onclick="closeNavDrawer()"></div>
     <div id="navDrawer" class="nav-drawer">
       <div class="nav-drawer-header">
@@ -445,10 +477,12 @@
       </div>
       <div id="navbar" class="nav-tabs"></div>
     </div>
-  
-  <div class="container" id="mainContainer">
+
     <div class="header-bar">
-      <div class="title-group">✨ 日軌流光</div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
+        <div class="title-group">✨ 日軌流光</div>
+      </div>
       <div class="top-actions">
         <a href="recurring.html" class="btn-bubble" style="background:#e0f2fe; color:#0284c7; border-color:#bae6fd;">
           🔄 <span class="btn-text">重複規則</span>
@@ -591,6 +625,34 @@
       </form>
     </div>
   </div>
+
+  <script>
+    /* ☰ 抽屜導覽列 JavaScript 控制項 */
+    function openNavDrawer() {
+      document.getElementById('navDrawer').classList.add('open');
+      document.getElementById('navOverlay').classList.add('open');
+    }
+
+    function closeNavDrawer() {
+      document.getElementById('navDrawer').classList.remove('open');
+      document.getElementById('navOverlay').classList.remove('open');
+    }
+
+    function loadNavbar() {
+      fetch('nav.html')
+        .then(response => response.text())
+        .then(data => {
+          const navContainer = document.getElementById('navbar');
+          if (navContainer) {
+            navContainer.innerHTML = data;
+            const currentPath = window.location.pathname.split('/').pop() || 'daily_adv.html';
+            navContainer.querySelectorAll('.nav-btn').forEach(link => {
+              if (link.getAttribute('href') === currentPath) link.classList.add('active');
+            });
+          }
+        }).catch(err => console.log('導覽列載入失敗:', err));
+    }
+  </script>
 
   <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
 </body>
