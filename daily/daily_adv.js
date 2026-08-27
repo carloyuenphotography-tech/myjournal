@@ -216,7 +216,7 @@ function checkFrontendRecurring() {
       let added = false;
 
       results.data.forEach((r, idx) => {
-        const frequency = String(getProp(r, ['frequency', '頻率']) || '').trim();
+        const frequency = String(getProp(r, ['frequency', '頻率']) || '').trim().toUpperCase();
         const content = String(getProp(r, ['content', '內容', '事項']) || '').trim();
         const type = String(getProp(r, ['type', '類型']) || 'Task').trim();
         const dayParam = String(getProp(r, ['dayparam', '日期參數', 'day']) || '').trim();
@@ -246,10 +246,14 @@ function checkFrontendRecurring() {
   });
 }
 
+/* ⚡ 1. 新增 DAILY 每天重複邏輯 */
 function calcTargetDate(frequency, dayParam, today) {
   const year = today.getFullYear();
   const month = today.getMonth();
 
+  if (frequency === 'DAILY') {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  }
   if (frequency === 'MONTHLY_END') {
     const d = new Date(year, month + 1, 0);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -320,6 +324,7 @@ function toggleQuickDateInput(chk) {
   }
 }
 
+/* ⚡ 3. 修改：分類標籤寫入「備註」而非「標題」 */
 function handleQuickSubmit(e) {
   e.preventDefault();
   const type = document.getElementById('quickType').value;
@@ -330,11 +335,10 @@ function handleQuickSubmit(e) {
 
   if (!content) return;
 
+  let remarks = '';
   const targetCatObj = CATEGORIES.find(c => c.id === catId);
   if (targetCatObj && targetCatObj.tag) {
-    if (!content.toLowerCase().includes(targetCatObj.tag.toLowerCase())) {
-      content += ` ${targetCatObj.tag}`;
-    }
+    remarks = targetCatObj.tag;
   }
 
   const newId = 'L' + new Date().getTime();
@@ -346,7 +350,7 @@ function handleQuickSubmit(e) {
     type: type,
     content: content,
     status: 'Pending',
-    remarks: ''
+    remarks: remarks
   };
 
   allLogs.push(newItem);
@@ -356,7 +360,7 @@ function handleQuickSubmit(e) {
   toggleQuickDateInput(document.getElementById('quickIsBacklog'));
 
   refreshAllViews();
-  syncToSheet('addLog', { id: newId, date: targetDate, type, content, status: 'Pending', remarks: '' });
+  syncToSheet('addLog', { id: newId, date: targetDate, type, content, status: 'Pending', remarks: remarks });
 }
 
 function isItemDone(status) {
@@ -412,6 +416,7 @@ function getDayOrder(dateStr) {
   } catch (e) { return null; }
 }
 
+/* ⚡ 2. 點擊日期可直接在該日期新增工作 */
 function renderTimeline() {
   const container = document.getElementById('timelineContainer');
   container.innerHTML = '';
@@ -485,9 +490,10 @@ function renderTimeline() {
     if (isToday) dayBlock.id = 'todayBlock';
 
     dayBlock.innerHTML = `
-      <div class="day-date-col">
+      <div class="day-date-col" onclick="openAddModal('${dateVal}')" style="cursor:pointer;" title="點擊在 ${dateVal} 新增事項">
         <span class="day-weekday">${weekdayDisplay}</span>
         <span class="day-number">${dayNum}</span>
+        <span style="font-size:0.65rem; color:var(--primary); margin-top:2px; font-weight:bold; opacity:0.85;">➕ 新增</span>
       </div>
       <div class="day-content-col">
         ${pendingCount > 0 ? `<div class="pending-tasks-pill">☑ ${pendingCount} pending task${pendingCount > 1 ? 's' : ''}</div>` : ''}
@@ -782,7 +788,6 @@ function archiveItem(id) {
 
   target.status = 'Archived';
   refreshAllViews();
-  // ⚡ 補齊 complete 參數
   syncToSheet('toggleLog', { 
     id: target.id, 
     content: target.content, 
@@ -867,7 +872,6 @@ function unarchiveItem(id) {
 
   target.status = 'Pending';
   refreshAllViews();
-  // ⚡ 補齊 complete 參數
   syncToSheet('toggleLog', { 
     id: target.id, 
     content: target.content, 
@@ -897,10 +901,11 @@ function refreshAllViews() {
   if (document.getElementById('archivedModal').style.display === 'flex') renderArchivedModal();
 }
 
-function openAddModal() {
+/* ⚡ 2. 支援指定 presetDate 新增 */
+function openAddModal(presetDate) {
   document.getElementById('modalFormTitle').textContent = '➕ 新增事項';
   document.getElementById('modalItemId').value = '';
-  document.getElementById('modalDate').value = todayStr;
+  document.getElementById('modalDate').value = presetDate || todayStr;
   document.getElementById('modalType').value = 'Task';
   document.getElementById('modalContent').value = '';
   document.getElementById('modalRemarks').value = '';
@@ -1000,7 +1005,6 @@ function assignToTodayFromModal() {
   closeItemModal();
 }
 
-/* ⚡ 修正：點擊完成時發送完整欄位資料給 Apps Script */
 function toggleDoneFromModal() {
   const id = document.getElementById('modalItemId').value;
   if (!id) return;
@@ -1014,7 +1018,6 @@ function toggleDoneFromModal() {
   closeItemModal();
   refreshAllViews();
 
-  // 傳送包含 oldContent、date、type、status 等全量參數
   syncToSheet('toggleLog', { 
     id: target.id, 
     content: target.content, 
