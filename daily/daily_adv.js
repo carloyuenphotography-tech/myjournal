@@ -8,7 +8,7 @@ const CATEGORIES = [
   { id: 'urgent',   name: '🔥 重要/緊急', tag: '#urgent',   bg: '#ffe4e6', color: '#9f1239' },
   { id: 'finance',  name: '💰 財務/購物', tag: '#finance',  bg: '#ffedd5', color: '#9a3412' },
   { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' },
-  { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',   bg: '#1E1542', color: '#C5BCDE' }
+  { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',    bg: '#1E1542', color: '#C5BCDE' }
 ];
 
 let allLogs = [];
