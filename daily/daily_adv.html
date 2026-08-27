@@ -74,7 +74,6 @@
       border-radius: 10px; font-size: 0.72rem;
     }
 
-    /* 🗂️ 分類選單 / 看板切換器佈局 */
     .app-body-layout {
       display: flex;
       flex-direction: column;
@@ -89,7 +88,7 @@
       gap: 6px;
       padding-bottom: 4px;
       position: relative;
-      z-index: 200; /* 確保懸浮與點擊優先權 */
+      z-index: 200;
     }
     .sidebar-categories::-webkit-scrollbar { height: 4px; }
     .sidebar-categories::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -141,13 +140,13 @@
       border-radius: 10px; padding: 10px;
       display: flex; flex-direction: column; gap: 8px;
     }
-    .quick-input-row { display: flex; gap: 6px; align-items: center; }
+    .quick-input-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     .quick-input-row select {
       padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color);
-      font-size: 0.95rem; font-weight: bold; background: #fff; width: 44px; text-align: center;
+      font-size: 0.85rem; font-weight: bold; background: #fff; outline: none;
     }
     .quick-input-row input[type="text"] {
-      flex: 1; min-width: 0; padding: 6px 10px; border-radius: 6px;
+      flex: 1; min-width: 150px; padding: 6px 10px; border-radius: 6px;
       border: 1px solid var(--border-color); font-size: 0.85rem;
     }
     .quick-input-row input[type="date"] {
@@ -159,7 +158,6 @@
       border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.82rem; white-space: nowrap;
     }
 
-    /* 時間軸容器 */
     .timeline-container { display: flex; flex-direction: column; gap: 16px; margin-top: 6px; }
 
     .day-block { display: flex; gap: 12px; position: relative; }
@@ -194,14 +192,6 @@
     .task-card.type-Event { background: #0284c7; }
     .task-card.type-Task { background: #2563eb; }
     .task-card.type-Note { background: #64748b; }
-
-    .task-card.tag-sch     { background-color: #fef08a !important; color: #713f12 !important; }
-    .task-card.tag-family  { background-color: #dcfce7 !important; color: #14532d !important; }
-    .task-card.tag-work    { background-color: #e0f2fe !important; color: #075985 !important; }
-    .task-card.tag-urgent  { background-color: #ffe4e6 !important; color: #9f1239 !important; }
-    .task-card.tag-finance { background-color: #ffedd5 !important; color: #9a3412 !important; }
-    .task-card.tag-health  { background-color: #ccfbf1 !important; color: #115e59 !important; }
-    .task-card.tag-personal{ background-color: #f3e8ff !important; color: #581c87 !important; }
 
     .task-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
     .task-title { font-weight: bold; font-size: 0.88rem; line-height: 1.35; word-break: break-word; }
@@ -251,7 +241,6 @@
       .btn-bubble { padding: 5px 9px; font-size: 0.85rem; }
     }
 
-    /* 🖥️ 桌面端修正：提升左側選單的 z-index 確保點擊無阻擋 */
     @media (min-width: 900px) {
       .container {
         max-width: 100% !important; padding: 20px;
@@ -264,7 +253,6 @@
         gap: 20px;
       }
 
-      /* 關鍵修復：給左側欄明確的 z-index 與置頂層級 */
       .sidebar-categories {
         width: 200px;
         flex-shrink: 0;
@@ -386,33 +374,25 @@
       </div>
     </div>
 
-    <!-- 🗂️ App 主體佈局 (包含左側分類選單 + 右側主內容) -->
     <div class="app-body-layout">
       
-      <!-- 🗂️ 分類選單 / TaskBoard 轉換器 (加入 type="button" 避開事件衝突) -->
-      <aside class="sidebar-categories">
+      <!-- 🗂️ 分類看板選單 (由 JS 動態生成) -->
+      <aside class="sidebar-categories" id="sidebarCategories">
         <div class="sidebar-title">看板分類</div>
-        <button type="button" class="cat-btn active" data-cat="all" onclick="setCategoryFilter('all')">✨ 全部事項</button>
-        <button type="button" class="cat-btn" data-cat="sch" onclick="setCategoryFilter('sch')">🏫 學校 / 學業</button>
-        <button type="button" class="cat-btn" data-cat="family" onclick="setCategoryFilter('family')">🏠 家庭 / 家</button>
-        <button type="button" class="cat-btn" data-cat="work" onclick="setCategoryFilter('work')">💼 工作 / 辦公</button>
-        <button type="button" class="cat-btn" data-cat="urgent" onclick="setCategoryFilter('urgent')">🔥 重要 / 緊急</button>
-        <button type="button" class="cat-btn" data-cat="finance" onclick="setCategoryFilter('finance')">💰 財務 / 購物</button>
-        <button type="button" class="cat-btn" data-cat="health" onclick="setCategoryFilter('health')">🌿 健康 / 運動</button>
-        <button type="button" class="cat-btn" data-cat="personal" onclick="setCategoryFilter('personal')">👤 個人</button>
       </aside>
 
-      <!-- 📋 右側主內容區 -->
       <main class="main-content-area">
-        <!-- ⚡ Rapid Logging 快速輸入 -->
+        <!-- ⚡ Rapid Logging 快速輸入區 (支援類型、分類選單) -->
         <form class="quick-input-card" onsubmit="handleQuickSubmit(event)">
           <div class="quick-input-row">
-            <select id="quickType">
-              <option value="Task">•</option>
-              <option value="Event">o</option>
-              <option value="筆記">-</option>
+            <select id="quickType" title="類型">
+              <option value="Task">• 任務</option>
+              <option value="Event">o 事件</option>
+              <option value="筆記">- 筆記</option>
             </select>
-            <input type="text" id="quickContent" placeholder="⚡ 快速記下... (#sch #family)" required>
+            <!-- 🏷️ 快速選擇分類 (動態生成，預設為「個人」) -->
+            <select id="quickCategory" title="分類"></select>
+            <input type="text" id="quickContent" placeholder="⚡ 快速記下事項..." required>
           </div>
           <div class="quick-input-row" style="justify-content: space-between; gap: 6px;">
             <input type="date" id="quickDate">
