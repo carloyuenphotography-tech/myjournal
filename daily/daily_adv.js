@@ -1,39 +1,4 @@
-/* ⚙️ 中央分類設定集 */
-const CATEGORIES = [
-  { id: 'all',      name: '✨ 全部事項', tag: '',           bg: '',        color: '' },
-  { id: 'personal', name: '👤 個人',      tag: '#personal', bg: '#f3e8ff', color: '#581c87', isDefault: true },
-  { id: 'sch',      name: '🏫 學校/學業', tag: '#sch',      bg: '#FFE06B', color: '#38751e' },
-  { id: 'family',   name: '🏠 家庭/家',   tag: '#family',   bg: '#dcfce7', color: '#14532d' },
-  { id: 'work',     name: '💼 工作/辦公', tag: '#work',     bg: '#e0f2fe', color: '#075985' },
-  { id: 'urgent',   name: '🔥 重要/緊急', tag: '#urgent',   bg: '#ffe4e6', color: '#9f1239' },
-  { id: 'finance',  name: '💰 財務/購物', tag: '#finance',  bg: '#ffedd5', color: '#9a3412' },
-  { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' },
-  { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',    bg: '#1E1542', color: '#C5BCDE' }
-];
-
-
-let allLogs = [];
-let currentCategoryFilter = 'all';
-
-function getTodayString() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function getTomorrowString() {
-  const now = new Date();
-  now.setDate(now.getDate() + 1);
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-let todayStr = getTodayString();
-let tomorrowStr = getTomorrowString();
+let allRules = [];
 
 function initGoogleSignIn() {
   const container = document.getElementById("googleSignInContainer");
@@ -47,18 +12,10 @@ function initGoogleSignIn() {
       callback: handleCredentialResponse
     });
     google.accounts.id.renderButton(container, { theme: "outline", size: "large" });
-  } else if (typeof CONFIG === 'undefined' || !CONFIG.GOOGLE_CLIENT_ID) {
-    container.innerHTML = '<div style="color:#ef4444; font-size:0.8rem;">❌ 讀取失敗：缺少 config.js 或 GOOGLE_CLIENT_ID</div>';
   }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  initCategoriesInfrastructure();
-
-  if (typeof CONFIG === 'undefined') {
-    showStatus('❌ 找不到 config.js 設定', '#ef4444');
-    return;
-  }
   const savedEmail = sessionStorage.getItem("user_google_email") || (sessionStorage.getItem("google_user") ? JSON.parse(sessionStorage.getItem("google_user")).email : null);
   if (savedEmail && typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
     if (ALLOWED_EMAILS.map(e => e.toLowerCase().trim()).includes(savedEmail.toLowerCase().trim())) {
@@ -68,71 +25,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   checkLoginStatus();
 });
-
-function initCategoriesInfrastructure() {
-  let styleEl = document.getElementById('dynamicCatStyles');
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = 'dynamicCatStyles';
-    document.head.appendChild(styleEl);
-  }
-  let cssText = '';
-  CATEGORIES.forEach(c => {
-    if (c.id !== 'all' && c.bg) {
-      cssText += `.task-card.tag-${c.id} { background-color: ${c.bg} !important; color: ${c.color} !important; }\n`;
-    }
-  });
-  styleEl.textContent = cssText;
-
-  const sidebar = document.getElementById('sidebarCategories');
-  if (sidebar) {
-    sidebar.innerHTML = '<div class="sidebar-title">看板分類</div>';
-    CATEGORIES.forEach(c => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `cat-btn ${c.id === currentCategoryFilter ? 'active' : ''}`;
-      btn.dataset.cat = c.id;
-      btn.onclick = () => setCategoryFilter(c.id);
-      btn.textContent = c.name;
-      sidebar.appendChild(btn);
-    });
-  }
-
-  const quickCatSelect = document.getElementById('quickCategory');
-  if (quickCatSelect) {
-    quickCatSelect.innerHTML = '';
-    CATEGORIES.forEach(c => {
-      if (c.id !== 'all') {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.name;
-        if (c.isDefault) opt.selected = true;
-        quickCatSelect.appendChild(opt);
-      }
-    });
-  }
-}
-
-function initializeApp() {
-  if (window.google && window.google.accounts && window.google.accounts.id) {
-    window.google.accounts.id.cancel();
-  }
-  document.getElementById('authOverlay').style.display = 'none';
-  document.getElementById('mainContainer').style.display = 'block';
-
-  const quickDateInput = document.getElementById('quickDate');
-  if (quickDateInput) quickDateInput.value = todayStr;
-
-  triggerRecurringCheck();
-  loadLogsData();
-}
-
-function triggerRecurringCheck() {
-  const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
-  if (apiUrl) {
-    fetch(`${apiUrl}?action=runTrigger`, { mode: 'no-cors' });
-  }
-}
 
 function handleCredentialResponse(response) {
   const payload = parseJwt(response.credential);
@@ -146,7 +38,6 @@ function handleCredentialResponse(response) {
     }
     sessionStorage.setItem("user_google_email", userEmail);
     sessionStorage.setItem('google_user', JSON.stringify({ name: payload.name, email: userEmail, picture: payload.picture }));
-    sessionStorage.setItem('google_token', response.credential);
     initializeApp();
   }
 }
@@ -167,107 +58,235 @@ function checkLoginStatus() {
   }
 }
 
+function initializeApp() {
+  document.getElementById('authOverlay').style.display = 'none';
+  document.getElementById('mainContainer').style.display = 'block';
+  loadRecurringData();
+}
+
 function showStatus(text, color = '#0284c7') {
   const msg = document.getElementById('statusMessage');
   if (msg) { msg.style.color = color; msg.textContent = text; }
 }
 
-function loadLogsData() {
+function loadRecurringData() {
   const sheetId = CONFIG.DAILY_SHEET_ID;
-  const gid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_LOG : '0';
-  if (!sheetId) { showStatus('❌ 缺少 DAILY_SHEET_ID', '#ef4444'); return; }
+  const recGid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_RECURRING : null;
+  if (!sheetId || !recGid) {
+    showStatus('❌ 缺少 DAILY_SHEET_ID 或 DAILY_RECURRING GID', '#ef4444');
+    return;
+  }
 
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&t=${new Date().getTime()}`;
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${recGid}&t=${new Date().getTime()}`;
 
   Papa.parse(csvUrl, {
-    download: true, header: true, skipEmptyLines: true,
+    download: true,
+    header: false,
+    skipEmptyLines: true,
     complete: (results) => {
-      allLogs = parseLogs(results.data);
+      allRules = parseRecurringArrayRows(results.data);
       showStatus('');
-      checkFrontendRecurring();
-      refreshAllViews();
+      renderRulesList();
     },
     error: () => showStatus('❌ 讀取失敗，請確認 Google Sheet 公開權限', '#ef4444')
   });
 }
 
-/* ⚡ 模糊比對欄位名稱 */
-function getProp(obj, keyNames) {
-  if (!obj) return '';
-  for (let k of Object.keys(obj)) {
-    let cleanKey = k.trim().toLowerCase();
-    for (let kn of keyNames) {
-      if (cleanKey === kn || cleanKey.includes(kn)) {
-        return obj[k];
-      }
+function parseRecurringArrayRows(rows) {
+  if (!rows || rows.length === 0) return [];
+
+  let headerIndex = -1;
+  for (let i = 0; i < Math.min(rows.length, 5); i++) {
+    const rowStr = rows[i].join(',').toLowerCase();
+    if (rowStr.includes('content') || rowStr.includes('id')) {
+      headerIndex = i;
+      break;
     }
   }
-  return '';
+
+  if (headerIndex === -1) return [];
+
+  const headers = rows[headerIndex].map(h => String(h).trim().toLowerCase());
+  const idIdx = headers.findIndex(h => h === 'id' || h.includes('id'));
+  const contentIdx = headers.findIndex(h => h === 'content' || h.includes('content') || h.includes('事項'));
+  const typeIdx = headers.findIndex(h => h === 'type' || h.includes('type'));
+  const freqIdx = headers.findIndex(h => h === 'frequency' || h.includes('frequency'));
+  const dayIdx = headers.findIndex(h => h === 'dayparam' || h.includes('dayparam'));
+  const lastIdx = headers.findIndex(h => h === 'lastgenerated' || h.includes('lastgenerated'));
+  const remIdx = headers.findIndex(h => h === 'remarks' || h.includes('remarks') || h.includes('備註'));
+
+  const rules = [];
+  for (let i = headerIndex + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const content = contentIdx !== -1 && r[contentIdx] ? String(r[contentIdx]).trim() : '';
+    if (!content) continue;
+
+    rules.push({
+      id: idIdx !== -1 && r[idIdx] ? String(r[idIdx]).trim() : `R${String(i).padStart(3, '0')}`,
+      content: content,
+      type: typeIdx !== -1 && r[typeIdx] ? String(r[typeIdx]).trim() : 'Task',
+      frequency: freqIdx !== -1 && r[freqIdx] ? String(r[freqIdx]).trim().toUpperCase() : 'DAILY',
+      dayParam: dayIdx !== -1 && r[dayIdx] ? String(r[dayIdx]).trim() : '',
+      lastGenerated: lastIdx !== -1 && r[lastIdx] ? String(r[lastIdx]).trim() : '',
+      remarks: remIdx !== -1 && r[remIdx] ? String(r[remIdx]).trim() : ''
+    });
+  }
+  return rules;
 }
 
-function checkFrontendRecurring() {
-  const sheetId = CONFIG.DAILY_SHEET_ID;
-  const recGid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_RECURRING : null;
-  if (!sheetId || !recGid) return;
+function renderRulesList() {
+  const grid = document.getElementById('rulesGrid');
+  grid.innerHTML = '';
 
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${recGid}&t=${new Date().getTime()}`;
+  if (allRules.length === 0) {
+    grid.innerHTML = '<div style="text-align:center; color:#64748b; padding:30px 0;">目前無重複規則</div>';
+    return;
+  }
 
-  Papa.parse(csvUrl, {
-    download: true, header: true, skipEmptyLines: true,
-    complete: (results) => {
-      if (!results.data) return;
-      const today = new Date();
-      let added = false;
+  allRules.forEach(rule => {
+    const card = document.createElement('div');
+    card.className = 'rule-card';
 
-      results.data.forEach((r, idx) => {
-        const frequency = String(getProp(r, ['frequency', '頻率']) || '').trim().toUpperCase();
-        const content = String(getProp(r, ['content', '內容', '事項']) || '').trim();
-        const type = String(getProp(r, ['type', '類型']) || 'Task').trim();
-        const dayParam = String(getProp(r, ['dayparam', '日期參數', 'day']) || '').trim();
-        const remarks = String(getProp(r, ['remarks', '備註']) || '').trim();
+    let paramText = rule.dayParam ? ` (參數: ${rule.dayParam})` : '';
 
-        if (!frequency || !content) return;
-
-        const targetDateStr = calcTargetDate(frequency, dayParam, today);
-        if (!targetDateStr) return;
-
-        const exists = allLogs.some(log => log.content === content && log.date === targetDateStr);
-
-        if (!exists) {
-          const newId = 'L_REC_' + new Date().getTime() + '_' + idx;
-          const newItem = { id: newId, date: targetDateStr, type, content, status: 'Pending', remarks };
-          allLogs.push(newItem);
-          added = true;
-
-          syncToSheet('addLog', { id: newId, date: targetDateStr, type, content, status: 'Pending', remarks });
-        }
-      });
-
-      if (added) {
-        refreshAllViews();
-      }
-    }
+    card.innerHTML = `
+      <div class="rule-info">
+        <div class="rule-header">
+          <span class="rule-id">${rule.id}</span>
+          <span class="rule-freq">${rule.frequency}${paramText}</span>
+          <span class="rule-type">${rule.type}</span>
+        </div>
+        <div class="rule-title">${rule.content}</div>
+        <div class="rule-details">
+          ${rule.remarks ? `💬 備註: ${rule.remarks} ｜ ` : ''}
+          ⏱️ 上次產生: ${rule.lastGenerated || '未產生'}
+        </div>
+      </div>
+      <div class="rule-actions">
+        <button class="btn-sm btn-gen" onclick="generateSingleRuleNow('${rule.id}')" title="立即產生一筆卡片至今天的待辦">⚡ 立即生成</button>
+        <button class="btn-sm btn-edit" onclick="openEditModal('${rule.id}')">✏️ 編輯</button>
+        <button class="btn-sm btn-del" onclick="deleteRule('${rule.id}')">🗑️ 刪除</button>
+      </div>
+    `;
+    grid.appendChild(card);
   });
 }
 
-/* ⚡ 1. 新增 DAILY 每天重複邏輯 */
+function updateDayParamHint() {
+  const freq = document.getElementById('modalFrequency').value;
+  const hintEl = document.getElementById('dayParamHint');
+  
+  if (freq === 'DAILY' || freq === 'MONTHLY_END' || freq === 'QUARTERLY_END') {
+    hintEl.textContent = '此模式不需填寫 DayParam (可留空)';
+  } else if (freq === 'MONTHLY_DAY') {
+    hintEl.textContent = '請填寫日期數字 (例如 15 代表每月 15 號)';
+  } else if (freq === 'YEARLY') {
+    hintEl.textContent = '請填寫月日格式 (例如 05-15 代表每年 5 月 15 日)';
+  }
+}
+
+function openAddModal() {
+  document.getElementById('modalTitle').textContent = '➕ 新增重複規則';
+  document.getElementById('modalRuleId').value = '';
+  document.getElementById('modalIdInput').value = `R${String(allRules.length + 1).padStart(3, '0')}`;
+  document.getElementById('modalIdInput').disabled = false;
+  document.getElementById('modalType').value = 'Task';
+  document.getElementById('modalContent').value = '';
+  document.getElementById('modalFrequency').value = 'DAILY';
+  document.getElementById('modalDayParam').value = '';
+  document.getElementById('modalRemarks').value = '';
+  updateDayParamHint();
+  document.getElementById('ruleModal').style.display = 'flex';
+}
+
+function openEditModal(id) {
+  const target = allRules.find(r => r.id === id);
+  if (!target) return;
+
+  document.getElementById('modalTitle').textContent = '✏️ 編輯重複規則';
+  document.getElementById('modalRuleId').value = target.id;
+  document.getElementById('modalIdInput').value = target.id;
+  document.getElementById('modalIdInput').disabled = true;
+  document.getElementById('modalType').value = target.type;
+  document.getElementById('modalContent').value = target.content;
+  document.getElementById('modalFrequency').value = target.frequency;
+  document.getElementById('modalDayParam').value = target.dayParam;
+  document.getElementById('modalRemarks').value = target.remarks;
+  updateDayParamHint();
+  document.getElementById('ruleModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('ruleModal').style.display = 'none';
+}
+
+function handleFormSubmit(e) {
+  e.preventDefault();
+  const ruleId = document.getElementById('modalRuleId').value;
+  const idInput = document.getElementById('modalIdInput').value.trim();
+  const type = document.getElementById('modalType').value;
+  const content = document.getElementById('modalContent').value.trim();
+  const frequency = document.getElementById('modalFrequency').value;
+  const dayParam = document.getElementById('modalDayParam').value.trim();
+  const remarks = document.getElementById('modalRemarks').value.trim();
+
+  if (!content) return;
+
+  const finalId = idInput || `R${new Date().getTime()}`;
+
+  if (ruleId) {
+    const target = allRules.find(r => r.id === ruleId);
+    if (target) {
+      target.type = type; target.content = content;
+      target.frequency = frequency; target.dayParam = dayParam; target.remarks = remarks;
+      syncToSheet('editRecurring', { id: target.id, type, content, frequency, dayParam, remarks });
+    }
+  } else {
+    const newRule = { id: finalId, type, content, frequency, dayParam, remarks, lastGenerated: '' };
+    allRules.push(newRule);
+    syncToSheet('addRecurring', { id: finalId, type, content, frequency, dayParam, remarks });
+  }
+
+  closeModal();
+  renderRulesList();
+}
+
+function deleteRule(id) {
+  if (!confirm(`確定要刪除重複規則 (${id}) 嗎？`)) return;
+
+  const idx = allRules.findIndex(r => r.id === id);
+  if (idx !== -1) {
+    allRules.splice(idx, 1);
+    syncToSheet('deleteRecurring', { id });
+    renderRulesList();
+  }
+}
+
+/* ⚡ 算今天的日期格式 YYYY-MM-DD */
+function getTodayStr() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+/* ⚡ 計算目標日期 */
 function calcTargetDate(frequency, dayParam, today) {
   const year = today.getFullYear();
   const month = today.getMonth();
+  const freq = String(frequency).toUpperCase();
 
-  if (frequency === 'DAILY') {
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  if (freq === 'DAILY') {
+    return getTodayStr();
   }
-  if (frequency === 'MONTHLY_END') {
+  if (freq === 'MONTHLY_END') {
     const d = new Date(year, month + 1, 0);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
-  if (frequency === 'MONTHLY_DAY') {
+  if (freq === 'MONTHLY_DAY') {
     const day = parseInt(dayParam || '1', 10);
     const d = new Date(year, month, day);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
-  if (frequency === 'QUARTERLY_END') {
+  if (freq === 'QUARTERLY_END') {
     const qEndMonths = [2, 5, 8, 11];
     let qMonth = qEndMonths.find(m => m >= month);
     let qYear = year;
@@ -275,7 +294,7 @@ function calcTargetDate(frequency, dayParam, today) {
     const d = new Date(qYear, qMonth + 1, 0);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
-  if (frequency === 'YEARLY') {
+  if (freq === 'YEARLY') {
     if (!dayParam || !dayParam.includes('-')) return null;
     const [mStr, dStr] = dayParam.split('-');
     return `${year}-${String(mStr).padStart(2, '0')}-${String(dStr).padStart(2, '0')}`;
@@ -283,812 +302,97 @@ function calcTargetDate(frequency, dayParam, today) {
   return null;
 }
 
-function parseRecurringRows(rows) {
-  if (!rows) return [];
-  return rows.map((r, idx) => {
-    const idVal = getProp(r, ['id', '唯一編號']);
-    const contentVal = getProp(r, ['content', '內容', '事項']);
-    const typeVal = getProp(r, ['type', '類型']);
-    const freqVal = getProp(r, ['frequency', '頻率']);
-    const dayVal = getProp(r, ['dayparam', '日期', '日']);
-    const lastVal = getProp(r, ['lastgenerated', '最後']);
-    const remVal = getProp(r, ['remarks', '備註']);
+/* ⚡ 1. 單一規則立即生成卡片至今日 */
+function generateSingleRuleNow(ruleId) {
+  const rule = allRules.find(r => r.id === ruleId);
+  if (!rule) return;
 
-    return {
-      id: String(idVal || '').trim() || `R${String(idx + 1).padStart(3, '0')}`,
-      content: String(contentVal || '').trim(),
-      type: String(typeVal || 'Task').trim(),
-      frequency: String(freqVal || 'DAILY').trim().toUpperCase(),
-      dayParam: String(dayVal || '').trim(),
-      lastGenerated: String(lastVal || '').trim(),
-      remarks: String(remVal || '').trim()
-    };
-  }).filter(r => {
-    // ⚡ 自動過濾空白列以及表格原本的第 2 列英文標題 (Content / ID)
-    const c = r.content.toLowerCase();
-    const id = r.id.toLowerCase();
-    return c !== '' && c !== 'content' && id !== 'id';
-  });
-}
+  const today = new Date();
+  const todayStr = getTodayStr();
+  const targetDate = calcTargetDate(rule.frequency, rule.dayParam, today) || todayStr;
 
-function setCategoryFilter(category) {
-  currentCategoryFilter = category;
-  document.querySelectorAll('.cat-btn').forEach(btn => {
-    if (btn.dataset.cat === category) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
-  });
-  refreshAllViews();
-}
+  const newId = 'L_REC_' + new Date().getTime();
 
-function toggleQuickDateInput(chk) {
-  const dt = document.getElementById('quickDate');
-  if (dt) {
-    dt.disabled = chk.checked;
-    dt.style.opacity = chk.checked ? '0.4' : '1';
-  }
-}
+  showStatus(`⏳ 正在為【${rule.content}】寫入 ${targetDate} 待辦...`, '#8b5cf6');
 
-/* ⚡ 3. 修改：分類標籤寫入「備註」而非「標題」 */
-function handleQuickSubmit(e) {
-  e.preventDefault();
-  const type = document.getElementById('quickType').value;
-  const catId = document.getElementById('quickCategory').value;
-  const isBacklog = document.getElementById('quickIsBacklog').checked;
-  let content = document.getElementById('quickContent').value.trim();
-  const quickDateVal = document.getElementById('quickDate').value;
-
-  if (!content) return;
-
-  let remarks = '';
-  const targetCatObj = CATEGORIES.find(c => c.id === catId);
-  if (targetCatObj && targetCatObj.tag) {
-    remarks = targetCatObj.tag;
-  }
-
-  const newId = 'L' + new Date().getTime();
-  const targetDate = isBacklog ? '' : (quickDateVal || todayStr);
-
-  const newItem = {
+  // 直接新增至 Daily Log
+  syncToSheet('addLog', {
     id: newId,
     date: targetDate,
-    type: type,
-    content: content,
+    type: rule.type,
+    content: rule.content,
     status: 'Pending',
-    remarks: remarks
-  };
-
-  allLogs.push(newItem);
-
-  document.getElementById('quickContent').value = '';
-  document.getElementById('quickIsBacklog').checked = false;
-  toggleQuickDateInput(document.getElementById('quickIsBacklog'));
-
-  refreshAllViews();
-  syncToSheet('addLog', { id: newId, date: targetDate, type, content, status: 'Pending', remarks: remarks });
-}
-
-function isItemDone(status) {
-  return status === '完成' || status === 'Done';
-}
-
-function isItemArchived(status) {
-  return status === 'Archived' || status === '已典藏';
-}
-
-function isNoteType(type) {
-  if (!type) return false;
-  const t = String(type).trim().toLowerCase();
-  return t === '筆記' || t === 'note' || t === '-';
-}
-
-function getTagClasses(item) {
-  const text = ((item.content || '') + ' ' + (item.remarks || '')).toLowerCase();
-  const classes = [];
-  CATEGORIES.forEach(c => {
-    if (c.tag && text.includes(c.tag.toLowerCase())) {
-      classes.push(`tag-${c.id}`);
-    }
+    remarks: rule.remarks
   });
-  return classes.join(' ');
+
+  // 更新 LastGenerated
+  rule.lastGenerated = todayStr;
+  syncToSheet('editRecurring', {
+    id: rule.id,
+    content: rule.content,
+    type: rule.type,
+    frequency: rule.frequency,
+    dayParam: rule.dayParam,
+    lastGenerated: todayStr,
+    remarks: rule.remarks
+  });
+
+  setTimeout(() => {
+    showStatus('');
+    alert(`✅ 已成功為【${rule.content}】生成 ${targetDate} 的待辦事項！\n返回主頁即可查看卡片。`);
+    renderRulesList();
+  }, 1000);
 }
 
-function updateAllBadges() {
-  const overdueCount = allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type)).length;
-  const pastNotesCount = allLogs.filter(i => i.date && i.date < todayStr && !isItemArchived(i.status) && isNoteType(i.type)).length;
-  const backlogCount = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status)).length;
-  const completedCount = allLogs.filter(i => isItemDone(i.status)).length;
-  const archivedCount = allLogs.filter(i => isItemArchived(i.status)).length;
+/* ⚡ 2. 批量檢測生成今天所有符合的重複規則 */
+function generateAllRulesNow() {
+  if (!confirm('確定要根據所有符合條件的規則，立即生成今天的待辦事項嗎？')) return;
 
-  document.getElementById('overdueBadgeCount').textContent = overdueCount + pastNotesCount;
-  document.getElementById('backlogBadgeCount').textContent = backlogCount;
-  document.getElementById('completedBadgeCount').textContent = completedCount;
-  document.getElementById('archivedBadgeCount').textContent = archivedCount;
-}
+  const today = new Date();
+  const todayStr = getTodayStr();
+  let generatedCount = 0;
 
-function saveDayOrder(dateStr, cardIds) {
-  try {
-    const savedOrders = JSON.parse(localStorage.getItem('daily_card_orders') || '{}');
-    savedOrders[dateStr] = cardIds;
-    localStorage.setItem('daily_card_orders', JSON.stringify(savedOrders));
-  } catch (e) {}
-}
+  showStatus('⏳ 正在檢測並生成今日待辦...', '#8b5cf6');
 
-function getDayOrder(dateStr) {
-  try {
-    const savedOrders = JSON.parse(localStorage.getItem('daily_card_orders') || '{}');
-    return savedOrders[dateStr] || null;
-  } catch (e) { return null; }
-}
+  allRules.forEach((rule, idx) => {
+    const targetDate = calcTargetDate(rule.frequency, rule.dayParam, today);
 
-/* ⚡ 2. 點擊日期可直接在該日期新增工作 */
-function renderTimeline() {
-  const container = document.getElementById('timelineContainer');
-  container.innerHTML = '';
+    if (targetDate === todayStr || rule.frequency === 'DAILY') {
+      const newId = 'L_REC_' + new Date().getTime() + '_' + idx;
 
-  const datedLogs = allLogs.filter(item => item.date && item.date >= todayStr && !isItemDone(item.status) && !isItemArchived(item.status));
-
-  let filteredLogs = datedLogs;
-  if (currentCategoryFilter !== 'all') {
-    filteredLogs = datedLogs.filter(item => getTagClasses(item).includes(`tag-${currentCategoryFilter}`));
-  }
-
-  const datesSet = new Set(filteredLogs.map(i => i.date));
-  datesSet.add(todayStr);
-  datesSet.add(tomorrowStr);
-  const sortedDates = Array.from(datesSet).sort();
-
-  const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-
-  let lastMonthYear = '';
-
-  sortedDates.forEach(dateVal => {
-    const dateParts = dateVal.split('-');
-    if (dateParts.length === 3) {
-      const year = dateParts[0];
-      const monthNum = parseInt(dateParts[1], 10);
-      const monthKey = `${year}-${monthNum}`;
-
-      if (monthKey !== lastMonthYear) {
-        lastMonthYear = monthKey;
-
-        const dObj = new Date(year, monthNum - 1, 1);
-        const monthNameEN = dObj.toLocaleString('en-US', { month: 'long' });
-
-        const monthHeader = document.createElement('div');
-        monthHeader.className = 'month-divider';
-        monthHeader.innerHTML = `
-          <span class="month-text">📅 ${monthNum} 月 ${monthNameEN}</span>
-          <span class="year-badge">${year} 年</span>
-        `;
-        container.appendChild(monthHeader);
-      }
-    }
-
-    const d = new Date(dateVal);
-    const weekdayStr = weekdays[d.getDay()];
-    const dayNum = dateParts[2] ? parseInt(dateParts[2], 10) : d.getDate();
-    const isToday = (dateVal === todayStr);
-    const isTomorrow = (dateVal === tomorrowStr);
-
-    let weekdayDisplay = weekdayStr;
-    if (isToday) weekdayDisplay = '今天';
-    else if (isTomorrow) weekdayDisplay = '明天';
-
-    let dayItems = filteredLogs.filter(i => i.date === dateVal);
-
-    const savedOrder = getDayOrder(dateVal);
-    if (savedOrder && Array.isArray(savedOrder)) {
-      dayItems.sort((a, b) => {
-        let idxA = savedOrder.indexOf(String(a.id));
-        let idxB = savedOrder.indexOf(String(b.id));
-        if (idxA === -1) idxA = 999;
-        if (idxB === -1) idxB = 999;
-        return idxA - idxB;
+      syncToSheet('addLog', {
+        id: newId,
+        date: todayStr,
+        type: rule.type,
+        content: rule.content,
+        status: 'Pending',
+        remarks: rule.remarks
       });
+
+      rule.lastGenerated = todayStr;
+      syncToSheet('editRecurring', {
+        id: rule.id,
+        content: rule.content,
+        type: rule.type,
+        frequency: rule.frequency,
+        dayParam: rule.dayParam,
+        lastGenerated: todayStr,
+        remarks: rule.remarks
+      });
+
+      generatedCount++;
     }
+  });
 
-    const pendingCount = dayItems.filter(i => !isNoteType(i.type)).length;
-
-    const dayBlock = document.createElement('div');
-    dayBlock.className = `day-block ${isToday ? 'is-today' : ''} ${isTomorrow ? 'is-tomorrow' : ''}`;
-    if (isToday) dayBlock.id = 'todayBlock';
-
-    dayBlock.innerHTML = `
-      <div class="day-date-col" onclick="openAddModal('${dateVal}')" style="cursor:pointer;" title="點擊在 ${dateVal} 新增事項">
-        <span class="day-weekday">${weekdayDisplay}</span>
-        <span class="day-number">${dayNum}</span>
-        <span style="font-size:0.65rem; color:var(--primary); margin-top:2px; font-weight:bold; opacity:0.85;">➕ 新增</span>
-      </div>
-      <div class="day-content-col">
-        ${pendingCount > 0 ? `<div class="pending-tasks-pill">☑ ${pendingCount} pending task${pendingCount > 1 ? 's' : ''}</div>` : ''}
-        <div class="day-card-list" data-date="${dateVal}" style="display:flex; flex-direction:column; gap:6px;"></div>
-      </div>
-    `;
-
-    const cardList = dayBlock.querySelector('.day-card-list');
-    if (dayItems.length === 0) {
-      cardList.innerHTML = `<div style="font-size:0.8rem; color:#94a3b8; padding:4px 0;">無待辦事項 🎉</div>`;
+  setTimeout(() => {
+    showStatus('');
+    if (generatedCount > 0) {
+      alert(`🎉 成功生成 ${generatedCount} 項待辦事項至今日（${todayStr}）！\n點擊「返回主頁」即可查看。`);
+      renderRulesList();
     } else {
-      dayItems.forEach(item => cardList.appendChild(createTaskCard(item)));
+      alert(`ℹ️ 今天（${todayStr}）沒有符合條件需新生成的項目。`);
     }
-
-    container.appendChild(dayBlock);
-  });
-
-  initSortable();
-}
-
-function createTaskCard(item) {
-  const card = document.createElement('div');
-  const tagClass = getTagClasses(item);
-  card.className = `task-card type-${item.type} ${tagClass}`;
-  card.dataset.id = item.id;
-  card.onclick = (e) => {
-    e.stopPropagation();
-    openEditModal(item);
-  };
-
-  let displayTitle = item.content;
-  let locationBadgeHtml = '';
-
-  const match = displayTitle.match(/@([^\s#(\[]+)(?:\((.*?)\))?/);
-  if (match) {
-    const locText = match[1];
-    const timeText = match[2];
-
-    displayTitle = displayTitle.replace(/@[^\s#]+(\(.*?\))?/, '').trim();
-
-    locationBadgeHtml = `
-      <span class="location-badge">
-        📍 ${locText}
-        ${timeText ? `<span class="loc-time">🕒 ${timeText}</span>` : ''}
-      </span>
-    `;
-  }
-
-  card.innerHTML = `
-    <div class="task-info">
-      <div class="task-title">${displayTitle}</div>
-      ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-      ${locationBadgeHtml}
-    </div>
-    <div class="drag-handle" title="拖曳排序" onclick="event.stopPropagation()">⋮⋮</div>
-  `;
-  return card;
-}
-
-function initSortable() {
-  if (typeof Sortable === 'undefined') return;
-
-  const lists = document.querySelectorAll('.day-card-list');
-  lists.forEach(list => {
-    new Sortable(list, {
-      handle: '.drag-handle',
-      animation: 150,
-      ghostClass: 'sortable-ghost',
-      onEnd: function (evt) {
-        const dateStr = evt.from.dataset.date;
-        if (!dateStr) return;
-
-        const currentCardIds = Array.from(evt.from.children)
-                                    .map(card => card.dataset.id)
-                                    .filter(Boolean);
-        saveDayOrder(dateStr, currentCardIds);
-      }
-    });
-  });
-}
-
-function sortReverseChronological(items) {
-  return items.sort((a, b) => {
-    const dateA = a.date || '';
-    const dateB = b.date || '';
-    if (dateA !== dateB) {
-      return dateB.localeCompare(dateA);
-    }
-    return String(b.id).localeCompare(String(a.id));
-  });
-}
-
-function openOverdueModal() {
-  renderOverdueModal();
-  document.getElementById('overdueModal').style.display = 'flex';
-}
-function closeOverdueModal() {
-  document.getElementById('overdueModal').style.display = 'none';
-}
-
-function renderOverdueModal() {
-  const body = document.getElementById('overdueModalBody');
-  body.innerHTML = '';
-
-  const overdueTasks = sortReverseChronological(
-    allLogs.filter(i => i.date && i.date < todayStr && !isItemDone(i.status) && !isItemArchived(i.status) && !isNoteType(i.type))
-  );
-
-  const pastNotes = sortReverseChronological(
-    allLogs.filter(i => i.date && i.date < todayStr && !isItemArchived(i.status) && isNoteType(i.type))
-  );
-
-  if (overdueTasks.length === 0 && pastNotes.length === 0) {
-    body.innerHTML = `<div style="text-align:center; color:#059669; padding:20px 0; font-weight:bold;">✅ 目前沒有逾期工作或過往筆記！</div>`;
-    return;
-  }
-
-  if (overdueTasks.length > 0) {
-    const tEl = document.createElement('div');
-    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#991b1b; margin-bottom:6px;";
-    tEl.textContent = "⚠️ 逾期任務與事件";
-    body.appendChild(tEl);
-
-    overdueTasks.forEach(item => {
-      const row = document.createElement('div');
-      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-      row.onclick = () => openEditModal(item);
-      row.innerHTML = `
-        <div class="task-info">
-          <div style="font-size:0.72rem; opacity:0.85; font-weight:bold;">📅 日期：${item.date}</div>
-          <div class="task-title">${item.content}</div>
-          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-        </div>
-      `;
-      body.appendChild(row);
-    });
-  }
-
-  if (pastNotes.length > 0) {
-    const nEl = document.createElement('div');
-    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
-    nEl.textContent = "📝 過往筆記 (Past Notes)";
-    body.appendChild(nEl);
-
-    pastNotes.forEach(item => {
-      const row = document.createElement('div');
-      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-      row.onclick = () => openEditModal(item);
-      row.innerHTML = `
-        <div class="task-info">
-          <div style="font-size:0.72rem; opacity:0.85; font-weight:bold;">📅 日期：${item.date}</div>
-          <div class="task-title">${item.content}</div>
-          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-        </div>
-      `;
-      body.appendChild(row);
-    });
-  }
-}
-
-function openBacklogModal() {
-  renderBacklogModal();
-  document.getElementById('backlogModal').style.display = 'flex';
-}
-function closeBacklogModal() {
-  document.getElementById('backlogModal').style.display = 'none';
-}
-
-function renderBacklogModal() {
-  const body = document.getElementById('backlogModalBody');
-  body.innerHTML = '';
-
-  const items = allLogs.filter(i => (!i.date || i.date.trim() === '') && !isItemDone(i.status) && !isItemArchived(i.status));
-  const tasks = sortReverseChronological(items.filter(i => !isNoteType(i.type)));
-  const notes = sortReverseChronological(items.filter(i => isNoteType(i.type)));
-
-  if (tasks.length === 0 && notes.length === 0) {
-    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">目前沒有未有日期的工作與筆記 🎉</div>`;
-    return;
-  }
-
-  if (tasks.length > 0) {
-    const tEl = document.createElement('div');
-    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#7e22ce; margin-bottom:6px;";
-    tEl.textContent = "☑️ 未有日期任務與事件";
-    body.appendChild(tEl);
-
-    tasks.forEach(item => {
-      const row = document.createElement('div');
-      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-      row.onclick = () => openEditModal(item);
-      row.innerHTML = `
-        <div class="task-info">
-          <div class="task-title">${item.content}</div>
-          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-        </div>
-      `;
-      body.appendChild(row);
-    });
-  }
-
-  if (notes.length > 0) {
-    const nEl = document.createElement('div');
-    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
-    nEl.textContent = "📝 未有日期筆記";
-    body.appendChild(nEl);
-
-    notes.forEach(item => {
-      const row = document.createElement('div');
-      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-      row.onclick = () => openEditModal(item);
-      row.innerHTML = `
-        <div class="task-info">
-          <div class="task-title">${item.content}</div>
-          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-        </div>
-      `;
-      body.appendChild(row);
-    });
-  }
-}
-
-function openCompletedModal() {
-  renderCompletedModal();
-  document.getElementById('completedModal').style.display = 'flex';
-}
-function closeCompletedModal() {
-  document.getElementById('completedModal').style.display = 'none';
-}
-
-function renderCompletedModal() {
-  const body = document.getElementById('completedModalBody');
-  body.innerHTML = '';
-
-  const items = allLogs.filter(i => isItemDone(i.status));
-  const tasks = sortReverseChronological(items.filter(i => !isNoteType(i.type)));
-  const notes = sortReverseChronological(items.filter(i => isNoteType(i.type)));
-
-  if (tasks.length === 0 && notes.length === 0) {
-    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">尚無已完成的事項</div>`;
-    return;
-  }
-
-  if (tasks.length > 0) {
-    const tEl = document.createElement('div');
-    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#166534; margin-bottom:6px;";
-    tEl.textContent = "✅ 已完成任務與事件";
-    body.appendChild(tEl);
-
-    tasks.forEach(item => {
-      const row = document.createElement('div');
-      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-      row.style.opacity = '0.85';
-      row.onclick = () => openEditModal(item);
-      row.innerHTML = `
-        <div class="task-info">
-          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
-          <div class="task-title" style="text-decoration:line-through;">${item.content}</div>
-          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-        </div>
-      `;
-      body.appendChild(row);
-    });
-  }
-
-  if (notes.length > 0) {
-    const nEl = document.createElement('div');
-    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
-    nEl.textContent = "📝 已完成筆記";
-    body.appendChild(nEl);
-
-    notes.forEach(item => {
-      const row = document.createElement('div');
-      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-      row.style.opacity = '0.85';
-      row.onclick = () => openEditModal(item);
-      row.innerHTML = `
-        <div class="task-info">
-          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
-          <div class="task-title" style="text-decoration:line-through;">${item.content}</div>
-          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-        </div>
-      `;
-      body.appendChild(row);
-    });
-  }
-}
-
-function archiveItem(id) {
-  const target = allLogs.find(l => String(l.id) === String(id));
-  if (!target) return;
-
-  target.status = 'Archived';
-  refreshAllViews();
-  syncToSheet('toggleLog', { 
-    id: target.id, 
-    content: target.content, 
-    oldContent: target.content,
-    date: target.date,
-    type: target.type,
-    remarks: target.remarks,
-    status: 'Archived' 
-  });
-}
-
-function openArchivedModal() {
-  renderArchivedModal();
-  document.getElementById('archivedModal').style.display = 'flex';
-}
-
-function closeArchivedModal() {
-  document.getElementById('archivedModal').style.display = 'none';
-}
-
-function renderArchivedModal() {
-  const body = document.getElementById('archivedModalBody');
-  body.innerHTML = '';
-
-  const items = allLogs.filter(i => isItemArchived(i.status));
-  const tasks = sortReverseChronological(items.filter(i => !isNoteType(i.type)));
-  const notes = sortReverseChronological(items.filter(i => isNoteType(i.type)));
-
-  if (tasks.length === 0 && notes.length === 0) {
-    body.innerHTML = `<div style="text-align:center; color:#64748b; padding:20px 0;">典藏庫為空</div>`;
-    return;
-  }
-
-  if (tasks.length > 0) {
-    const tEl = document.createElement('div');
-    tEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin-bottom:6px;";
-    tEl.textContent = "📦 典藏任務與事件";
-    body.appendChild(tEl);
-
-    tasks.forEach(item => {
-      const row = document.createElement('div');
-      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-      row.style.opacity = '0.75';
-      row.onclick = () => openEditModal(item);
-      row.innerHTML = `
-        <div class="task-info">
-          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
-          <div class="task-title">${item.content}</div>
-          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-        </div>
-      `;
-      body.appendChild(row);
-    });
-  }
-
-  if (notes.length > 0) {
-    const nEl = document.createElement('div');
-    nEl.style.cssText = "font-weight:bold; font-size:0.85rem; color:#475569; margin:14px 0 6px 0;";
-    nEl.textContent = "📝 典藏筆記";
-    body.appendChild(nEl);
-
-    notes.forEach(item => {
-      const row = document.createElement('div');
-      row.className = `task-card type-${item.type} ${getTagClasses(item)}`;
-      row.style.opacity = '0.75';
-      row.onclick = () => openEditModal(item);
-      row.innerHTML = `
-        <div class="task-info">
-          ${item.date ? `<div style="font-size:0.72rem; opacity:0.85;">📅 ${item.date}</div>` : `<div style="font-size:0.72rem; opacity:0.85;">📥 無日期</div>`}
-          <div class="task-title">${item.content}</div>
-          ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
-        </div>
-      `;
-      body.appendChild(row);
-    });
-  }
-}
-
-function unarchiveItem(id) {
-  const target = allLogs.find(l => String(l.id) === String(id));
-  if (!target) return;
-
-  target.status = 'Pending';
-  refreshAllViews();
-  syncToSheet('toggleLog', { 
-    id: target.id, 
-    content: target.content, 
-    oldContent: target.content,
-    date: target.date,
-    type: target.type,
-    remarks: target.remarks,
-    status: 'Pending' 
-  });
-}
-
-function assignToToday(id) {
-  const target = allLogs.find(l => String(l.id) === String(id));
-  if (!target) return;
-  target.date = todayStr;
-
-  refreshAllViews();
-  syncToSheet('editLog', { id: target.id, oldContent: target.content, date: target.date, type: target.type, content: target.content, remarks: target.remarks, status: target.status });
-}
-
-function refreshAllViews() {
-  renderTimeline();
-  updateAllBadges();
-  if (document.getElementById('overdueModal').style.display === 'flex') renderOverdueModal();
-  if (document.getElementById('backlogModal').style.display === 'flex') renderBacklogModal();
-  if (document.getElementById('completedModal').style.display === 'flex') renderCompletedModal();
-  if (document.getElementById('archivedModal').style.display === 'flex') renderArchivedModal();
-}
-
-/* ⚡ 2. 支援指定 presetDate 新增 */
-function openAddModal(presetDate) {
-  document.getElementById('modalFormTitle').textContent = '➕ 新增事項';
-  document.getElementById('modalItemId').value = '';
-  document.getElementById('modalDate').value = presetDate || todayStr;
-  document.getElementById('modalType').value = 'Task';
-  document.getElementById('modalContent').value = '';
-  document.getElementById('modalRemarks').value = '';
-
-  updateModalButtonsState();
-  document.getElementById('itemModal').style.display = 'flex';
-}
-
-function openEditModal(targetOrId) {
-  let target = null;
-  if (typeof targetOrId === 'object' && targetOrId !== null) {
-    target = targetOrId;
-  } else {
-    target = allLogs.find(l => String(l.id) === String(targetOrId));
-  }
-
-  if (!target) {
-    alert('⚠️ 找不到該事項資料');
-    return;
-  }
-
-  document.getElementById('modalFormTitle').textContent = '✏️ 編輯 / 操作事項';
-  document.getElementById('modalItemId').value = target.id;
-  document.getElementById('modalDate').value = target.date || '';
-  document.getElementById('modalType').value = target.type;
-  document.getElementById('modalContent').value = target.content;
-  document.getElementById('modalRemarks').value = target.remarks || '';
-
-  updateModalButtonsState(target);
-  document.getElementById('itemModal').style.display = 'flex';
-}
-
-function updateModalButtonsState(targetItem) {
-  const id = document.getElementById('modalItemId')?.value;
-  const currentType = document.getElementById('modalType')?.value;
-
-  const btnDelete = document.getElementById('btnDelete');
-  const btnArchive = document.getElementById('btnArchive');
-  const btnAssignToday = document.getElementById('btnAssignTodayModal');
-  const btnToggleDone = document.getElementById('btnToggleDoneModal');
-
-  if (!id) {
-    if (btnDelete) btnDelete.style.display = 'none';
-    if (btnArchive) btnArchive.style.display = 'none';
-    if (btnAssignToday) btnAssignToday.style.display = 'none';
-    if (btnToggleDone) btnToggleDone.style.display = 'none';
-    return;
-  }
-
-  const target = targetItem || allLogs.find(l => String(l.id) === String(id));
-
-  if (btnDelete) btnDelete.style.display = 'inline-block';
-
-  if (btnArchive) {
-    btnArchive.style.display = 'inline-block';
-    if (target && isItemArchived(target.status)) {
-      btnArchive.textContent = '↺ 取消典藏';
-      btnArchive.onclick = () => { unarchiveItem(id); closeItemModal(); };
-    } else {
-      btnArchive.textContent = '📦 典藏';
-      btnArchive.onclick = () => archiveFromModal();
-    }
-  }
-
-  if (btnAssignToday) {
-    if (target && target.date !== todayStr && !isItemDone(target.status)) {
-      btnAssignToday.style.display = 'inline-block';
-    } else {
-      btnAssignToday.style.display = 'none';
-    }
-  }
-
-  if (btnToggleDone) {
-    if (isNoteType(currentType)) {
-      btnToggleDone.style.display = 'none';
-    } else {
-      btnToggleDone.style.display = 'inline-block';
-      if (target && isItemDone(target.status)) {
-        btnToggleDone.textContent = '↺ 還原待辦';
-        btnToggleDone.style.background = '#e0f2fe';
-        btnToggleDone.style.color = '#0284c7';
-        btnToggleDone.style.borderColor = '#bae6fd';
-      } else {
-        btnToggleDone.textContent = '✅ 標示完成';
-        btnToggleDone.style.background = '#dcfce7';
-        btnToggleDone.style.color = '#15803d';
-        btnToggleDone.style.borderColor = '#86efac';
-      }
-    }
-  }
-}
-
-function assignToTodayFromModal() {
-  const id = document.getElementById('modalItemId').value;
-  if (!id) return;
-  assignToToday(id);
-  closeItemModal();
-}
-
-function toggleDoneFromModal() {
-  const id = document.getElementById('modalItemId').value;
-  if (!id) return;
-
-  const target = allLogs.find(l => String(l.id) === String(id));
-  if (!target) return;
-
-  const newStatus = isItemDone(target.status) ? 'Pending' : '完成';
-  target.status = newStatus;
-
-  closeItemModal();
-  refreshAllViews();
-
-  syncToSheet('toggleLog', { 
-    id: target.id, 
-    content: target.content, 
-    oldContent: target.content,
-    date: target.date,
-    type: target.type,
-    remarks: target.remarks,
-    status: newStatus 
-  });
-}
-
-function archiveFromModal() {
-  const id = document.getElementById('modalItemId').value;
-  if (!id) return;
-
-  archiveItem(id);
-  closeItemModal();
-}
-
-function closeItemModal() {
-  document.getElementById('itemModal').style.display = 'none';
-}
-
-function handleFormSubmit(e) {
-  e.preventDefault();
-  const id = document.getElementById('modalItemId').value;
-  const date = document.getElementById('modalDate').value.trim();
-  const type = document.getElementById('modalType').value;
-  const content = document.getElementById('modalContent').value.trim();
-  const remarks = document.getElementById('modalRemarks').value.trim();
-
-  if (!content) return;
-
-  if (id) {
-    const target = allLogs.find(l => String(l.id) === String(id));
-    if (target) {
-      const oldContent = target.content;
-      target.date = date; target.type = type; target.content = content; target.remarks = remarks;
-      syncToSheet('editLog', { id, oldContent, date, type, content, remarks, status: target.status });
-    }
-  } else {
-    const newId = 'L' + new Date().getTime();
-    const newItem = { id: newId, date, type, content, status: 'Pending', remarks };
-    allLogs.push(newItem);
-    syncToSheet('addLog', { id: newId, date, type, content, status: 'Pending', remarks });
-  }
-
-  closeItemModal();
-  refreshAllViews();
-}
-
-function deleteCurrentItem() {
-  const id = document.getElementById('modalItemId').value;
-  if (!id || !confirm('確定要刪除這筆事項嗎？')) return;
-
-  const idx = allLogs.findIndex(l => String(l.id) === String(id));
-  if (idx !== -1) {
-    const target = allLogs[idx];
-    allLogs.splice(idx, 1);
-    syncToSheet('deleteLog', { id: target.id, content: target.content });
-  }
-
-  closeItemModal();
-  refreshAllViews();
+  }, 1200);
 }
 
 function syncToSheet(action, paramsObj) {
@@ -1097,9 +401,4 @@ function syncToSheet(action, paramsObj) {
 
   const params = new URLSearchParams({ action, key: CONFIG.SECRET_KEY || '', ...paramsObj });
   fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' });
-}
-
-function scrollToToday() {
-  const el = document.getElementById('todayBlock');
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
