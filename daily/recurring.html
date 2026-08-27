@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🔄 重複事項管理 - Recurring Rules</title>
+  
+  <script src="config.js"></script>
+  <script src="allowed-emails.js"></script>
+  <script src="recurring.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  
+  <style>
+    :root {
+      --primary: #0284c7;
+      --bg-color: #f8fafc;
+      --border-color: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: #0f172a;
+      margin: 0;
+      padding: 12px;
+    }
+
+    .auth-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.85);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 9999; padding: 16px;
+    }
+    .auth-card {
+      background: #fff; border-radius: 16px; width: 100%; max-width: 360px;
+      padding: 28px 20px; text-align: center;
+    }
+
+    .container {
+      max-width: 1000px; margin: 0 auto; background: #fff;
+      padding: 16px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      display: none;
+    }
+
+    .header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 12px; border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap; gap: 10px;
+    }
+    .title-group { font-size: 1.1rem; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+
+    .btn-action {
+      background: var(--primary); color: #fff; border: none; padding: 8px 14px;
+      border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem;
+      display: inline-flex; align-items: center; gap: 4px; text-decoration: none;
+    }
+    .btn-action:hover { opacity: 0.9; }
+
+    .btn-secondary {
+      background: #f1f5f9; color: #475569; border: 1px solid var(--border-color);
+    }
+
+    .rules-grid {
+      display: flex; flex-direction: column; gap: 10px; margin-top: 16px;
+    }
+
+    .rule-card {
+      background: #ffffff; border: 1px solid var(--border-color);
+      border-radius: 12px; padding: 12px 16px; display: flex;
+      justify-content: space-between; align-items: center; gap: 12px;
+      transition: all 0.15s ease;
+    }
+    .rule-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08); }
+
+    .rule-info { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .rule-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .rule-id { font-size: 0.75rem; font-weight: bold; background: #e0f2fe; color: #0284c7; padding: 2px 6px; border-radius: 4px; }
+    .rule-freq { font-size: 0.75rem; font-weight: bold; background: #fef08a; color: #713f12; padding: 2px 6px; border-radius: 4px; }
+    .rule-type { font-size: 0.75rem; font-weight: bold; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; }
+    .rule-title { font-weight: bold; font-size: 0.95rem; }
+    .rule-details { font-size: 0.78rem; color: #64748b; }
+
+    .rule-actions { display: flex; gap: 6px; }
+    .btn-sm {
+      padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; cursor: pointer; font-weight: bold; border: none;
+    }
+    .btn-edit { background: #e0f2fe; color: #0284c7; }
+    .btn-del { background: #fee2e2; color: #ef4444; }
+
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.45); display: none; justify-content: center; align-items: center;
+      z-index: 1000; padding: 16px;
+    }
+    .modal-card {
+      background: #fff; border-radius: 16px; width: 100%; max-width: 480px;
+      padding: 20px; display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; font-weight: bold; }
+    .form-group input, .form-group select {
+      padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; outline: none;
+    }
+    .form-row { display: flex; gap: 10px; }
+    .form-row .form-group { flex: 1; }
+  </style>
+</head>
+<body>
+
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <h3 style="margin-top:0;">⚡ 日軌流光 - 管理重複事項</h3>
+      <p style="color:#64748b; font-size:0.85rem;">請先驗證 Google 帳號</p>
+      <div id="googleSignInContainer" style="display:flex; justify-content:center; min-height:40px;"></div>
+    </div>
+  </div>
+
+  <div class="container" id="mainContainer">
+    <div class="header-bar">
+      <div class="title-group">
+        <a href="daily_adv.html" class="btn-action btn-secondary">⬅️ 返回主頁</a>
+        <span>🔄 重複事項管理 (Recurring Rules)</span>
+      </div>
+      <button class="btn-action" onclick="openAddModal()">➕ 新增重複規則</button>
+    </div>
+
+    <div id="statusMessage" style="font-size:0.8rem; color:var(--primary); margin:10px 0 0 0;">⏳ 載入中...</div>
+
+    <div id="rulesGrid" class="rules-grid"></div>
+  </div>
+
+  <!-- 新增/編輯 Modal -->
+  <div id="ruleModal" class="modal-overlay">
+    <div class="modal-card">
+      <div style="font-weight:bold; font-size:1rem; border-bottom:1px solid #e2e8f0; padding-bottom:8px;" id="modalTitle">➕ 新增重複規則</div>
+      <form id="ruleForm" onsubmit="handleFormSubmit(event)">
+        <input type="hidden" id="modalRuleId">
+        
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+          <div class="form-row">
+            <div class="form-group">
+              <label>唯一編號 (ID)：</label>
+              <input type="text" id="modalIdInput" placeholder="例如 R001 (留空自動生成)">
+            </div>
+            <div class="form-group">
+              <label>類型：</label>
+              <select id="modalType">
+                <option value="Task">Task (任務)</option>
+                <option value="Event">Event (事件)</option>
+                <option value="筆記">筆記 (Note)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>事項內容 (Content)：</label>
+            <input type="text" id="modalContent" required placeholder="例如: 交租 #finance">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>重複頻率規則 (Frequency)：</label>
+              <select id="modalFrequency" onchange="updateDayParamHint()">
+                <option value="DAILY">DAILY (每天)</option>
+                <option value="MONTHLY_DAY">MONTHLY_DAY (每月指定日)</option>
+                <option value="MONTHLY_END">MONTHLY_END (每月最後一天)</option>
+                <option value="QUARTERLY_END">QUARTERLY_END (每季最後一天)</option>
+                <option value="YEARLY">YEARLY (每年指定日期)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>日期參數 (DayParam)：</label>
+              <input type="text" id="modalDayParam" placeholder="請參閱提示...">
+              <span id="dayParamHint" style="font-size:0.7rem; color:#64748b; font-weight:normal;"></span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>備註 (Remarks)：</label>
+            <input type="text" id="modalRemarks" placeholder="可選備註資訊...">
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+          <button type="button" onclick="closeModal()" style="padding:6px 12px; background:#f1f5f9; border:none; border-radius:6px; cursor:pointer;">取消</button>
+          <button type="submit" style="padding:6px 14px; background:var(--primary); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
+</body>
+</html>
