@@ -21,6 +21,6 @@ const CONFIG = {
   API_URLS: {
     DAILY: 'https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec',
     MONTHLY: 'https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec',
-    DAILY_RECURRING: https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec'
+    DAILY_RECURRING: 'https://script.google.com/macros/s/AKfycbzsRO60ArZr8jdhh7OqIva3416UajwiEXFUy3doRRhkNNo0kbnhGZdcg96xX1_bkQtg/exec'
   }
 };
