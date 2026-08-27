@@ -281,3 +281,32 @@ function syncToSheet(action, paramsObj) {
   const params = new URLSearchParams({ action, key: CONFIG.SECRET_KEY || '', ...paramsObj });
   fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' });
 }
+
+/* ⚡ 即時觸發生成重複待辦事項 */
+function triggerGenerateNow() {
+  const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
+  if (!apiUrl) {
+    alert('❌ 缺少 API URL 設定');
+    return;
+  }
+
+  if (!confirm('確定要立即執行重複規則，生成今天的待辦事項嗎？')) return;
+
+  showStatus('⏳ 正在發送生成指令給 Google Sheets，請稍候...', '#8b5cf6');
+
+  const params = new URLSearchParams({
+    action: 'runTrigger',
+    key: CONFIG.SECRET_KEY || ''
+  });
+
+  fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' })
+    .then(() => {
+      showStatus('✅ 觸發成功！已在背景發送生成指令，2 秒後更新頁面...', '#166534');
+      setTimeout(() => {
+        loadRecurringData();
+      }, 2000);
+    })
+    .catch(() => {
+      showStatus('❌ 觸發失敗，請確認網路或 API 設定。', '#ef4444');
+    });
+}
