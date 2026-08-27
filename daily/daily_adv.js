@@ -2,12 +2,13 @@
 const CATEGORIES = [
   { id: 'all',      name: '✨ 全部事項', tag: '',           bg: '',        color: '' },
   { id: 'personal', name: '👤 個人',      tag: '#personal', bg: '#f3e8ff', color: '#581c87', isDefault: true },
-  { id: 'sch',      name: '🏫 學校/學業', tag: '#sch',      bg: '#fef08a', color: '#713f12' },
-  { id: 'family',   name: '🏠 家庭/家',   tag: '#family',   bg: '#dcfce7', color: '#14532d' },
-  { id: 'work',     name: '💼 工作/辦公', tag: '#work',     bg: '#e0f2fe', color: '#075985' },
+  { id: 'sch',      name: '🏫 學校', tag: '#sch',      bg: '#fef08a', color: '#713f12' },
+  { id: 'family',   name: '🏠 家庭',   tag: '#family',   bg: '#dcfce7', color: '#14532d' },
+  { id: 'work',     name: '💼 工作', tag: '#work',     bg: '#e0f2fe', color: '#075985' },
   { id: 'urgent',   name: '🔥 重要/緊急', tag: '#urgent',   bg: '#ffe4e6', color: '#9f1239' },
   { id: 'finance',  name: '💰 財務/購物', tag: '#finance',  bg: '#ffedd5', color: '#9a3412' },
-  { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' }
+  { id: 'health',   name: '🌿 健康/飲食', tag: '#health',   bg: '#ccfbf1', color: '#115e59' },
+  { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',   bg: '#f0f9ff', color: '#0369a1' }
 ];
 
 let allLogs = [];
