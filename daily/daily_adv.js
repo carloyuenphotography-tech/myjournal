@@ -2,12 +2,12 @@
 const CATEGORIES = [
   { id: 'all',      name: '✨ 全部事項', tag: '',           bg: '',        color: '' },
   { id: 'personal', name: '👤 個人',      tag: '#personal', bg: '#f3e8ff', color: '#581c87', isDefault: true },
-  { id: 'sch',      name: '🏫 學校', tag: '#sch',      bg: '#fef08a', color: '#713f12' },
-  { id: 'family',   name: '🏠 家庭',   tag: '#family',   bg: '#dcfce7', color: '#14532d' },
-  { id: 'work',     name: '💼 工作', tag: '#work',     bg: '#e0f2fe', color: '#075985' },
+  { id: 'sch',      name: '🏫 學校/學業', tag: '#sch',      bg: '#fef08a', color: '#713f12' },
+  { id: 'family',   name: '🏠 家庭/家',   tag: '#family',   bg: '#dcfce7', color: '#14532d' },
+  { id: 'work',     name: '💼 工作/辦公', tag: '#work',     bg: '#e0f2fe', color: '#075985' },
   { id: 'urgent',   name: '🔥 重要/緊急', tag: '#urgent',   bg: '#ffe4e6', color: '#9f1239' },
   { id: 'finance',  name: '💰 財務/購物', tag: '#finance',  bg: '#ffedd5', color: '#9a3412' },
-  { id: 'health',   name: '🌿 健康/飲食', tag: '#health',   bg: '#ccfbf1', color: '#115e59' },
+  { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' },
   { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',   bg: '#f0f9ff', color: '#0369a1' }
 ];
 
@@ -396,6 +396,22 @@ function updateAllBadges() {
   document.getElementById('archivedBadgeCount').textContent = archivedCount;
 }
 
+/* 💾 本地記憶體排序記錄管理 */
+function saveDayOrder(dateStr, cardIds) {
+  try {
+    const savedOrders = JSON.parse(localStorage.getItem('daily_card_orders') || '{}');
+    savedOrders[dateStr] = cardIds;
+    localStorage.setItem('daily_card_orders', JSON.stringify(savedOrders));
+  } catch (e) {}
+}
+
+function getDayOrder(dateStr) {
+  try {
+    const savedOrders = JSON.parse(localStorage.getItem('daily_card_orders') || '{}');
+    return savedOrders[dateStr] || null;
+  } catch (e) { return null; }
+}
+
 function renderTimeline() {
   const container = document.getElementById('timelineContainer');
   container.innerHTML = '';
@@ -449,7 +465,20 @@ function renderTimeline() {
     if (isToday) weekdayDisplay = '今天';
     else if (isTomorrow) weekdayDisplay = '明天';
 
-    const dayItems = filteredLogs.filter(i => i.date === dateVal);
+    let dayItems = filteredLogs.filter(i => i.date === dateVal);
+
+    // 🎯 套用儲存好的自訂排序
+    const savedOrder = getDayOrder(dateVal);
+    if (savedOrder && Array.isArray(savedOrder)) {
+      dayItems.sort((a, b) => {
+        let idxA = savedOrder.indexOf(String(a.id));
+        let idxB = savedOrder.indexOf(String(b.id));
+        if (idxA === -1) idxA = 999;
+        if (idxB === -1) idxB = 999;
+        return idxA - idxB;
+      });
+    }
+
     const pendingCount = dayItems.filter(i => !isNoteType(i.type)).length;
 
     const dayBlock = document.createElement('div');
@@ -463,7 +492,7 @@ function renderTimeline() {
       </div>
       <div class="day-content-col">
         ${pendingCount > 0 ? `<div class="pending-tasks-pill">☑ ${pendingCount} pending task${pendingCount > 1 ? 's' : ''}</div>` : ''}
-        <div class="day-card-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+        <div class="day-card-list" data-date="${dateVal}" style="display:flex; flex-direction:column; gap:6px;"></div>
       </div>
     `;
 
@@ -477,11 +506,9 @@ function renderTimeline() {
     container.appendChild(dayBlock);
   });
 
-  // 初始化 Sortable 拖曳排序功能
   initSortable();
 }
 
-/* 🎯 右方加入 drag-handle 拖曳圖示 */
 function createTaskCard(item) {
   const card = document.createElement('div');
   const tagClass = getTagClasses(item);
@@ -502,18 +529,25 @@ function createTaskCard(item) {
   return card;
 }
 
-/* ⚡ 初始化 SortableJS：啟用拖曳手柄機制 */
+/* ⚡ 初始化 SortableJS 並在拖曳完畢時自動記憶順序 */
 function initSortable() {
   if (typeof Sortable === 'undefined') return;
 
   const lists = document.querySelectorAll('.day-card-list');
   lists.forEach(list => {
     new Sortable(list, {
-      handle: '.drag-handle', // 僅點擊圖示時觸發拖曳
+      handle: '.drag-handle',
       animation: 150,
       ghostClass: 'sortable-ghost',
       onEnd: function (evt) {
-        // 可在此擴充把最新順序同步回 Google Sheet
+        const dateStr = evt.from.dataset.date;
+        if (!dateStr) return;
+
+        // 擷取目前列表中所有卡片的 ID 順序並儲存
+        const currentCardIds = Array.from(evt.from.children)
+                                    .map(card => card.dataset.id)
+                                    .filter(Boolean);
+        saveDayOrder(dateStr, currentCardIds);
       }
     });
   });
