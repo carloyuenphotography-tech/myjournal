@@ -10,8 +10,8 @@
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
 
   <script src="daily_adv.js?v=2.5"></script>
-  <script src="config.js"></script>
-  <script src="allowed-emails.js"></script>
+  <script src="../config.js"></script>
+  <script src="../allowed-emails.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   
@@ -639,19 +639,31 @@
     }
 
     function loadNavbar() {
-      fetch('nav.html')
+      // 由於 daily_adv.html 位於 daily/ 資料夾下，因此需要往上一層抓取 ../nav.html
+      fetch('../nav.html')
         .then(response => response.text())
         .then(data => {
           const navContainer = document.getElementById('navbar');
           if (navContainer) {
             navContainer.innerHTML = data;
-            const currentPath = window.location.pathname.split('/').pop() || 'daily_adv.html';
+            
+            // 取得目前的完整相對路徑並進行 active 高亮標示
+            const currentFilename = window.location.pathname.split('/').pop() || 'daily_adv.html';
+            
             navContainer.querySelectorAll('.nav-btn').forEach(link => {
-              if (link.getAttribute('href') === currentPath) link.classList.add('active');
+              const href = link.getAttribute('href') || '';
+              if (href.includes(currentFilename)) {
+                link.classList.add('active');
+              }
             });
           }
         }).catch(err => console.log('導覽列載入失敗:', err));
     }
+
+    // 頁面載入時觸發導覽列讀取
+    window.addEventListener('DOMContentLoaded', () => {
+      loadNavbar();
+    });
   </script>
 
   <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
