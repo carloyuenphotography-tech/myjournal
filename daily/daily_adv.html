@@ -373,6 +373,53 @@
       opacity: 0.9;
       font-weight: normal;
     }
+        }
+
+    /* ☰ 三劃抽屜式導覽列樣式 */
+    .nav-bar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 12px 12px 12px;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 16px;
+    }
+    .nav-bar-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--header-bg);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hamburger-btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      font-size: 1.3rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #334155;
+      transition: background 0.2s;
+    }
+    .hamburger-btn:hover { background: #e2e8f0; }
+
+    .nav-drawer {
+      position: fixed;
+      top: 0;
+      right: -280px;
+      width: 280px;
+      height: 100%;
+      background: #ffffff;
+      box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+      z-index: 10000;
+      transition: right 0.3s ease;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body>
@@ -384,7 +431,21 @@
       <div id="googleSignInContainer" style="display:flex; justify-content:center; min-height:40px;"></div>
     </div>
   </div>
+<!-- ☰ 頂部與抽屜式導覽列 -->
+    <div class="nav-bar-header">
+      <div class="nav-bar-title">📊 校曆與 Dashboard</div>
+      <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
+    </div>
 
+    <div id="navOverlay" class="nav-overlay" onclick="closeNavDrawer()"></div>
+    <div id="navDrawer" class="nav-drawer">
+      <div class="nav-drawer-header">
+        <span>🧭 功能選單</span>
+        <button class="nav-drawer-close" onclick="closeNavDrawer()">✕</button>
+      </div>
+      <div id="navbar" class="nav-tabs"></div>
+    </div>
+  
   <div class="container" id="mainContainer">
     <div class="header-bar">
       <div class="title-group">✨ 日軌流光</div>
