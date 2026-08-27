@@ -1,9 +1,9 @@
 let allRules = [];
 
-function initGoogleSignIn() {
+window.initGoogleSignIn = function() {
   const container = document.getElementById("googleSignInContainer");
   if (!container) {
-    document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+    document.addEventListener('DOMContentLoaded', window.initGoogleSignIn);
     return;
   }
   if (typeof CONFIG !== 'undefined' && CONFIG.GOOGLE_CLIENT_ID && window.google) {
@@ -13,7 +13,7 @@ function initGoogleSignIn() {
     });
     google.accounts.id.renderButton(container, { theme: "outline", size: "large" });
   }
-}
+};
 
 window.addEventListener('DOMContentLoaded', () => {
   const savedEmail = sessionStorage.getItem("user_google_email") || (sessionStorage.getItem("google_user") ? JSON.parse(sessionStorage.getItem("google_user")).email : null);
@@ -53,14 +53,14 @@ function parseJwt(token) {
 function checkLoginStatus() {
   if (sessionStorage.getItem('google_user')) initializeApp();
   else {
-    document.getElementById('authOverlay').style.display = 'flex';
-    document.getElementById('mainContainer').style.display = 'none';
+    if (document.getElementById('authOverlay')) document.getElementById('authOverlay').style.display = 'flex';
+    if (document.getElementById('mainContainer')) document.getElementById('mainContainer').style.display = 'none';
   }
 }
 
 function initializeApp() {
-  document.getElementById('authOverlay').style.display = 'none';
-  document.getElementById('mainContainer').style.display = 'block';
+  if (document.getElementById('authOverlay')) document.getElementById('authOverlay').style.display = 'none';
+  if (document.getElementById('mainContainer')) document.getElementById('mainContainer').style.display = 'block';
   loadRecurringData();
 }
 
@@ -69,17 +69,11 @@ function showStatus(text, color = '#0284c7') {
   if (msg) { msg.style.color = color; msg.textContent = text; }
 }
 
-function getProp(obj, keyNames) {
-  if (!obj) return '';
-  for (let k of Object.keys(obj)) {
-    if (keyNames.includes(k.trim().toLowerCase())) {
-      return obj[k];
-    }
-  }
-  return '';
-}
-
 function loadRecurringData() {
+  if (typeof CONFIG === 'undefined') {
+    showStatus('❌ 缺少 config.js 設定', '#ef4444');
+    return;
+  }
   const sheetId = CONFIG.DAILY_SHEET_ID;
   const recGid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_RECURRING : null;
   if (!sheetId || !recGid) {
@@ -89,9 +83,14 @@ function loadRecurringData() {
 
   const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${recGid}&t=${new Date().getTime()}`;
 
+  if (typeof Papa === 'undefined') {
+    showStatus('❌ 載入 PapaParse 失敗，請確認網路連線', '#ef4444');
+    return;
+  }
+
   Papa.parse(csvUrl, {
     download: true,
-    header: false, // ⚡ 改用陣列讀取，以精確相容雙層標題列
+    header: false,
     skipEmptyLines: true,
     complete: (results) => {
       allRules = parseRecurringArrayRows(results.data);
@@ -105,7 +104,6 @@ function loadRecurringData() {
 function parseRecurringArrayRows(rows) {
   if (!rows || rows.length === 0) return [];
 
-  // 自動尋找包含 "ID" 或 "Content" 的英文標題列 (Row 2)
   let headerIndex = -1;
   for (let i = 0; i < Math.min(rows.length, 5); i++) {
     const rowStr = rows[i].join(',').toLowerCase();
@@ -147,6 +145,7 @@ function parseRecurringArrayRows(rows) {
 
 function renderRulesList() {
   const grid = document.getElementById('rulesGrid');
+  if (!grid) return;
   grid.innerHTML = '';
 
   if (allRules.length === 0) {
@@ -174,18 +173,20 @@ function renderRulesList() {
         </div>
       </div>
       <div class="rule-actions">
-        <button class="btn-sm btn-edit" onclick="openEditModal('${rule.id}')">✏️ 編輯</button>
-        <button class="btn-sm btn-del" onclick="deleteRule('${rule.id}')">🗑️ 刪除</button>
+        <button class="btn-sm btn-gen" onclick="window.generateSingleRuleNow('${rule.id}', 'today')" title="立即產生卡片至今天">⚡ 今天</button>
+        <button class="btn-sm btn-gen" style="background:#059669;" onclick="window.generateSingleRuleNow('${rule.id}', 'tomorrow')" title="立即產生卡片至明天">⚡ 明天</button>
+        <button class="btn-sm btn-edit" onclick="window.openEditModal('${rule.id}')">✏️ 編輯</button>
+        <button class="btn-sm btn-del" onclick="window.deleteRule('${rule.id}')">🗑️ 刪除</button>
       </div>
     `;
     grid.appendChild(card);
   });
 }
 
-function updateDayParamHint() {
+window.updateDayParamHint = function() {
   const freq = document.getElementById('modalFrequency').value;
   const hintEl = document.getElementById('dayParamHint');
-  
+  if (!hintEl) return;
   if (freq === 'DAILY' || freq === 'MONTHLY_END' || freq === 'QUARTERLY_END') {
     hintEl.textContent = '此模式不需填寫 DayParam (可留空)';
   } else if (freq === 'MONTHLY_DAY') {
@@ -193,9 +194,9 @@ function updateDayParamHint() {
   } else if (freq === 'YEARLY') {
     hintEl.textContent = '請填寫月日格式 (例如 05-15 代表每年 5 月 15 日)';
   }
-}
+};
 
-function openAddModal() {
+window.openAddModal = function() {
   document.getElementById('modalTitle').textContent = '➕ 新增重複規則';
   document.getElementById('modalRuleId').value = '';
   document.getElementById('modalIdInput').value = `R${String(allRules.length + 1).padStart(3, '0')}`;
@@ -205,11 +206,11 @@ function openAddModal() {
   document.getElementById('modalFrequency').value = 'DAILY';
   document.getElementById('modalDayParam').value = '';
   document.getElementById('modalRemarks').value = '';
-  updateDayParamHint();
+  window.updateDayParamHint();
   document.getElementById('ruleModal').style.display = 'flex';
-}
+};
 
-function openEditModal(id) {
+window.openEditModal = function(id) {
   const target = allRules.find(r => r.id === id);
   if (!target) return;
 
@@ -222,15 +223,15 @@ function openEditModal(id) {
   document.getElementById('modalFrequency').value = target.frequency;
   document.getElementById('modalDayParam').value = target.dayParam;
   document.getElementById('modalRemarks').value = target.remarks;
-  updateDayParamHint();
+  window.updateDayParamHint();
   document.getElementById('ruleModal').style.display = 'flex';
-}
+};
 
-function closeModal() {
+window.closeModal = function() {
   document.getElementById('ruleModal').style.display = 'none';
-}
+};
 
-function handleFormSubmit(e) {
+window.handleFormSubmit = function(e) {
   e.preventDefault();
   const ruleId = document.getElementById('modalRuleId').value;
   const idInput = document.getElementById('modalIdInput').value.trim();
@@ -245,7 +246,6 @@ function handleFormSubmit(e) {
   const finalId = idInput || `R${new Date().getTime()}`;
 
   if (ruleId) {
-    // 編輯舊資料
     const target = allRules.find(r => r.id === ruleId);
     if (target) {
       target.type = type; target.content = content;
@@ -253,17 +253,16 @@ function handleFormSubmit(e) {
       syncToSheet('editRecurring', { id: target.id, type, content, frequency, dayParam, remarks });
     }
   } else {
-    // 新增資料
     const newRule = { id: finalId, type, content, frequency, dayParam, remarks, lastGenerated: '' };
     allRules.push(newRule);
     syncToSheet('addRecurring', { id: finalId, type, content, frequency, dayParam, remarks });
   }
 
-  closeModal();
+  window.closeModal();
   renderRulesList();
-}
+};
 
-function deleteRule(id) {
+window.deleteRule = function(id) {
   if (!confirm(`確定要刪除重複規則 (${id}) 嗎？`)) return;
 
   const idx = allRules.findIndex(r => r.id === id);
@@ -272,41 +271,151 @@ function deleteRule(id) {
     syncToSheet('deleteRecurring', { id });
     renderRulesList();
   }
+};
+
+function getTodayStr() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
+function getTomorrowStr() {
+  const now = new Date();
+  now.setDate(now.getDate() + 1);
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function calcTargetDate(frequency, dayParam, baseDateObj) {
+  const year = baseDateObj.getFullYear();
+  const month = baseDateObj.getMonth();
+  const freq = String(frequency).toUpperCase();
+
+  if (freq === 'DAILY') {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(baseDateObj.getDate()).padStart(2, '0')}`;
+  }
+  if (freq === 'MONTHLY_END') {
+    const d = new Date(year, month + 1, 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  if (freq === 'MONTHLY_DAY') {
+    const day = parseInt(dayParam || '1', 10);
+    const d = new Date(year, month, day);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  if (freq === 'QUARTERLY_END') {
+    const qEndMonths = [2, 5, 8, 11];
+    let qMonth = qEndMonths.find(m => m >= month);
+    let qYear = year;
+    if (qMonth === undefined) { qMonth = 2; qYear = year + 1; }
+    const d = new Date(qYear, qMonth + 1, 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  if (freq === 'YEARLY') {
+    if (!dayParam || !dayParam.includes('-')) return null;
+    const [mStr, dStr] = dayParam.split('-');
+    return `${year}-${String(mStr).padStart(2, '0')}-${String(dStr).padStart(2, '0')}`;
+  }
+  return null;
+}
+
+window.generateSingleRuleNow = function(ruleId, targetDay = 'today') {
+  const rule = allRules.find(r => r.id === ruleId);
+  if (!rule) return;
+
+  const isTomorrow = targetDay === 'tomorrow';
+  const labelText = isTomorrow ? '明天' : '今天';
+  const baseDateObj = isTomorrow ? (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d; })() : new Date();
+  const dateStr = isTomorrow ? getTomorrowStr() : getTodayStr();
+
+  const targetDate = calcTargetDate(rule.frequency, rule.dayParam, baseDateObj) || dateStr;
+  const newId = 'L_REC_' + new Date().getTime();
+
+  showStatus(`⏳ 正在為【${rule.content}】寫入 ${targetDate} (${labelText}) 待辦...`, '#8b5cf6');
+
+  syncToSheet('addLog', {
+    id: newId,
+    date: targetDate,
+    type: rule.type,
+    content: rule.content,
+    status: 'Pending',
+    remarks: rule.remarks
+  });
+
+  rule.lastGenerated = dateStr;
+  syncToSheet('editRecurring', {
+    id: rule.id,
+    content: rule.content,
+    type: rule.type,
+    frequency: rule.frequency,
+    dayParam: rule.dayParam,
+    lastGenerated: dateStr,
+    remarks: rule.remarks
+  });
+
+  setTimeout(() => {
+    showStatus('');
+    alert(`✅ 已成功為【${rule.content}】生成 ${targetDate} (${labelText}) 的待辦事項！\n返回主頁即可查看卡片。`);
+    renderRulesList();
+  }, 1000);
+};
+
+window.generateAllRulesNow = function(targetDay = 'today') {
+  const isTomorrow = targetDay === 'tomorrow';
+  const labelText = isTomorrow ? '明天' : '今天';
+
+  if (!confirm(`確定要根據所有符合條件的規則，立即生成${labelText}的待辦事項嗎？`)) return;
+
+  const baseDateObj = isTomorrow ? (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d; })() : new Date();
+  const dateStr = isTomorrow ? getTomorrowStr() : getTodayStr();
+  let generatedCount = 0;
+
+  showStatus(`⏳ 正在檢測並生成${labelText}待辦...`, '#8b5cf6');
+
+  allRules.forEach((rule, idx) => {
+    const targetDate = calcTargetDate(rule.frequency, rule.dayParam, baseDateObj);
+
+    if (targetDate === dateStr || rule.frequency === 'DAILY') {
+      const newId = 'L_REC_' + new Date().getTime() + '_' + idx;
+
+      syncToSheet('addLog', {
+        id: newId,
+        date: dateStr,
+        type: rule.type,
+        content: rule.content,
+        status: 'Pending',
+        remarks: rule.remarks
+      });
+
+      rule.lastGenerated = dateStr;
+      syncToSheet('editRecurring', {
+        id: rule.id,
+        content: rule.content,
+        type: rule.type,
+        frequency: rule.frequency,
+        dayParam: rule.dayParam,
+        lastGenerated: dateStr,
+        remarks: rule.remarks
+      });
+
+      generatedCount++;
+    }
+  });
+
+  setTimeout(() => {
+    showStatus('');
+    if (generatedCount > 0) {
+      alert(`🎉 成功生成 ${generatedCount} 項待辦事項至${labelText}（${dateStr}）！\n點擊「返回主頁」即可查看。`);
+      renderRulesList();
+    } else {
+      alert(`ℹ️ ${labelText}（${dateStr}）沒有符合條件需新生成的項目。`);
+    }
+  }, 1200);
+};
+
 function syncToSheet(action, paramsObj) {
+  if (typeof CONFIG === 'undefined') return;
   const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
   if (!apiUrl) return;
 
   const params = new URLSearchParams({ action, key: CONFIG.SECRET_KEY || '', ...paramsObj });
   fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' });
-}
-
-/* ⚡ 即時觸發生成重複待辦事項 */
-function triggerGenerateNow() {
-  const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
-  if (!apiUrl) {
-    alert('❌ 缺少 API URL 設定');
-    return;
-  }
-
-  if (!confirm('確定要立即執行重複規則，生成今天的待辦事項嗎？')) return;
-
-  showStatus('⏳ 正在發送生成指令給 Google Sheets，請稍候...', '#8b5cf6');
-
-  const params = new URLSearchParams({
-    action: 'runTrigger',
-    key: CONFIG.SECRET_KEY || ''
-  });
-
-  fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' })
-    .then(() => {
-      showStatus('✅ 觸發成功！已在背景發送生成指令，2 秒後更新頁面...', '#166534');
-      setTimeout(() => {
-        loadRecurringData();
-      }, 2000);
-    })
-    .catch(() => {
-      showStatus('❌ 觸發失敗，請確認網路或 API 設定。', '#ef4444');
-    });
 }
