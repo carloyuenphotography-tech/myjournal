@@ -74,7 +74,7 @@
       border-radius: 10px; font-size: 0.72rem;
     }
 
-    /* ⚡ 快速輸入區 (支援日期選擇) */
+    /* ⚡ 快速輸入區 */
     .quick-input-card {
       background: #f8fafc; border: 1px solid var(--border-color);
       border-radius: 10px; padding: 10px; margin-top: 10px;
@@ -98,6 +98,7 @@
       border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.82rem; white-space: nowrap;
     }
 
+    /* 時間軸容器 */
     .timeline-container { display: flex; flex-direction: column; gap: 16px; margin-top: 14px; }
 
     .day-block { display: flex; gap: 12px; position: relative; }
@@ -143,8 +144,6 @@
 
     .task-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
     .task-title { font-weight: bold; font-size: 0.88rem; line-height: 1.35; word-break: break-word; }
-    
-    /* 💬 備註支援多行換行顯示 */
     .task-remarks {
       font-size: 0.75rem; opacity: 0.9; margin-top: 4px;
       white-space: pre-wrap; word-break: break-word;
@@ -179,7 +178,6 @@
     }
 
     .month-divider {
-      position: sticky; top: 0; z-index: 100;
       background: rgba(248, 250, 252, 0.95); backdrop-filter: blur(8px);
       padding: 8px 12px; margin: 12px 0 6px 0; border-bottom: 2px solid #cbd5e1;
       display: flex; align-items: center; gap: 10px;
@@ -192,21 +190,30 @@
       .btn-bubble { padding: 5px 9px; font-size: 0.85rem; }
     }
 
-    /* 🖥️ 桌面端：Google TasksBoard 看板佈局風格 */
+    /* 🖥️ 桌面端修正：TasksBoard 看板佈局 (修復 Flex 擠壓問題) */
     @media (min-width: 900px) {
       .container {
         max-width: 100% !important; padding: 20px;
         background: #f1f5f9; box-shadow: none;
       }
       .timeline-container {
-        display: flex; flex-direction: row; overflow-x: auto;
-        align-items: flex-start; gap: 16px; padding-bottom: 16px;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap; /* 👈 關鍵修正：允許月份標題獨立一行，欄位並排 */
+        align-items: flex-start;
+        gap: 16px;
       }
-      .timeline-container::-webkit-scrollbar { height: 8px; }
-      .timeline-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+      .month-divider {
+        flex: 0 0 100%; /* 👈 月份標題獨占 100% 寬度 */
+        width: 100%;
+        border-radius: 10px;
+        margin: 0 0 8px 0;
+      }
 
       .day-block {
-        min-width: 290px; max-width: 320px; flex: 0 0 290px;
+        flex: 0 0 280px; /* 固定看板卡片寬度 */
+        width: 280px;
         background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;
         padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         flex-direction: column; gap: 12px;
@@ -217,10 +224,6 @@
       }
       .day-number { font-size: 1.1rem; width: 32px; height: 32px; }
       .day-content-col { width: 100%; }
-      
-      .month-divider {
-        min-width: 100%; border-radius: 10px; margin: 0 0 10px 0;
-      }
 
       .modal-card { max-width: 680px !important; padding: 24px !important; }
       .form-row-inline { display: flex; gap: 16px; }
@@ -279,7 +282,7 @@
       </div>
     </div>
 
-    <!-- ⚡ Rapid Logging 快速輸入 (含預設今日日期選擇) -->
+    <!-- ⚡ Rapid Logging 快速輸入 -->
     <form class="quick-input-card" onsubmit="handleQuickSubmit(event)">
       <div class="quick-input-row">
         <select id="quickType">
