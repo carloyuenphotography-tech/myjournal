@@ -231,7 +231,7 @@ window.closeModal = function() {
   document.getElementById('ruleModal').style.display = 'none';
 };
 
-window.handleFormSubmit = function(e) {
+window.handleFormSubmit = async function(e) {
   e.preventDefault();
   const ruleId = document.getElementById('modalRuleId').value;
   const idInput = document.getElementById('modalIdInput').value.trim();
@@ -250,25 +250,25 @@ window.handleFormSubmit = function(e) {
     if (target) {
       target.type = type; target.content = content;
       target.frequency = frequency; target.dayParam = dayParam; target.remarks = remarks;
-      syncToSheet('editRecurring', { id: target.id, type, content, frequency, dayParam, remarks });
+      await syncToSheetAsync('editRecurring', { id: target.id, type, content, frequency, dayParam, remarks });
     }
   } else {
     const newRule = { id: finalId, type, content, frequency, dayParam, remarks, lastGenerated: '' };
     allRules.push(newRule);
-    syncToSheet('addRecurring', { id: finalId, type, content, frequency, dayParam, remarks });
+    await syncToSheetAsync('addRecurring', { id: finalId, type, content, frequency, dayParam, remarks });
   }
 
   window.closeModal();
   renderRulesList();
 };
 
-window.deleteRule = function(id) {
+window.deleteRule = async function(id) {
   if (!confirm(`確定要刪除重複規則 (${id}) 嗎？`)) return;
 
   const idx = allRules.findIndex(r => r.id === id);
   if (idx !== -1) {
     allRules.splice(idx, 1);
-    syncToSheet('deleteRecurring', { id });
+    await syncToSheetAsync('deleteRecurring', { id });
     renderRulesList();
   }
 };
@@ -317,7 +317,8 @@ function calcTargetDate(frequency, dayParam, baseDateObj) {
   return null;
 }
 
-window.generateSingleRuleNow = function(ruleId, targetDay = 'today') {
+/* ⚡ 單一規則生成（改為同步佇列） */
+window.generateSingleRuleNow = async function(ruleId, targetDay = 'today') {
   const rule = allRules.find(r => r.id === ruleId);
   if (!rule) return;
 
@@ -329,9 +330,10 @@ window.generateSingleRuleNow = function(ruleId, targetDay = 'today') {
   const targetDate = calcTargetDate(rule.frequency, rule.dayParam, baseDateObj) || dateStr;
   const newId = 'L_REC_' + new Date().getTime();
 
-  showStatus(`⏳ 正在為【${rule.content}】寫入 ${targetDate} (${labelText}) 待辦...`, '#8b5cf6');
+  showStatus(`⏳ 正在寫入【${rule.content}】至 ${targetDate} (${labelText}) 待辦...`, '#8b5cf6');
 
-  syncToSheet('addLog', {
+  // 1. 寫入 DAILY_LOG
+  await syncToSheetAsync('addLog', {
     id: newId,
     date: targetDate,
     type: rule.type,
@@ -340,8 +342,9 @@ window.generateSingleRuleNow = function(ruleId, targetDay = 'today') {
     remarks: rule.remarks
   });
 
+  // 2. 更新 LastGenerated
   rule.lastGenerated = dateStr;
-  syncToSheet('editRecurring', {
+  await syncToSheetAsync('editRecurring', {
     id: rule.id,
     content: rule.content,
     type: rule.type,
@@ -351,32 +354,33 @@ window.generateSingleRuleNow = function(ruleId, targetDay = 'today') {
     remarks: rule.remarks
   });
 
-  setTimeout(() => {
-    showStatus('');
-    alert(`✅ 已成功為【${rule.content}】生成 ${targetDate} (${labelText}) 的待辦事項！\n返回主頁即可查看卡片。`);
-    renderRulesList();
-  }, 1000);
+  showStatus('');
+  alert(`✅ 已成功為【${rule.content}】生成 ${targetDate} (${labelText}) 的待辦事項！\n返回主頁即可查看卡片。`);
+  renderRulesList();
 };
 
-window.generateAllRulesNow = function(targetDay = 'today') {
+/* ⚡ 批量生成（改為 async/await 順序寫入，防止 GAS 請求遺失） */
+window.generateAllRulesNow = async function(targetDay = 'today') {
   const isTomorrow = targetDay === 'tomorrow';
   const labelText = isTomorrow ? '明天' : '今天';
 
-  if (!confirm(`確定要根據所有符合條件的規則，立即生成${labelText}的待辦事項嗎？`)) return;
+  if (!confirm(`確定要根據所有符合條件的規則，順序生成${labelText}的待辦事項嗎？`)) return;
 
   const baseDateObj = isTomorrow ? (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d; })() : new Date();
   const dateStr = isTomorrow ? getTomorrowStr() : getTodayStr();
   let generatedCount = 0;
 
-  showStatus(`⏳ 正在檢測並生成${labelText}待辦...`, '#8b5cf6');
-
-  allRules.forEach((rule, idx) => {
+  for (let i = 0; i < allRules.length; i++) {
+    const rule = allRules[i];
     const targetDate = calcTargetDate(rule.frequency, rule.dayParam, baseDateObj);
 
     if (targetDate === dateStr || rule.frequency === 'DAILY') {
-      const newId = 'L_REC_' + new Date().getTime() + '_' + idx;
+      showStatus(`⏳ (${i + 1}/${allRules.length}) 正在生成【${rule.content}】...`, '#8b5cf6');
 
-      syncToSheet('addLog', {
+      const newId = 'L_REC_' + new Date().getTime() + '_' + i;
+
+      // 排隊寫入 DAILY_LOG
+      await syncToSheetAsync('addLog', {
         id: newId,
         date: dateStr,
         type: rule.type,
@@ -386,7 +390,7 @@ window.generateAllRulesNow = function(targetDay = 'today') {
       });
 
       rule.lastGenerated = dateStr;
-      syncToSheet('editRecurring', {
+      await syncToSheetAsync('editRecurring', {
         id: rule.id,
         content: rule.content,
         type: rule.type,
@@ -398,24 +402,27 @@ window.generateAllRulesNow = function(targetDay = 'today') {
 
       generatedCount++;
     }
-  });
+  }
 
-  setTimeout(() => {
-    showStatus('');
-    if (generatedCount > 0) {
-      alert(`🎉 成功生成 ${generatedCount} 項待辦事項至${labelText}（${dateStr}）！\n點擊「返回主頁」即可查看。`);
-      renderRulesList();
-    } else {
-      alert(`ℹ️ ${labelText}（${dateStr}）沒有符合條件需新生成的項目。`);
-    }
-  }, 1200);
+  showStatus('');
+  if (generatedCount > 0) {
+    alert(`🎉 成功順序寫入 ${generatedCount} 項待辦事項至${labelText}（${dateStr}）！\n點擊「返回主頁」即可查看。`);
+    renderRulesList();
+  } else {
+    alert(`ℹ️ ${labelText}（${dateStr}）沒有符合條件需新生成的項目。`);
+  }
 };
 
-function syncToSheet(action, paramsObj) {
-  if (typeof CONFIG === 'undefined') return;
-  const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
-  if (!apiUrl) return;
+/* ⚡ 排隊發送函式 (每筆間隔 350ms) */
+function syncToSheetAsync(action, paramsObj) {
+  return new Promise((resolve) => {
+    if (typeof CONFIG === 'undefined') return resolve();
+    const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
+    if (!apiUrl) return resolve();
 
-  const params = new URLSearchParams({ action, key: CONFIG.SECRET_KEY || '', ...paramsObj });
-  fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' });
+    const params = new URLSearchParams({ action, key: CONFIG.SECRET_KEY || '', ...paramsObj });
+    fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' })
+      .then(() => setTimeout(resolve, 350))
+      .catch(() => setTimeout(resolve, 350));
+  });
 }
