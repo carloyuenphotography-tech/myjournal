@@ -149,7 +149,7 @@ function renderRulesList() {
   grid.innerHTML = '';
 
   if (allRules.length === 0) {
-    grid.innerHTML = '<div style="text-align:center; color:#64748b; padding:30px 0;">目前無重複規則</div>';
+    grid.innerHTML = '<div style="text-align:center; color:#64748b; padding:30px 0; grid-column: 1 / -1;">目前無重複規則</div>';
     return;
   }
 
@@ -317,7 +317,7 @@ function calcTargetDate(frequency, dayParam, baseDateObj) {
   return null;
 }
 
-/* ⚡ 單一規則生成（改為同步佇列） */
+/* ⚡ 單一規則生成（自動在標題加上 🔄 圖示並寫入 Google Sheets） */
 window.generateSingleRuleNow = async function(ruleId, targetDay = 'today') {
   const rule = allRules.find(r => r.id === ruleId);
   if (!rule) return;
@@ -330,14 +330,18 @@ window.generateSingleRuleNow = async function(ruleId, targetDay = 'today') {
   const targetDate = calcTargetDate(rule.frequency, rule.dayParam, baseDateObj) || dateStr;
   const newId = 'L_REC_' + new Date().getTime();
 
-  showStatus(`⏳ 正在寫入【${rule.content}】至 ${targetDate} (${labelText}) 待辦...`, '#8b5cf6');
+  // 確保寫入標題最前方包含 🔄 圖示
+  const recIcon = '🔄 ';
+  const genContent = rule.content.startsWith('🔄') ? rule.content : (recIcon + rule.content);
 
-  // 1. 寫入 DAILY_LOG
+  showStatus(`⏳ 正在寫入【${genContent}】至 ${targetDate} (${labelText}) 待辦...`, '#8b5cf6');
+
+  // 1. 寫入 DAILY_LOG (包含 🔄 標題)
   await syncToSheetAsync('addLog', {
     id: newId,
     date: targetDate,
     type: rule.type,
-    content: rule.content,
+    content: genContent,
     status: 'Pending',
     remarks: rule.remarks
   });
@@ -355,11 +359,11 @@ window.generateSingleRuleNow = async function(ruleId, targetDay = 'today') {
   });
 
   showStatus('');
-  alert(`✅ 已成功為【${rule.content}】生成 ${targetDate} (${labelText}) 的待辦事項！\n返回主頁即可查看卡片。`);
+  alert(`✅ 已成功為【${genContent}】生成 ${targetDate} (${labelText}) 的待辦事項！\n返回主頁即可查看卡片。`);
   renderRulesList();
 };
 
-/* ⚡ 批量生成（改為 async/await 順序寫入，防止 GAS 請求遺失） */
+/* ⚡ 批量生成（自動在標題加上 🔄 圖示並寫入 Google Sheets） */
 window.generateAllRulesNow = async function(targetDay = 'today') {
   const isTomorrow = targetDay === 'tomorrow';
   const labelText = isTomorrow ? '明天' : '今天';
@@ -375,16 +379,19 @@ window.generateAllRulesNow = async function(targetDay = 'today') {
     const targetDate = calcTargetDate(rule.frequency, rule.dayParam, baseDateObj);
 
     if (targetDate === dateStr || rule.frequency === 'DAILY') {
-      showStatus(`⏳ (${i + 1}/${allRules.length}) 正在生成【${rule.content}】...`, '#8b5cf6');
+      const recIcon = '🔄 ';
+      const genContent = rule.content.startsWith('🔄') ? rule.content : (recIcon + rule.content);
+
+      showStatus(`⏳ (${i + 1}/${allRules.length}) 正在生成【${genContent}】...`, '#8b5cf6');
 
       const newId = 'L_REC_' + new Date().getTime() + '_' + i;
 
-      // 排隊寫入 DAILY_LOG
+      // 排隊寫入 DAILY_LOG (包含 🔄 標題)
       await syncToSheetAsync('addLog', {
         id: newId,
         date: dateStr,
         type: rule.type,
-        content: rule.content,
+        content: genContent,
         status: 'Pending',
         remarks: rule.remarks
       });

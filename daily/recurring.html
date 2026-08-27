@@ -7,7 +7,7 @@
   
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
-  <script src="recurring.js?v=5.0"></script>
+  <script src="recurring.js?v=6.0"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   
   <style>
@@ -38,9 +38,16 @@
     }
 
     .container {
-      max-width: 1000px; margin: 0 auto; background: #fff;
+      max-width: 1200px; margin: 0 auto; background: #fff;
       padding: 16px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
       display: none;
+    }
+
+    @media (min-width: 900px) {
+      .container {
+        max-width: 100% !important; padding: 20px;
+        background: #f8fafc; box-shadow: none;
+      }
     }
 
     .header-bar {
@@ -61,27 +68,31 @@
       background: #f1f5f9; color: #475569; border: 1px solid var(--border-color);
     }
 
+    /* ⚡ 響應式多欄網格佈局 */
     .rules-grid {
-      display: flex; flex-direction: column; gap: 10px; margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
     }
 
     .rule-card {
       background: #ffffff; border: 1px solid var(--border-color);
-      border-radius: 12px; padding: 12px 16px; display: flex;
-      justify-content: space-between; align-items: center; gap: 12px;
-      transition: all 0.15s ease; flex-wrap: wrap;
+      border-radius: 12px; padding: 14px 16px; display: flex;
+      flex-direction: column; justify-content: space-between; gap: 12px;
+      transition: all 0.15s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     }
-    .rule-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08); }
+    .rule-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08); }
 
-    .rule-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 240px; }
-    .rule-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .rule-info { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+    .rule-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .rule-id { font-size: 0.75rem; font-weight: bold; background: #e0f2fe; color: #0284c7; padding: 2px 6px; border-radius: 4px; }
     .rule-freq { font-size: 0.75rem; font-weight: bold; background: #fef08a; color: #713f12; padding: 2px 6px; border-radius: 4px; }
     .rule-type { font-size: 0.75rem; font-weight: bold; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; }
-    .rule-title { font-weight: bold; font-size: 0.95rem; }
+    .rule-title { font-weight: bold; font-size: 0.95rem; word-break: break-word; }
     .rule-details { font-size: 0.78rem; color: #64748b; }
 
-    .rule-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .rule-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 10px; }
     .btn-sm {
       padding: 6px 10px; font-size: 0.78rem; border-radius: 6px; cursor: pointer; font-weight: bold; border: none;
     }
@@ -118,22 +129,22 @@
   </div>
 
   <div class="container" id="mainContainer">
-<!-- 頂部按鈕區域 -->
-<div class="header-bar">
-  <div class="title-group">
-    <a href="daily_adv.html" class="btn-action btn-secondary">⬅️ 返回主頁</a>
-    <span>🔄 重複事項管理 (Recurring Rules)</span>
-  </div>
-  <div style="display:flex; gap:8px; flex-wrap:wrap;">
-    <button class="btn-action" style="background:#8b5cf6;" onclick="generateAllRulesNow('today')">⚡ 生成今天待辦</button>
-    <button class="btn-action" style="background:#059669;" onclick="generateAllRulesNow('tomorrow')">⚡ 生成明天待辦</button>
-    <button class="btn-action" onclick="openAddModal()">➕ 新增重複規則</button>
-  </div>
-</div>
+    <!-- 頂部導覽區（已修正包覆於容器內） -->
+    <div class="header-bar">
+      <div class="title-group">
+        <a href="daily_adv.html" class="btn-action btn-secondary">⬅️ 返回主頁</a>
+        <span>🔄 重複事項管理 (Recurring Rules)</span>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn-action" style="background:#8b5cf6;" onclick="generateAllRulesNow('today')">⚡ 生成今天待辦</button>
+        <button class="btn-action" style="background:#059669;" onclick="generateAllRulesNow('tomorrow')">⚡ 生成明天待辦</button>
+        <button class="btn-action" onclick="openAddModal()">➕ 新增重複規則</button>
+      </div>
     </div>
 
     <div id="statusMessage" style="font-size:0.8rem; color:var(--primary); margin:10px 0 0 0;">⏳ 載入中...</div>
 
+    <!-- 網格清單區域 -->
     <div id="rulesGrid" class="rules-grid"></div>
   </div>
 
