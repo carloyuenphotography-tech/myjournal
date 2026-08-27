@@ -514,43 +514,37 @@ function createTaskCard(item) {
   const tagClass = getTagClasses(item);
   card.className = `task-card type-${item.type} ${tagClass}`;
   card.dataset.id = item.id;
-  card.onclick = (e) => {
-    e.stopPropagation();
-    openEditModal(item);
-  };
+  card.onclick = (e) => { e.stopPropagation(); openEditModal(item); };
+
+  let displayTitle = item.content;
+  let locationBadgeHtml = '';
+
+  // 🎯 自動解析 @地點(時間) 或 @地點，例如 @學校(08:00-16:00) 或 @學校
+  const match = displayTitle.match(/@([^\s#(\[]+)(?:\((.*?)\))?/);
+  if (match) {
+    const locText = match[1];     // 地點：學校
+    const timeText = match[2];    // 時間：08:00-16:00 (若無則為 undefined)
+
+    // 從標題移除 @語法，保持標題潔淨
+    displayTitle = displayTitle.replace(/@[^\s#]+(\(.*?\))?/, '').trim();
+
+    locationBadgeHtml = `
+      <span class="location-badge">
+        📍 ${locText}
+        ${timeText ? `<span class="loc-time">🕒 ${timeText}</span>` : ''}
+      </span>
+    `;
+  }
 
   card.innerHTML = `
     <div class="task-info">
-      <div class="task-title">${item.content}</div>
+      <div class="task-title">${displayTitle}</div>
       ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+      ${locationBadgeHtml}
     </div>
     <div class="drag-handle" title="拖曳排序" onclick="event.stopPropagation()">⋮⋮</div>
   `;
   return card;
-}
-
-/* ⚡ 初始化 SortableJS 並在拖曳完畢時自動記憶順序 */
-function initSortable() {
-  if (typeof Sortable === 'undefined') return;
-
-  const lists = document.querySelectorAll('.day-card-list');
-  lists.forEach(list => {
-    new Sortable(list, {
-      handle: '.drag-handle',
-      animation: 150,
-      ghostClass: 'sortable-ghost',
-      onEnd: function (evt) {
-        const dateStr = evt.from.dataset.date;
-        if (!dateStr) return;
-
-        // 擷取目前列表中所有卡片的 ID 順序並儲存
-        const currentCardIds = Array.from(evt.from.children)
-                                    .map(card => card.dataset.id)
-                                    .filter(Boolean);
-        saveDayOrder(dateStr, currentCardIds);
-      }
-    });
-  });
 }
 
 function sortReverseChronological(items) {
