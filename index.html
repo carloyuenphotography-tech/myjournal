@@ -270,6 +270,10 @@
       gap: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.04);
       transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .daily-card:hover {
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
 
     /* 🎨 CATEGORIES 分類動態色彩系統 */
@@ -367,6 +371,37 @@
     }
     .drag-handle:active { cursor: grabbing; opacity: 1; }
     .sortable-ghost { opacity: 0.4; }
+
+    /* ✏️ Modal 編輯對話框樣式 */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.5); display: none; justify-content: center; align-items: center;
+      z-index: 10000; padding: 16px; backdrop-filter: blur(2px);
+    }
+    .modal-card {
+      background: #fff; border-radius: 16px; width: 100%; max-width: 480px;
+      padding: 20px; max-height: 85vh; display: flex; flex-direction: column;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .modal-header {
+      font-size: 1rem; font-weight: bold; margin-bottom: 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 10px; border-bottom: 1px solid var(--border-color);
+    }
+    .modal-close-btn { border: none; background: none; cursor: pointer; font-size: 1.2rem; color: #64748b; }
+    .modal-form-body { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+    .modal-form-body label { font-size: 0.8rem; font-weight: bold; display: flex; flex-direction: column; gap: 4px; color: #334155; }
+    .modal-form-body input[type="text"], .modal-form-body input[type="date"], .modal-form-body select, .modal-form-body textarea {
+      width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color);
+      font-size: 0.85rem; font-family: inherit;
+    }
+    .modal-form-body textarea { min-height: 100px; resize: vertical; line-height: 1.4; }
+    .form-row-inline { display: flex; gap: 10px; }
+    .form-row-inline label { flex: 1; }
+    .modal-actions-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 14px; flex-wrap: wrap; gap: 6px; border-top: 1px solid var(--border-color); padding-top: 12px;
+    }
 
     /* 月曆區域與控制列 */
     .calendar-controls {
@@ -540,7 +575,7 @@
     <!-- ☰ 頂部與抽屜式導覽列 -->
     <div class="nav-bar-header">
       <div class="nav-bar-title">📊 校曆與 Dashboard</div>
-      <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
+      <button class="hamburger-btn" onclick="openNavDrawer()">☰選單</button>
     </div>
 
     <div id="navOverlay" class="nav-overlay" onclick="closeNavDrawer()"></div>
@@ -598,6 +633,52 @@
 
     <!-- 手機版週檢視 (星期日至六) -->
     <div id="calendarList" class="calendar-list"></div>
+  </div>
+
+  <!-- ✏️ 編輯 / 操作事項 Modal -->
+  <div id="itemModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span id="modalFormTitle">✏️ 編輯事項</span>
+        <button class="modal-close-btn" onclick="closeItemModal()">✕</button>
+      </div>
+      <form id="itemForm" onsubmit="handleFormSubmit(event)">
+        <input type="hidden" id="modalItemId">
+        <div class="modal-form-body">
+          <div class="form-row-inline">
+            <label>日期：
+              <input type="date" id="modalDate">
+            </label>
+            <label>類型：
+              <select id="modalType" onchange="updateModalButtonsState()">
+                <option value="Task">Task (任務)</option>
+                <option value="Event">Event (事件)</option>
+                <option value="筆記">筆記 (Note)</option>
+              </select>
+            </label>
+          </div>
+          <label>內容：
+            <input type="text" id="modalContent" required>
+          </label>
+          <label>備註 (Remarks)：
+            <textarea id="modalRemarks" placeholder="可輸入詳細備註..."></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions-bar">
+          <div style="display:flex; gap:6px;">
+            <button type="button" id="btnDelete" onclick="deleteCurrentItem()" style="background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">🗑️ 刪除</button>
+            <button type="button" id="btnArchive" onclick="archiveFromModal()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">📦 典藏</button>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" id="btnAssignTodayModal" onclick="assignToTodayFromModal()" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">📅 排至今天</button>
+            <button type="button" id="btnToggleDoneModal" onclick="toggleDoneFromModal()" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">✅ 完成</button>
+            <button type="button" onclick="closeItemModal()" style="background:#f1f5f9; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;">取消</button>
+            <button type="submit" style="background:var(--primary-color); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">儲存</button>
+          </div>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script>
@@ -727,10 +808,9 @@
     const todayStr = getTodayString();
     let selectedDailyDate = todayStr;
 
-    // 取得指定日期所在的星期日 Date 物件
     function getSundayDate(d) {
       const dt = new Date(d);
-      const day = dt.getDay(); // 0 是 星期日
+      const day = dt.getDay();
       const diff = dt.getDate() - day;
       return new Date(dt.setDate(diff));
     }
@@ -835,12 +915,11 @@
       return text.replace(/#([\w\u4e00-\u9fa5]+)/g, '<span style="font-weight:600; opacity:0.9;">#$1</span>');
     }
 
-    // 取得 Status 的優先順序權重（數字越大越靠後排序）
     function getStatusPriority(status) {
       const s = String(status || '').trim().toLowerCase();
       if (s === 'done' || s === '完成' || s === '已完成') return 2;
       if (s === 'archived' || s === '典藏' || s === '已典藏') return 3;
-      return 1; // Pending / 進行中
+      return 1;
     }
 
     function renderDailyLog() {
@@ -854,13 +933,10 @@
 
       const targetDate = normalizeDateStr(selectedDailyDate);
       
-      // 載入當日所有狀態的事項
       let logs = dailyRows.filter(r => r.parsedDate === targetDate);
 
-      // 讀取 localStorage 自訂次序
       const savedOrder = JSON.parse(localStorage.getItem(`daily_order_${selectedDailyDate}`) || '[]');
 
-      // 排序邏輯：1. Status 狀態 (Pending > 完成 > Archived) 2. 同狀態內按自訂拖曳順序
       logs.sort((a, b) => {
         const prioA = getStatusPriority(a.parsedStatus);
         const prioB = getStatusPriority(b.parsedStatus);
@@ -896,7 +972,6 @@
         if (type === '事件' || type === 'Event') badgeClass = 'event';
         if (type === '筆記' || type === 'Note') badgeClass = 'note';
 
-        // 解析 @地點(時間)
         let locationBadgeHtml = '';
         const match = displayTitle.match(/@([^\s#(\[]+)(?:\((.*?)\))?/);
         if (match) {
@@ -913,7 +988,6 @@
 
         const div = document.createElement('div');
         
-        // 根據 Status 組合 class
         let statusClass = '';
         if (isDone) statusClass = 'status-done';
         else if (isArchived) statusClass = 'status-archived';
@@ -921,9 +995,11 @@
         div.className = `daily-card ${tagClass} ${statusClass}`.trim();
         div.setAttribute('data-id', item.id);
         
+        // 點擊卡片開啟編輯對話框
+        div.onclick = () => openEditModal(item);
+
         const formattedRemark = formatHashtags(remarks ? remarks.replace(/\n/g, '<br>') : '');
 
-        // 狀態特別標籤
         let statusBadgeHtml = '';
         if (isDone) statusBadgeHtml = `<span class="badge badge-status-done">✅ 已完成</span>`;
         if (isArchived) statusBadgeHtml = `<span class="badge badge-status-archived">📦 已典藏</span>`;
@@ -943,7 +1019,6 @@
         container.appendChild(div);
       });
 
-      // 啟用 SortableJS 並儲存次序至 localStorage
       if (typeof Sortable !== 'undefined') {
         Sortable.create(container, {
           handle: '.drag-handle',
@@ -970,6 +1045,236 @@
       const day = String(d.getDate()).padStart(2, '0');
       selectedDailyDate = `${y}-${m}-${day}`;
       renderDailyLog();
+    }
+
+    /* ✏️ Modal 操作與對話框邏輯 */
+    function openEditModal(target) {
+      if (!target) return;
+      document.getElementById('modalFormTitle').textContent = '✏️ 編輯 / 操作事項';
+      document.getElementById('modalItemId').value = target.id;
+      document.getElementById('modalDate').value = target.parsedDate || selectedDailyDate || todayStr;
+      document.getElementById('modalType').value = target.parsedType || 'Task';
+      document.getElementById('modalContent').value = target.parsedContent || '';
+      document.getElementById('modalRemarks').value = target.parsedRemarks || '';
+
+      updateModalButtonsState(target);
+      document.getElementById('itemModal').style.display = 'flex';
+    }
+
+    function closeItemModal() {
+      document.getElementById('itemModal').style.display = 'none';
+    }
+
+    function updateModalButtonsState(targetItem) {
+      const id = document.getElementById('modalItemId')?.value;
+      const currentType = document.getElementById('modalType')?.value;
+
+      const btnDelete = document.getElementById('btnDelete');
+      const btnArchive = document.getElementById('btnArchive');
+      const btnAssignToday = document.getElementById('btnAssignTodayModal');
+      const btnToggleDone = document.getElementById('btnToggleDoneModal');
+
+      if (!id) {
+        if (btnDelete) btnDelete.style.display = 'none';
+        if (btnArchive) btnArchive.style.display = 'none';
+        if (btnAssignToday) btnAssignToday.style.display = 'none';
+        if (btnToggleDone) btnToggleDone.style.display = 'none';
+        return;
+      }
+
+      const target = targetItem || dailyRows.find(l => String(l.id) === String(id));
+      if (!target) return;
+
+      if (btnDelete) btnDelete.style.display = 'inline-block';
+
+      const prio = getStatusPriority(target.parsedStatus);
+      const isDone = (prio === 2);
+      const isArchived = (prio === 3);
+
+      if (btnArchive) {
+        btnArchive.style.display = 'inline-block';
+        if (isArchived) {
+          btnArchive.textContent = '↺ 取消典藏';
+          btnArchive.onclick = () => { unarchiveItem(id); closeItemModal(); };
+        } else {
+          btnArchive.textContent = '📦 典藏';
+          btnArchive.onclick = () => archiveFromModal();
+        }
+      }
+
+      if (btnAssignToday) {
+        if (target.parsedDate !== todayStr && !isDone) {
+          btnAssignToday.style.display = 'inline-block';
+        } else {
+          btnAssignToday.style.display = 'none';
+        }
+      }
+
+      if (btnToggleDone) {
+        if (currentType && (currentType.toLowerCase() === '筆記' || currentType.toLowerCase() === 'note')) {
+          btnToggleDone.style.display = 'none';
+        } else {
+          btnToggleDone.style.display = 'inline-block';
+          if (isDone) {
+            btnToggleDone.textContent = '↺ 還原待辦';
+            btnToggleDone.style.background = '#e0f2fe';
+            btnToggleDone.style.color = '#0284c7';
+            btnToggleDone.style.borderColor = '#bae6fd';
+          } else {
+            btnToggleDone.textContent = '✅ 標示完成';
+            btnToggleDone.style.background = '#dcfce7';
+            btnToggleDone.style.color = '#15803d';
+            btnToggleDone.style.borderColor = '#86efac';
+          }
+        }
+      }
+    }
+
+    function toggleDoneFromModal() {
+      const id = document.getElementById('modalItemId').value;
+      if (!id) return;
+
+      const target = dailyRows.find(l => String(l.id) === String(id));
+      if (!target) return;
+
+      const prio = getStatusPriority(target.parsedStatus);
+      const isDone = (prio === 2);
+
+      const newStatus = isDone ? 'Pending' : '完成';
+      target.parsedStatus = newStatus;
+
+      closeItemModal();
+      renderDailyLog();
+
+      syncToSheet('toggleLog', { 
+        id: target.id, 
+        content: target.parsedContent, 
+        oldContent: target.parsedContent,
+        date: target.parsedDate,
+        type: target.parsedType,
+        remarks: target.parsedRemarks,
+        status: newStatus 
+      });
+    }
+
+    function archiveFromModal() {
+      const id = document.getElementById('modalItemId').value;
+      if (!id) return;
+
+      const target = dailyRows.find(l => String(l.id) === String(id));
+      if (!target) return;
+
+      target.parsedStatus = 'Archived';
+      closeItemModal();
+      renderDailyLog();
+
+      syncToSheet('toggleLog', { 
+        id: target.id, 
+        content: target.parsedContent, 
+        oldContent: target.parsedContent,
+        date: target.parsedDate,
+        type: target.parsedType,
+        remarks: target.parsedRemarks,
+        status: 'Archived' 
+      });
+    }
+
+    function unarchiveItem(id) {
+      const target = dailyRows.find(l => String(l.id) === String(id));
+      if (!target) return;
+
+      target.parsedStatus = 'Pending';
+      renderDailyLog();
+
+      syncToSheet('toggleLog', { 
+        id: target.id, 
+        content: target.parsedContent, 
+        oldContent: target.parsedContent,
+        date: target.parsedDate,
+        type: target.parsedType,
+        remarks: target.parsedRemarks,
+        status: 'Pending' 
+      });
+    }
+
+    function assignToTodayFromModal() {
+      const id = document.getElementById('modalItemId').value;
+      if (!id) return;
+
+      const target = dailyRows.find(l => String(l.id) === String(id));
+      if (!target) return;
+
+      target.parsedDate = todayStr;
+      closeItemModal();
+      renderDailyLog();
+
+      syncToSheet('editLog', { 
+        id: target.id, 
+        oldContent: target.parsedContent, 
+        date: todayStr, 
+        type: target.parsedType, 
+        content: target.parsedContent, 
+        remarks: target.parsedRemarks, 
+        status: target.parsedStatus 
+      });
+    }
+
+    function deleteCurrentItem() {
+      const id = document.getElementById('modalItemId').value;
+      if (!id || !confirm('確定要刪除這筆事項嗎？')) return;
+
+      const idx = dailyRows.findIndex(l => String(l.id) === String(id));
+      if (idx !== -1) {
+        const target = dailyRows[idx];
+        dailyRows.splice(idx, 1);
+        syncToSheet('deleteLog', { id: target.id, content: target.parsedContent });
+      }
+
+      closeItemModal();
+      renderDailyLog();
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('modalItemId').value;
+      const date = document.getElementById('modalDate').value.trim();
+      const type = document.getElementById('modalType').value;
+      const content = document.getElementById('modalContent').value.trim();
+      const remarks = document.getElementById('modalRemarks').value.trim();
+
+      if (!content) return;
+
+      if (id) {
+        const target = dailyRows.find(l => String(l.id) === String(id));
+        if (target) {
+          const oldContent = target.parsedContent;
+          target.parsedDate = date; 
+          target.parsedType = type; 
+          target.parsedContent = content; 
+          target.parsedRemarks = remarks;
+          
+          syncToSheet('editLog', { 
+            id, 
+            oldContent, 
+            date, 
+            type, 
+            content, 
+            remarks, 
+            status: target.parsedStatus 
+          });
+        }
+      }
+
+      closeItemModal();
+      renderDailyLog();
+    }
+
+    function syncToSheet(action, paramsObj) {
+      const apiUrl = CONFIG.API_URLS ? CONFIG.API_URLS.DAILY : '';
+      if (!apiUrl) return;
+
+      const params = new URLSearchParams({ action, key: CONFIG.SECRET_KEY || '', ...paramsObj });
+      fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' });
     }
 
     function processCalendarData(rows) {
@@ -1102,11 +1407,9 @@
         grid.appendChild(createCell('day-cell other-month', ''));
       }
 
-      // 渲染手機版週檢視
       renderMobileWeekCalendar();
     }
 
-    /* 📱 手機版週檢視 (星期日至六) */
     function changeMobileWeek(delta) {
       currentMobileWeekStart.setDate(currentMobileWeekStart.getDate() + (delta * 7));
       renderMobileWeekCalendar();
@@ -1126,7 +1429,6 @@
       const startStr = `${startDate.getFullYear()}/${startDate.getMonth()+1}/${startDate.getDate()}`;
       const endStr = `${endDate.getFullYear()}/${endDate.getMonth()+1}/${endDate.getDate()}`;
 
-      // 週導覽列 Header
       const weekCtrl = document.createElement('div');
       weekCtrl.className = 'mobile-week-ctrl';
       weekCtrl.innerHTML = `
@@ -1136,7 +1438,6 @@
       `;
       list.appendChild(weekCtrl);
 
-      // 渲染星期日到星期六共 7 天
       for (let i = 0; i < 7; i++) {
         const d = new Date(startDate);
         d.setDate(d.getDate() + i);

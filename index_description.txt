@@ -1,0 +1,26 @@
+這份網頁程式碼（index.html）是一個專為教職員或學校人員設計的 「校曆與每日工作整合儀表板（Dashboard）」。  為了方便你日後向 AI 或開發人員下達更新指令，以下為你整理這頁面的重點功能、設計特色以及技術資料流結構：一、 重點功能 (Key Features)🔐 Google 帳號驗證與 Email 白名單控制功能：整合 Google 官方 Identity SDK，使用者需透過 Google 帳號登入。  權限：會比對 allowed-emails.js 內的 Email 白名單，未授權用戶會被拒絕存取並顯示錯誤訊息。狀態保持：登入成功後將用戶資訊儲存於 sessionStorage，避免重新整理時重複登入。📌 今日動態行程與當值提示 (Today's Schedule & Duty)自動對應循環日：比對當日校曆的「循環日 (Cycle Day)」，並自動抓取該循環日對應的課表（節數、科目、班別、地點）。當值提醒：若有小息/午膳/放學當值安排，會以明顯的橘色卡片獨立標示（如 📢 當值：...）。📝 當日工作與筆記管理 (Daily Log & Tasks)按日切換：提供 ◀ / ▶ 按鈕可切換檢視不同日期的工作事項。事項分類：自動區分「工作 (Task)」、「事件 (Event)」、「筆記 (Note)」，並加上視覺標籤。自動解析 Hashtag：會自動辨識備註中的 #標籤 並轉換為高亮樣式。✋ 拖曳排序 (Drag & Drop)：整合 SortableJS，支援使用者用手指或滑鼠直接拖曳調整事項順序，並會自動存入 localStorage 記憶自訂順序。狀態過濾：自動過濾已完成 (Done) 的項目，只顯示未完成事項。📅 全月校曆檢視 (School Calendar & Monthly View)動態月份選擇器：自動從 CSV 資料集中提取可用月份，提供下拉選單與「上月/下月」快速切換按鈕。事件標籤分類：清楚標示「循環日 (A-F)」、「學校假期」與「特別活動」。今日高亮：自動為「今天」加上藍色外框與背景高亮標示。🧭 全站統一導覽列 (Dynamic Navigation)透過 fetch('nav.html') 動態載入頂部導覽列，並自動根據當前網址為對應頁面按鈕套用 active 高亮樣式。二、 設計特色與 UI/UX (Design & UX Highlights)📱 響應式雙模切換 (RWD - Desktop Grid vs Mobile List)桌機版 (Web)：採用標準的 7 欄日曆網格（.calendar-grid），適合大螢幕一覽全月安排。手機版 (Mobile)：當螢幕寬度 $\le 639\text{px}$ 時，自動隱藏網格，切換為垂直卡片流清單（.calendar-list），提升手機閱讀體驗。🎨 語意化色彩系統 (Semantic Color Scheme)全頁使用 CSS Variables (:root) 統一管理色彩，並運用色彩進行明確的功能分區：🟦 藍色 (--primary-color)：主要 UI、循環日標籤🟩 綠色 (--daily-color)：當日工作與筆記區塊🟧 橘色 (--duty-color)：當值提醒（高警示度）🟥 粉紅/紅色：學校假期標籤🟨 黃色/琥珀色：特別活動標籤🖱️ 直覺的微互動體驗拖曳反饋：工作卡片移過時顯示手掌游標（cursor: grab / grabbing）。導覽列橫向滾動：手機端導覽頁籤支援平滑橫向滑動 (-webkit-overflow-scrolling: touch)。三、 技術架構與資料源 (Tech Stack & Data Sources)數據解析：使用 PapaParse 解析外置 CSV 檔及 Google Sheets API 輸出的 CSV。資料來源：Sch Calendar-Grid view.csv（校曆資料：循環日/假期/活動）Google Sheets (Timetable)（個人時間表/課表）Google Sheets (Daily Log)（每日工作與速記）快取機制：sessionStorage: 登入狀態與用戶 EmaillocalStorage: 每日工作項目的拖曳自訂排序 (daily_order_YYYY-MM-DD)
+
+🌟 本次更新重點摘要：To-Do List 卡片美化與顏色分類：導入最新的 CATEGORIES 色彩系統（包含個人、學校、家庭、工作、緊急、財務、健康、攝影/天氣 #photo 等分類）。自動判斷 #tag 標籤並套用相對應的背景色與文字顏色。支援地點與時間解析：自動解析標題中的 @地點(時間)（例如：@禮堂(10:00)），並轉換成獨立高亮徽章顯示 📍。保留原習慣與簡化：保留 ◀ / ▶ 快速跳轉日期按鈕。保留 SortableJS 拖曳排序卡片功能（自動記憶於 LocalStorage）。簡化：未加入編輯彈窗，維持簡潔的單純檢視與排序。校曆手機版改為「週顯示 (星期日至六)」：在手機螢幕（$\le 639\text{px}$）下，校曆改為由星期日（Sun）至星期六（Sat）的單週視圖，並提供「◀ 上週」與「下週 ▶」切換按鈕。全站導覽列改為「三劃（Hamburger）抽屜式選單」：頂部左側設有標題，右側設有 ☰ 選單按鈕，點擊後展開抽屜式導覽列，適合選項過多的情況。
+
+🌟 本次更新重點：根據 Status 顯示不同視覺樣式：已完成 (完成 / Done)：事項標題會自動加上劃線 (刪除線 line-through)，卡片呈現半透明，並顯示 ✅ 已完成 徽章。已典藏 (Archived)：卡片呈現低透明度與灰階樣式，並顯示 📦 已典藏 徽章。自動排序置底：自動依照 未完成事項 (Pending) $\rightarrow$ 已完成 (完成) $\rightarrow$ 已典藏 (Archived) 的優先順序排列，把已完成和典藏的項目排在最下方。同一狀態層級內部，依舊保留 SortableJS 拖曳改變順序的功能（會記錄於 LocalStorage）。
+
+🌟 本次新增功能：
+點擊卡片彈出對話框：
+
+點擊任何當日工作卡片（按住右側 ⋮⋮ 仍可進行拖曳排序），即可彈出編輯視窗。
+
+完整操作動作按鈕：
+
+✅ 標示完成 / ↺ 還原待辦：可快速切換完成狀態（切換為筆記類型時會自動隱藏）。
+
+📦 典藏 / ↺ 取消典藏：可將事項放入典藏庫。
+
+📅 排至今天：非今天的待辦事項可一鍵改為今天。
+
+🗑️ 刪除：可刪除該筆資料。
+
+儲存：可即時修改日期、類型 (Task / Event / 筆記)、內容及備註 (Remarks)。
+
+自動同步至 Google Sheet：
+
+透過 syncToSheet() 自動將變更發送至 Google Apps Script 後端，保持資料同步。
