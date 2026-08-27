@@ -7,7 +7,7 @@
   
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
-  <script src="recurring.js?v=2.1"></script>
+  <script src="recurring.js?v=2.2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   
   <style>
@@ -118,15 +118,18 @@
   </div>
 
   <div class="container" id="mainContainer">
-    <div class="header-bar">
-      <div class="title-group">
-        <a href="daily_adv.html" class="btn-action btn-secondary">⬅️ 返回主頁</a>
-        <span>🔄 重複事項管理 (Recurring Rules)</span>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn-action" style="background:#8b5cf6;" onclick="generateAllRulesNow()">⚡ 即時生成今天符合待辦</button>
-        <button class="btn-action" onclick="openAddModal()">➕ 新增重複規則</button>
-      </div>
+<!-- 頂部按鈕區域 -->
+<div class="header-bar">
+  <div class="title-group">
+    <a href="daily_adv.html" class="btn-action btn-secondary">⬅️ 返回主頁</a>
+    <span>🔄 重複事項管理 (Recurring Rules)</span>
+  </div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <button class="btn-action" style="background:#8b5cf6;" onclick="generateAllRulesNow('today')">⚡ 生成今天待辦</button>
+    <button class="btn-action" style="background:#059669;" onclick="generateAllRulesNow('tomorrow')">⚡ 生成明天待辦</button>
+    <button class="btn-action" onclick="openAddModal()">➕ 新增重複規則</button>
+  </div>
+</div>
     </div>
 
     <div id="statusMessage" style="font-size:0.8rem; color:var(--primary); margin:10px 0 0 0;">⏳ 載入中...</div>
