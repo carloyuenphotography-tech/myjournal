@@ -4,568 +4,115 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>📁 專案管理 (Projects)</title>
-  <!-- Google Identity Services SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
   <style>
-    :root { --primary-color: #6366f1; --bg-color: #f8fafc; --border-color: #cbd5e1; }
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-color); color: #1e293b; margin: 0; padding: 12px; }
-    
-    /* 🔒 Google 登入驗證遮罩 Modal */
-    .auth-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(4px);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      padding: 16px;
-    }
-    .auth-card {
-      background: #ffffff;
-      border-radius: 16px;
-      width: 100%;
-      max-width: 360px;
-      padding: 28px 20px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-      text-align: center;
-    }
-    .auth-title { font-size: 1.25rem; font-weight: bold; color: #0f172a; margin-bottom: 8px; }
-    .auth-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 20px; }
-    .google-btn-wrapper { display: flex; justify-content: center; flex-direction: column; align-items: center; gap: 12px; }
+    :root { --primary-color: #6366f1; --bg-color: #f8fafc; --border-color: #cbd5e1; --header-bg: #1e293b; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-color); color: #1e293b; margin: 0; padding: 8px; }
 
-    .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 16px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: none; }
-    
-    .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; overflow-x: auto; white-space: nowrap; }
-    .nav-tabs::-webkit-scrollbar { display: none; }
-    .nav-btn { padding: 8px 14px; font-size: 0.88rem; border-radius: 6px; text-decoration: none; background: #e2e8f0; color: #475569; font-weight: bold; }
-    .nav-btn.active { background: var(--primary-color); color: #fff; }
-
-    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; font-size: 0.8rem; color: #475569; }
-    .logout-btn { background: #f1f5f9; border: 1px solid var(--border-color); padding: 3px 7px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-
-    /* ☰ 三劃選單按鈕樣式 */
-    .btn-hamburger {
-      background: #ffffff;
-      border: 1px solid var(--border-color);
-      color: var(--primary-color);
-      border-radius: 8px;
-      padding: 4px 10px;
-      font-size: 1.2rem;
-      line-height: 1;
-      font-weight: bold;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    #loginOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(248, 250, 252, 0.95); display: flex; flex-direction: column;
+      justify-content: center; align-items: center; z-index: 9999; gap: 16px;
     }
-    .btn-hamburger:hover { background: var(--primary-color); color: #fff; }
+    .login-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; max-width: 400px; width: 100%; }
+    .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 12px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: none; }
+
+    /* ☰ 藍本抽屜導覽列樣式 */
+    .nav-bar-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px 12px 12px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px; }
+    .nav-bar-title { font-size: 1.1rem; font-weight: bold; color: var(--header-bg); display: flex; align-items: center; gap: 6px; }
+    .hamburger-btn { background: #f1f5f9; border: 1px solid var(--border-color); font-size: 1.3rem; padding: 4px 10px; border-radius: 8px; cursor: pointer; color: #334155; }
+    .hamburger-btn:hover { background: #e2e8f0; }
+
+    .nav-drawer { position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: #ffffff; box-shadow: -4px 0 15px rgba(0,0,0,0.15); z-index: 10000; transition: right 0.3s ease; padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+    .nav-drawer.open { right: 0; }
+    .nav-drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px; font-weight: bold; }
+    .nav-drawer-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; }
+    .nav-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); z-index: 9999; display: none; backdrop-filter: blur(2px); }
+    .nav-overlay.open { display: block; }
+    .nav-tabs { display: flex; flex-direction: column; gap: 8px; }
+    .nav-btn { padding: 10px 14px; font-size: 0.9rem; border-radius: 8px; text-decoration: none; background: #f1f5f9; color: #334155; font-weight: bold; display: block; }
+    .nav-btn.active { background: var(--primary-color); color: #ffffff; }
 
     .controls-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; background: #f1f5f9; padding: 10px; border-radius: 8px; }
-    
     .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-    .project-card { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; flex-direction: column; gap: 10px; }
-    .project-card.archived { background: #f1f5f9; border-color: #94a3b8; opacity: 0.85; }
-    
-    .project-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-    .project-title { font-size: 1.05rem; font-weight: bold; color: #1e293b; display: flex; align-items: center; gap: 6px; }
-    .project-actions { display: flex; gap: 4px; }
-
-    .task-list { display: flex; flex-direction: column; gap: 6px; min-height: 50px; }
-    .task-item {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 8px;
-      font-size: 0.85rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: grab;
-      user-select: none;
-    }
-    .task-item:active { cursor: grabbing; }
-    .task-item.dragging { opacity: 0.4; background: #e2e8f0; border: 2px dashed var(--primary-color); }
-    
-    .drag-handle { color: #94a3b8; margin-right: 6px; cursor: grab; }
-    .task-content { flex: 1; min-width: 0; word-break: break-word; cursor: pointer; }
-    .task-content:hover { color: var(--primary-color); }
-    .task-meta { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
-
-    .badge-priority { font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 4px; }
-    .priority-high { background: #fee2e2; color: #dc2626; }
-    .priority-med { background: #fef3c7; color: #d97706; }
-    .priority-low { background: #f1f5f9; color: #64748b; }
-
-    .hashtag-pill { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 1px 5px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
-
-    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; }
-    .modal-box { background:#fff; width:100%; max-width:480px; border-radius:12px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
-    .form-group { margin-bottom: 10px; }
-    .form-group label { display: block; font-weight: bold; font-size: 0.8rem; color: #334155; margin-bottom: 3px; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; box-sizing: border-box; }
-    .form-group textarea.large-textarea { min-height: 110px; resize: vertical; }
-
-    .preview-remarks-box { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; min-height: 90px; font-size: 0.85rem; color: #0f172a; white-space: pre-wrap; word-break: break-word; }
+    .project-card { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
   </style>
 </head>
 <body>
 
-  <!-- 🔒 1. Google 登入驗證遮罩 -->
-  <div id="authOverlay" class="auth-overlay">
-    <div class="auth-card">
-      <div class="auth-title">📁 專案管理 (Projects)</div>
-      <div class="auth-desc">請登入 Google 帳號以驗證身分</div>
-      <div class="google-btn-wrapper">
-        <div id="g_id_onload" data-client_id="972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com" data-callback="handleCredentialResponse"></div>
-        <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large"></div>
-        <div id="loginErr" style="color: #ff3b30; font-size: 0.8rem; margin-top: 4px; white-space: pre-line;"></div>
-      </div>
+  <div id="loginOverlay">
+    <div class="login-card">
+      <h2>📁 專案管理看板</h2>
+      <p style="color: #8e8e93; font-size: 0.9rem;">請登入 Google 帳號以驗證身分</p>
+      <div id="g_id_onload" data-client_id="972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com" data-callback="handleCredentialResponse"></div>
+      <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"></div>
+      <div id="loginErr" style="color: #ff3b30; font-size: 0.85rem; margin-top: 12px;"></div>
     </div>
   </div>
 
-  <!-- 📱 2. 主畫面內容 -->
   <div class="container" id="mainContainer">
-    <div id="navbar" class="nav-tabs"></div>
+    <div class="nav-bar-header">
+      <div class="nav-bar-title">📁 專案管理看板 (Projects)</div>
+      <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
+    </div>
 
-    <div class="header-bar">
-      <div class="user-profile">
-        <span id="userInfo"></span>
-        <button class="logout-btn" onclick="logout()">登出</button>
+    <div id="navOverlay" class="nav-overlay" onclick="closeNavDrawer()"></div>
+    <div id="navDrawer" class="nav-drawer">
+      <div class="nav-drawer-header">
+        <span>🧭 功能選單</span>
+        <button class="nav-drawer-close" onclick="closeNavDrawer()">✕</button>
       </div>
-      <button type="button" class="btn-hamburger" onclick="toggleNavMenu()" title="切換選單">☰</button>
+      <div id="navbar" class="nav-tabs"></div>
     </div>
 
     <div class="controls-bar">
       <div style="display:flex; align-items:center; gap:10px;">
-        <h3 style="margin:0; color:var(--primary-color);">📁 專案看板管理 (Project Board)</h3>
+        <span id="userInfo" style="font-size:0.82rem; color:#475569;"></span>
         <button onclick="openTaskModal()" style="background:var(--primary-color); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:bold; cursor:pointer;">➕ 新增專案項目</button>
-      </div>
-      <div style="display:flex; gap:8px; align-items:center;">
-        <label style="font-size:0.8rem; font-weight:bold;">顯示設定：</label>
-        <select id="viewModeSelect" onchange="renderProjects()" style="padding:5px 8px; border-radius:6px; border:1px solid var(--border-color);">
-          <option value="active">進行中的專案</option>
-          <option value="archived">已典藏專案</option>
-          <option value="all">全部專案</option>
-        </select>
       </div>
     </div>
 
-    <div id="loading">⏳ 正在載入專案資料...</div>
     <div id="projectsGrid" class="projects-grid"></div>
   </div>
 
-  <!-- 🔍 預覽詳細 Modal -->
-  <div id="previewModal" class="modal-overlay">
-    <div class="modal-box">
-      <h3 style="margin-top:0; color:var(--primary-color);">👁️ 項目詳細檢視</h3>
-      <input type="hidden" id="previewRowIndex">
-      <div class="form-group"><label>專案名稱：</label><div id="previewProject" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; font-weight:bold;"></div></div>
-      <div class="form-group"><label>項目類型與名稱：</label><div id="previewTask" style="padding:6px; background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem;"></div></div>
-      <div class="form-group"><label>多行長備註 / 詳情：</label><div id="previewRemarks" class="preview-remarks-box"></div></div>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
-        <button type="button" onclick="openModalFromPreview()" style="background:#0284c7; color:#fff; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">✏️ 編輯此項目</button>
-        <button type="button" onclick="closePreviewModal()" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">關閉</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ➕ 新增/編輯 Modal -->
-  <div id="taskModal" class="modal-overlay">
-    <div class="modal-box">
-      <h3 id="modalTitleText" style="margin-top:0; color:var(--primary-color);">📝 新增專案項目</h3>
-      <form id="taskForm" onsubmit="handleTaskSubmit(event)">
-        <input type="hidden" id="editRowIndex">
-        
-        <div class="form-group">
-          <label>📁 專案名稱 (Project Title)</label>
-          <input type="text" id="inputProject" placeholder="例: 畢業典禮籌備 / 課程教材改革" required list="projectSuggestions">
-          <datalist id="projectSuggestions"></datalist>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;" class="form-group">
-          <div>
-            <label>📌 項目類型 (Signifier)</label>
-            <select id="inputSignifier">
-              <option value="• Task">• 任務 (Task)</option>
-              <option value="◦ Event">◦ 事件 (Event)</option>
-              <option value="- Note">- 便條 (Note)</option>
-            </select>
-          </div>
-          <div>
-            <label>⭐ 重要程度</label>
-            <select id="inputPriority">
-              <option value="普通">普通 (Normal)</option>
-              <option value="重要">重要 (High)</option>
-              <option value="低">低 (Low)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>📋 項目內容 (支援 #標籤)</label>
-          <input type="text" id="inputTask" placeholder="例: 預訂禮堂音響設備 #行政 #資安" required>
-        </div>
-
-        <div class="form-group">
-          <label>💬 多行長備註 / 詳情 (Remarks)</label>
-          <textarea id="inputRemarks" class="large-textarea" placeholder="輸入補充說明、連結或詳細內容..."></textarea>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
-          <button type="button" id="deleteBtn" onclick="deleteTaskItem()" style="background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; padding:7px 12px; border-radius:6px; font-weight:bold; cursor:pointer; display:none;">🗑️ 刪除</button>
-          <div style="display:flex; gap:8px; margin-left:auto;">
-            <button type="button" onclick="closeTaskModal()" style="padding:7px 12px; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">取消</button>
-            <button type="submit" id="submitBtn" style="background:var(--primary-color); color:#fff; border:none; padding:7px 16px; border-radius:6px; font-weight:bold; cursor:pointer;">儲存</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <script>
-    let projectRows = [];
-    let SHEET_ID = '';
-    let GID = '';
-    let API_URL = '';
-
-    function toggleNavMenu() {
-      const nav = document.getElementById('navbar');
-      if (nav) {
-        nav.style.display = (nav.style.display === 'none' || getComputedStyle(nav).display === 'none') ? 'flex' : 'none';
-      }
-    }
-
-    window.onload = () => {
-      loadNavbar();
-      if (typeof CONFIG !== 'undefined') {
-        SHEET_ID = CONFIG.PROJECTS_SHEET_ID || CONFIG.FT_SHEET_ID || '';
-        GID = (CONFIG.GIDS && CONFIG.GIDS.PROJECTS) ? CONFIG.GIDS.PROJECTS : '0';
-        API_URL = (CONFIG.API_URLS && CONFIG.API_URLS.PROJECTS) ? CONFIG.API_URLS.PROJECTS : (CONFIG.API_URLS?.FT || '');
-      }
-      checkLoginStatus();
-    };
-
-    function parseJwt(token) {
-      try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        return JSON.parse(decodeURIComponent(window.atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
-      } catch(e) { return null; }
-    }
+    function openNavDrawer() { document.getElementById('navDrawer').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); }
+    function closeNavDrawer() { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); }
 
     function handleCredentialResponse(response) {
-      const payload = parseJwt(response.credential);
-      if (!payload || !payload.email) return;
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
       const userEmail = payload.email.toLowerCase().trim();
-      if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
-        if (!ALLOWED_EMAILS.map(e => e.toLowerCase().trim()).includes(userEmail)) {
-          document.getElementById('loginErr').innerText = `⚠️ 存取被拒：未獲授權。`;
-          return;
-        }
+      if (typeof ALLOWED_EMAILS !== 'undefined' && ALLOWED_EMAILS.map(e => e.toLowerCase().trim()).includes(userEmail)) {
+        localStorage.setItem("user_google_email", userEmail);
+        localStorage.setItem("google_user", JSON.stringify({ name: payload.name, email: userEmail }));
+        checkLoginStatus();
       }
-      localStorage.setItem('user_google_email', userEmail);
-      localStorage.setItem('google_user', JSON.stringify({ name: payload.name, email: userEmail, picture: payload.picture }));
-      localStorage.setItem('google_token', response.credential);
-      checkLoginStatus();
     }
 
     function checkLoginStatus() {
-      const userStr = localStorage.getItem('google_user');
-      if (userStr) {
-        if (window.google?.accounts?.id) window.google.accounts.id.cancel();
-        const user = JSON.parse(userStr);
-        document.getElementById('userInfo').textContent = `👤 ${user.name || user.email}`;
-        document.getElementById('authOverlay').style.display = 'none';
+      const email = localStorage.getItem("user_google_email");
+      if (email) {
+        document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('mainContainer').style.display = 'block';
-        loadData();
-      } else {
-        document.getElementById('authOverlay').style.display = 'flex';
-        document.getElementById('mainContainer').style.display = 'none';
+        loadNavbar();
       }
-    }
-
-    function logout() {
-      localStorage.removeItem('user_google_email');
-      localStorage.removeItem('google_user');
-      localStorage.removeItem('google_token');
-      location.reload();
     }
 
     function loadNavbar() {
-      fetch('nav.html')
-        .then(res => res.text())
-        .then(data => {
-          const navContainer = document.getElementById('navbar');
-          if (navContainer) {
-            navContainer.innerHTML = data;
-            const currentPath = window.location.pathname.split('/').pop() || 'projects_2.html';
-            navContainer.querySelectorAll('.nav-btn').forEach(link => {
-              if (link.getAttribute('href') === currentPath) link.classList.add('active');
-            });
-          }
+      fetch('nav.html').then(res => res.text()).then(data => {
+        document.getElementById('navbar').innerHTML = data;
+        const currentPath = window.location.pathname.split('/').pop() || 'projects_2.html';
+        document.querySelectorAll('#navbar .nav-btn').forEach(link => {
+          if (link.getAttribute('href') === currentPath) link.classList.add('active');
         });
-    }
-
-    function loadData() {
-      if (!SHEET_ID) {
-        document.getElementById('loading').textContent = '❌ config.js 中缺少 Sheet ID 設定';
-        return;
-      }
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}&t=${new Date().getTime()}`;
-
-      Papa.parse(csvUrl, {
-        download: true, header: true, skipEmptyLines: true,
-        complete: (results) => {
-          projectRows = results.data.map((item, index) => {
-            const v = Object.values(item);
-            return {
-              id: item.ID || v[0] || `P_${index}`,
-              projectTitle: item.Project || item['專案名稱'] || v[1] || '未命名專案',
-              signifier: item.Signifier || v[2] || '• Task',
-              task: item.Task || item['項目'] || v[3] || '',
-              priority: item.Priority || item['重要程度'] || v[4] || '普通',
-              status: item.Status || item['狀態'] || '進行中',
-              remarks: item.Remarks || item['備註'] || v[5] || '',
-              _rowIndex: index + 2
-            };
-          });
-          updateProjectSuggestions();
-          renderProjects();
-          document.getElementById('loading').style.display = 'none';
-        }
       });
     }
 
-    function updateProjectSuggestions() {
-      const datalist = document.getElementById('projectSuggestions');
-      datalist.innerHTML = '';
-      const uniqueProjects = [...new Set(projectRows.map(r => r.projectTitle))];
-      uniqueProjects.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p;
-        datalist.appendChild(opt);
-      });
-    }
-
-    function formatTextWithTags(text) {
-      if (!text) return '';
-      return text.replace(/(#[^\s#]+)/g, '<span class="hashtag-pill">$1</span>');
-    }
-
-    function renderProjects() {
-      const grid = document.getElementById('projectsGrid');
-      const viewMode = document.getElementById('viewModeSelect').value;
-      grid.innerHTML = '';
-
-      let filtered = projectRows;
-      if (viewMode === 'active') {
-        filtered = projectRows.filter(r => r.status !== '已典藏');
-      } else if (viewMode === 'archived') {
-        filtered = projectRows.filter(r => r.status === '已典藏');
-      }
-
-      const groups = {};
-      filtered.forEach(item => {
-        if (!groups[item.projectTitle]) groups[item.projectTitle] = [];
-        groups[item.projectTitle].push(item);
-      });
-
-      if (Object.keys(groups).length === 0) {
-        grid.innerHTML = '<div style="color:#64748b; grid-column:1/-1; text-align:center; padding:30px;">目前沒有任何專案項目。</div>';
-        return;
-      }
-
-      for (const [projName, items] of Object.entries(groups)) {
-        const isArchived = items.every(i => i.status === '已典藏');
-        const card = document.createElement('div');
-        card.className = `project-card ${isArchived ? 'archived' : ''}`;
-
-        let tasksHtml = items.map(item => {
-          const pClass = item.priority === '重要' ? 'priority-high' : (item.priority === '低' ? 'priority-low' : 'priority-med');
-          return `
-            <div class="task-item" draggable="true" data-id="${item.id}" ondragstart="drag(event)" ondragover="allowDrop(event)" ondrop="drop(event, '${projName}')">
-              <div class="drag-handle" title="按住拖曳排序">☰</div>
-              <div class="task-content" onclick="openPreviewModal('${item.id}')">
-                <div>${item.signifier || '•'} ${formatTextWithTags(item.task)} <span class="badge-priority ${pClass}">${item.priority}</span></div>
-                ${item.remarks ? `<div class="task-meta">💬 ${formatTextWithTags(item.remarks)}</div>` : ''}
-              </div>
-              <button onclick="openTaskModal('${item.id}')" style="background:none; border:none; cursor:pointer; font-size:0.8rem;" title="編輯">✏️</button>
-            </div>
-          `;
-        }).join('');
-
-        card.innerHTML = `
-          <div class="project-header">
-            <div class="project-title">📁 ${projName} <span style="font-size:0.75rem; color:#64748b;">(${items.length})</span></div>
-            <div class="project-actions">
-              <button onclick="toggleProjectArchive('${projName}')" style="background:#f1f5f9; border:1px solid var(--border-color); padding:3px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer;">
-                ${isArchived ? '📤 取消典藏' : '📦 典藏專案'}
-              </button>
-            </div>
-          </div>
-          <div class="task-list" ondragover="allowDrop(event)" ondrop="dropToEmpty(event, '${projName}')">${tasksHtml}</div>
-        `;
-        grid.appendChild(card);
-      }
-    }
-
-    let draggedId = null;
-    function drag(e) {
-      draggedId = e.currentTarget.dataset.id;
-      e.currentTarget.classList.add('dragging');
-    }
-    function allowDrop(e) { e.preventDefault(); }
-    function drop(e, targetProj) {
-      e.preventDefault();
-      const targetItem = e.target.closest('.task-item');
-      if (!targetItem) return;
-      reorderItems(draggedId, targetItem.dataset.id, targetProj);
-    }
-    function dropToEmpty(e, targetProj) {
-      e.preventDefault();
-      if (draggedId) reorderItems(draggedId, null, targetProj);
-    }
-
-    function reorderItems(sourceId, targetId, projName) {
-      const sourceIdx = projectRows.findIndex(r => r.id === sourceId);
-      if (sourceIdx === -1) return;
-      const [moved] = projectRows.splice(sourceIdx, 1);
-      moved.projectTitle = projName;
-
-      if (targetId) {
-        const targetIdx = projectRows.findIndex(r => r.id === targetId);
-        if (targetIdx !== -1) projectRows.splice(targetIdx, 0, moved);
-        else projectRows.push(moved);
-      } else {
-        projectRows.push(moved);
-      }
-      renderProjects();
-      syncOrderToSheet();
-    }
-
-    function syncOrderToSheet() {
-      if (API_URL) {
-        const allIds = projectRows.map(r => r.id).join(',');
-        fetch(`${API_URL}?action=reorderProjects&ids=${allIds}&key=${CONFIG.SECRET_KEY || ''}`, { mode: 'no-cors' });
-      }
-    }
-
-    function toggleProjectArchive(projName) {
-      const targetItems = projectRows.filter(r => r.projectTitle === projName);
-      const isCurrentlyArchived = targetItems.every(i => i.status === '已典藏');
-      const newStatus = isCurrentlyArchived ? '進行中' : '已典藏';
-
-      targetItems.forEach(i => i.status = newStatus);
-      renderProjects();
-
-      if (API_URL) {
-        fetch(`${API_URL}?action=toggleProjectArchive&project=${encodeURIComponent(projName)}&status=${newStatus}&key=${CONFIG.SECRET_KEY || ''}`, { mode: 'no-cors' });
-      }
-    }
-
-    function openPreviewModal(id) {
-      const item = projectRows.find(r => r.id === id);
-      if (!item) return;
-      document.getElementById('previewRowIndex').value = id;
-      document.getElementById('previewProject').textContent = item.projectTitle;
-      document.getElementById('previewTask').innerHTML = `${item.signifier} ${formatTextWithTags(item.task)} <span class="badge-priority">${item.priority}</span>`;
-      document.getElementById('previewRemarks').innerHTML = item.remarks ? formatTextWithTags(item.remarks.replace(/\n/g, '<br>')) : '無多行長備註。';
-      document.getElementById('previewModal').style.display = 'flex';
-    }
-    function closePreviewModal() { document.getElementById('previewModal').style.display = 'none'; }
-    function openModalFromPreview() {
-      const id = document.getElementById('previewRowIndex').value;
-      closePreviewModal();
-      openTaskModal(id);
-    }
-
-    function openTaskModal(id = null) {
-      document.getElementById('taskModal').style.display = 'flex';
-      if (id) {
-        const item = projectRows.find(r => r.id === id);
-        if (!item) return;
-        document.getElementById('modalTitleText').textContent = '✏️ 編輯專案項目';
-        document.getElementById('editRowIndex').value = item.id;
-        document.getElementById('inputProject').value = item.projectTitle;
-        document.getElementById('inputSignifier').value = item.signifier;
-        document.getElementById('inputPriority').value = item.priority;
-        document.getElementById('inputTask').value = item.task;
-        document.getElementById('inputRemarks').value = item.remarks;
-        document.getElementById('deleteBtn').style.display = 'block';
-      } else {
-        document.getElementById('modalTitleText').textContent = '📝 新增專案項目';
-        document.getElementById('editRowIndex').value = '';
-        document.getElementById('taskForm').reset();
-        document.getElementById('deleteBtn').style.display = 'none';
-      }
-    }
-    function closeTaskModal() { document.getElementById('taskModal').style.display = 'none'; }
-
-    function handleTaskSubmit(e) {
-      e.preventDefault();
-      const id = document.getElementById('editRowIndex').value;
-      const projVal = document.getElementById('inputProject').value.trim();
-      const sigVal = document.getElementById('inputSignifier').value;
-      const priVal = document.getElementById('inputPriority').value;
-      const taskVal = document.getElementById('inputTask').value.trim();
-      const remVal = document.getElementById('inputRemarks').value.trim();
-
-      const isEdit = !!id;
-      const targetId = isEdit ? id : 'P_' + new Date().getTime();
-
-      const params = new URLSearchParams({
-        action: isEdit ? 'editProjectItem' : 'addProjectItem',
-        key: CONFIG.SECRET_KEY || '',
-        id: targetId,
-        Project: projVal,
-        Signifier: sigVal,
-        Task: taskVal,
-        Priority: priVal,
-        Remarks: remVal
-      });
-
-      if (API_URL) {
-        fetch(`${API_URL}?${params.toString()}`, { mode: 'no-cors' }).then(() => {
-          if (isEdit) {
-            const item = projectRows.find(r => r.id === id);
-            if (item) {
-              item.projectTitle = projVal;
-              item.signifier = sigVal;
-              item.priority = priVal;
-              item.task = taskVal;
-              item.remarks = remVal;
-            }
-          } else {
-            projectRows.unshift({
-              id: targetId, projectTitle: projVal, signifier: sigVal,
-              task: taskVal, priority: priVal, status: '進行中', remarks: remVal, _rowIndex: projectRows.length + 2
-            });
-          }
-          updateProjectSuggestions();
-          renderProjects();
-          closeTaskModal();
-        });
-      }
-    }
-
-    function deleteTaskItem() {
-      const id = document.getElementById('editRowIndex').value;
-      if (!id || !confirm('確定要刪除這個專案項目嗎？')) return;
-
-      projectRows = projectRows.filter(r => r.id !== id);
-      renderProjects();
-      closeTaskModal();
-
-      if (API_URL) {
-        fetch(`${API_URL}?action=deleteProjectItem&id=${id}&key=${CONFIG.SECRET_KEY || ''}`, { mode: 'no-cors' });
-      }
-    }
+    window.onload = checkLoginStatus;
   </script>
 </body>
 </html>
