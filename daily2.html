@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ 進階速記日誌 - Daily Advanced Dashboard</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="config.js"></script>
+  <script src="allowed-emails.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    :root {
+      --primary-color: #6366f1;
+      --bg-color: #f8fafc;
+      --border-color: #e2e8f0;
+      --header-bg: #1e293b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: #1e293b;
+      margin: 0;
+      padding: 8px;
+    }
+
+    #loginOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(248, 250, 252, 0.95); display: flex; flex-direction: column;
+      justify-content: center; align-items: center; z-index: 9999; gap: 16px;
+    }
+    .login-card {
+      background: white; padding: 40px; border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; max-width: 400px; width: 100%;
+    }
+    #mainContent { display: none; }
+
+    .container {
+      max-width: 1150px; margin: 0 auto; background: #ffffff;
+      padding: 12px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    /* ☰ 三劃抽屜式導覽列樣式 ( Blueprint 藍本 ) */
+    .nav-bar-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 12px 12px 12px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;
+    }
+    .nav-bar-title { font-size: 1.1rem; font-weight: bold; color: var(--header-bg); display: flex; align-items: center; gap: 6px; }
+    .hamburger-btn {
+      background: #f1f5f9; border: 1px solid var(--border-color); font-size: 1.3rem;
+      padding: 4px 10px; border-radius: 8px; cursor: pointer; color: #334155; transition: background 0.2s;
+    }
+    .hamburger-btn:hover { background: #e2e8f0; }
+
+    .nav-drawer {
+      position: fixed; top: 0; right: -280px; width: 280px; height: 100%;
+      background: #ffffff; box-shadow: -4px 0 15px rgba(0,0,0,0.15); z-index: 10000;
+      transition: right 0.3s ease; padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
+    }
+    .nav-drawer.open { right: 0; }
+    .nav-drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px; font-weight: bold; }
+    .nav-drawer-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; }
+    .nav-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); z-index: 9999; display: none; backdrop-filter: blur(2px); }
+    .nav-overlay.open { display: block; }
+    .nav-tabs { display: flex; flex-direction: column; gap: 8px; }
+    .nav-btn { padding: 10px 14px; font-size: 0.9rem; border-radius: 8px; text-decoration: none; background: #f1f5f9; color: #334155; font-weight: bold; display: block; }
+    .nav-btn.active { background: var(--primary-color); color: #ffffff; }
+
+    .controls-bar {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+      flex-wrap: wrap; gap: 8px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);
+    }
+    .user-profile { font-size: 0.82rem; color: #475569; display: flex; align-items: center; gap: 8px; }
+    .logout-btn { background: #ffffff; border: 1px solid var(--border-color); padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+
+    .daily-box { background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+    .daily-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #a7f3d0; padding-bottom: 8px; margin-bottom: 10px; }
+    .daily-title { font-size: 1rem; font-weight: bold; color: #166534; display: flex; align-items: center; gap: 6px; }
+
+    .btn-date-nav { padding: 3px 8px; font-size: 0.78rem; border: 1px solid #a7f3d0; background: #ffffff; color: #166534; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .btn-date-nav:hover { background: #dcfce7; }
+
+    .daily-list { display: flex; flex-direction: column; gap: 8px; }
+    .daily-card {
+      background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04); cursor: pointer;
+    }
+    .daily-card.status-done { opacity: 0.65; }
+    .daily-card.status-done .daily-card-title { text-decoration: line-through; }
+    .daily-card-title { font-size: 0.92rem; font-weight: 700; line-height: 1.35; word-break: break-word; }
+    .daily-card-remark { font-size: 0.8rem; margin-top: 4px; opacity: 0.9; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+
+    .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; display: inline-block; margin-bottom: 4px; }
+    .badge.task { background: rgba(0, 0, 0, 0.08); }
+    .badge.event { background: rgba(0, 0, 0, 0.12); }
+    .badge.note { background: rgba(0, 0, 0, 0.05); }
+
+    .drag-handle { cursor: grab; padding: 2px 6px; font-size: 1.1rem; opacity: 0.6; user-select: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Google 登入遮罩 -->
+  <div id="loginOverlay">
+    <div class="login-card">
+      <h2>⚡ 進階速記日誌</h2>
+      <p style="color: #8e8e93; font-size: 0.9rem; margin-bottom: 20px;">請先透過 Google 帳號驗證身分</p>
+      
+      <div id="g_id_onload" 
+           data-client_id="972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com" 
+           data-callback="handleCredentialResponse">
+      </div>
+      <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"></div>
+      <div id="loginErr" style="color: #ff3b30; font-size: 0.85rem; margin-top: 12px; white-space: pre-line;"></div>
+    </div>
+  </div>
+
+  <div id="mainContent" class="container">
+    <!-- ☰ 頂部與抽屜式導覽列 -->
+    <div class="nav-bar-header">
+      <div class="nav-bar-title">⚡ 進階速記日誌 (Daily Advanced)</div>
+      <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
+    </div>
+
+    <div id="navOverlay" class="nav-overlay" onclick="closeNavDrawer()"></div>
+    <div id="navDrawer" class="nav-drawer">
+      <div class="nav-drawer-header">
+        <span>🧭 功能選單</span>
+        <button class="nav-drawer-close" onclick="closeNavDrawer()">✕</button>
+      </div>
+      <div id="navbar" class="nav-tabs"></div>
+    </div>
+
+    <div class="controls-bar">
+      <div class="user-profile">
+        <span id="userInfo"></span>
+        <button class="logout-btn" onclick="logout()">登出</button>
+      </div>
+      <span style="font-size:0.85rem; color:#64748b;">自動讀取 Google Sheet 雲端資料</span>
+    </div>
+
+    <!-- 當日日誌卡片區塊 -->
+    <div class="daily-box">
+      <div class="daily-header">
+        <div class="daily-title">📌 當日速記與清單</div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span id="dailyDateDisplay" style="font-size: 0.85rem; color: #166534; font-weight: bold;"></span>
+          <button class="btn-date-nav" onclick="changeDailyDate(-1)">◀</button>
+          <button class="btn-date-nav" onclick="changeDailyDate(1)">▶</button>
+        </div>
+      </div>
+      <div id="dailyList" class="daily-list">
+        <div style="color: #64748b; font-size: 0.85rem;">⏳ 載入日誌資料中...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let dailyRows = [];
+    function getTodayString() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+    let selectedDailyDate = getTodayString();
+
+    const GOOGLE_SHEET_ID = (typeof CONFIG !== 'undefined' && CONFIG.DAILY_SHEET_ID) ? CONFIG.DAILY_SHEET_ID : '';
+    const DAILY_GID = (typeof CONFIG !== 'undefined' && CONFIG.GIDS && CONFIG.GIDS.DAILY_LOG) ? CONFIG.GIDS.DAILY_LOG : '0';
+    const DAILY_CSV_URL = GOOGLE_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${DAILY_GID}&t=${new Date().getTime()}` : '';
+
+    function parseJwt(token) {
+      try {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+      } catch (e) { return null; }
+    }
+
+    function handleCredentialResponse(response) {
+      const payload = parseJwt(response.credential);
+      if (!payload || !payload.email) return;
+      const userEmail = payload.email.toLowerCase().trim();
+      
+      if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
+        if (!ALLOWED_EMAILS.map(e => e.toLowerCase().trim()).includes(userEmail)) {
+          document.getElementById('loginErr').innerText = `⚠️ 存取被拒：${userEmail} 未獲授權。`;
+          return;
+        }
+      }
+
+      localStorage.setItem("user_google_email", userEmail);
+      localStorage.setItem("google_user", JSON.stringify({ name: payload.name, email: userEmail }));
+      initializeApp();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedEmail = localStorage.getItem("user_google_email");
+      if (savedEmail && typeof ALLOWED_EMAILS !== 'undefined') {
+        if (ALLOWED_EMAILS.map(e => e.toLowerCase().trim()).includes(savedEmail.toLowerCase().trim())) {
+          initializeApp();
+          return;
+        }
+      }
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('mainContent').style.display = 'none';
+    });
+
+    function logout() {
+      localStorage.removeItem("user_google_email");
+      localStorage.removeItem("google_user");
+      location.reload();
+    }
+
+    function initializeApp() {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+      
+      const user = JSON.parse(localStorage.getItem('google_user') || '{}');
+      if (user.name) document.getElementById('userInfo').textContent = `👤 ${user.name}`;
+
+      loadNavbar();
+      loadDailyLogData(); // 關鍵修復：主動載入 Google Sheet CSV
+    }
+
+    /* 📊 讀取 Google Sheet CSV 核心函式 */
+    function loadDailyLogData() {
+      if (!DAILY_CSV_URL) {
+        document.getElementById('dailyList').innerHTML = '<div style="color:#ef4444;">❌ 缺少 CONFIG.DAILY_SHEET_ID 設定</div>';
+        return;
+      }
+
+      Papa.parse(DAILY_CSV_URL, {
+        download: true, header: true, skipEmptyLines: true,
+        complete: (res) => {
+          if (res.data) {
+            dailyRows = res.data.map((r, i) => {
+              const v = Object.values(r);
+              let rawDate = r.Date || r.date || v[1] || '';
+              let cleanedDate = rawDate.toString().trim().replace(/\//g, '-');
+              return {
+                id: r.ID || r.id || v[0] || `L_${i}`,
+                parsedDate: cleanedDate,
+                parsedType: r.Type || r.type || v[2] || 'Task',
+                parsedContent: r.Content || r.content || v[3] || '',
+                parsedStatus: r.Status || r.status || v[4] || 'Pending',
+                parsedRemarks: r.Remarks || r.remarks || v[5] || '' 
+              };
+            });
+            renderDailyLog();
+          }
+        },
+        error: (err) => {
+          document.getElementById('dailyList').innerHTML = '<div style="color:#ef4444;">⚠️ 讀取 Google Sheet CSV 失敗</div>';
+        }
+      });
+    }
+
+    function renderDailyLog() {
+      const container = document.getElementById('dailyList');
+      const dateDisplay = document.getElementById('dailyDateDisplay');
+      if (!container) return;
+
+      container.innerHTML = '';
+      if (dateDisplay) dateDisplay.textContent = `${selectedDailyDate}`;
+
+      let logs = dailyRows.filter(r => r.parsedDate === selectedDailyDate);
+
+      if (logs.length === 0) {
+        container.innerHTML = `<div style="color:#64748b; font-size:0.85rem; padding: 6px 0;">當日無 Google Sheet 記錄事項。</div>`;
+        return;
+      }
+
+      logs.forEach(item => {
+        const div = document.createElement('div');
+        const isDone = item.parsedStatus === '完成' || item.parsedStatus === 'Done';
+        div.className = `daily-card ${isDone ? 'status-done' : ''}`;
+
+        div.innerHTML = `
+          <div style="flex:1; min-width:0;">
+            <div><span class="badge task">${item.parsedType}</span> ${isDone ? '✅ 已完成' : ''}</div>
+            <div class="daily-card-title">${item.parsedContent}</div>
+            ${item.parsedRemarks ? `<div class="daily-card-remark">💬 ${item.parsedRemarks}</div>` : ''}
+          </div>
+          <div class="drag-handle">⋮⋮</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function changeDailyDate(days) {
+      const parts = selectedDailyDate.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setDate(d.getDate() + days);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      selectedDailyDate = `${y}-${m}-${day}`;
+      renderDailyLog();
+    }
+
+    function openNavDrawer() { document.getElementById('navDrawer').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); }
+    function closeNavDrawer() { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); }
+
+    function loadNavbar() {
+      fetch('nav.html').then(response => response.text()).then(data => {
+        const navContainer = document.getElementById('navbar');
+        if (navContainer) {
+          navContainer.innerHTML = data;
+          const currentPath = window.location.pathname.split('/').pop() || 'daily_adv.html';
+          navContainer.querySelectorAll('.nav-btn').forEach(link => {
+            if (link.getAttribute('href') === currentPath) link.classList.add('active');
+          });
+        }
+      });
+    }
+  </script>
+</body>
+</html>
