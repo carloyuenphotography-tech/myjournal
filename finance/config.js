@@ -6,4 +6,7 @@ const CONFIG = {
     
     // 紀錄用：你的 Google Sheet ID (可選填)
     sheetId: "d/1-1xCCblZ3JkoGWHJ4LUtVIuIzbDktw1ukBOjApEVbzA"
+    // 各分頁的 GID
+  GIDS: {
+    FINANCE: '0',
 };
