@@ -13,7 +13,6 @@
     :root { --primary-color: #0d9488; --bg-color: #f8fafc; --border-color: #cbd5e1; }
     body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-color); color: #1e293b; margin: 0; padding: 12px; }
     
-    /* 🔒 Google 登入驗證遮罩 Modal */
     .auth-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -45,10 +44,27 @@
     .nav-btn { padding: 8px 14px; font-size: 0.88rem; border-radius: 6px; text-decoration: none; background: #e2e8f0; color: #475569; font-weight: bold; }
     .nav-btn.active { background: var(--primary-color); color: #fff; }
 
-    .header-bar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 8px; gap: 8px; font-size: 0.8rem; color: #475569; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; font-size: 0.8rem; color: #475569; }
     .logout-btn { background: #f1f5f9; border: 1px solid var(--border-color); padding: 3px 7px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
 
-    /* 控制列與篩選控制 */
+    /* ☰ 三劃選單按鈕樣式 */
+    .btn-hamburger {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      color: var(--primary-color);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 1.2rem;
+      line-height: 1;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .btn-hamburger:hover { background: var(--primary-color); color: #fff; }
+
     .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); }
     .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .filter-select { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; outline: none; background-color: #ffffff; color: #334155; }
@@ -56,22 +72,6 @@
     .hashtag-pill { display: inline-block; background: #ccfbf1; color: #0f766e; padding: 1px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin: 0 2px; }
     .hashtag-pill:hover { background: #0d9488; color: #ffffff; }
 
-    /* 🏷️ Signifier 細小圓角底色標籤 */
-    .signifier-pill {
-      display: inline-block;
-      background-color: #f1f5f9;
-      color: #334155;
-      font-size: 0.72rem;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 12px;
-      margin-right: 6px;
-      border: 1px solid #cbd5e1;
-      vertical-align: middle;
-      flex-shrink: 0;
-    }
-
-    /* 📅 12 個月清單排版 (Month Boards) */
     .month-board-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -115,7 +115,6 @@
       background: #f8fafc;
     }
 
-    /* ★ 本月專屬顏色標示 */
     .month-board.current-month {
       border: 2px solid #f59e0b;
       box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
@@ -142,7 +141,6 @@
     .status-btn.todo { background: #fee2e2; color: #dc2626; }
     .status-btn.done { background: #dcfce7; color: #16a34a; }
     
-    /* Modal 視窗 */
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; }
     .modal-box { background:#fff; width:100%; max-width:480px; border-radius:12px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
     .form-group { margin-bottom: 10px; }
@@ -163,7 +161,6 @@
       overflow-y: auto;
     }
 
-    /* 手機版專屬：隱藏過去月份與顯示切換按鈕 */
     @media (max-width: 768px) {
       .mobile-only-toggle { display: block !important; }
       .month-board.past-month { display: none; }
@@ -192,6 +189,7 @@
         <span id="userInfo"></span>
         <button class="logout-btn" onclick="logout()">登出</button>
       </div>
+      <button type="button" class="btn-hamburger" onclick="toggleNavMenu()" title="切換選單">☰</button>
     </div>
 
     <h3 style="margin-top:0; color:var(--primary-color);">🗓️ Monthly Future Log (年度月份總覽)</h3>
@@ -225,7 +223,6 @@
 
     <div id="loading">⏳ 正在載入 Monthly Log...</div>
     
-    <!-- 手機版專用的展開按鈕 -->
     <div id="mobilePastToggle" class="mobile-only-toggle" style="display:none; text-align:center; margin-bottom: 12px;">
       <button onclick="togglePastMonths()" style="padding: 6px 14px; border-radius: 20px; background: #e2e8f0; border: 1px solid var(--border-color); font-weight: bold; color: #475569; cursor: pointer;">
         👀 顯示上個月紀錄
@@ -302,12 +299,17 @@
     </div>
   </div>
 
-  <!-- 先載入邏輯檔案，再載入 Google 驗證，解決載入衝突 -->
   <script src="monthly.js"></script>
   <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
 
-
 <script>
+function toggleNavMenu() {
+  const nav = document.getElementById('navbar');
+  if (nav) {
+    nav.style.display = (nav.style.display === 'none' || getComputedStyle(nav).display === 'none') ? 'flex' : 'none';
+  }
+}
+
 function loadGlobalNavbar() {
   fetch('nav.html')
     .then(res => res.text())
@@ -315,7 +317,7 @@ function loadGlobalNavbar() {
       const navContainer = document.getElementById('navbar');
       if (navContainer) {
         navContainer.innerHTML = data;
-        const currentPath = window.location.pathname.split('/').pop() || 'daily.html';
+        const currentPath = window.location.pathname.split('/').pop() || 'monthly_2.html';
         navContainer.querySelectorAll('.nav-btn').forEach(link => {
           if (link.getAttribute('href') === currentPath) {
             link.classList.add('active');
