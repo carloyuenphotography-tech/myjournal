@@ -386,26 +386,39 @@
         <div class="card">
             <div class="card-title">🏦 更新銀行/資產結餘</div>
 
+            <!-- 第一層：選擇銀行 -->
             <div class="form-group">
-                <label>🏦 選擇銀行 / 帳戶</label>
-                <div class="pill-group" id="account-pills">
-                    <div class="pill active" onclick="selectAccount('HSBC', this)">🏦 HSBC</div>
-                    <div class="pill" onclick="selectAccount('恆生銀行', this)">🏦 恆生銀行</div>
-                    <div class="pill" onclick="selectAccount('渣打銀行', this)">🏦 渣打銀行</div>
-                    <div class="pill" onclick="selectAccount('中國銀行', this)">🏦 中國銀行</div>
-                    <div class="pill" onclick="selectAccount('股票投資', this)">📈 股票/投資</div>
-                    <div class="pill" onclick="selectAccount('現金結餘', this)">💵 現金</div>
+                <label>1️⃣ 選擇銀行 / 金融機構</label>
+                <div class="pill-group" id="bank-pills">
+                    <div class="pill active" onclick="selectBank('HSBC', this)">🏦 HSBC</div>
+                    <div class="pill" onclick="selectBank('恒生銀行', this)">🏦 恒生</div>
+                    <div class="pill" onclick="selectBank('中國銀行', this)">🏦 中銀</div>
+                    <div class="pill" onclick="selectBank('渣打銀行', this)">🏦 渣打</div>
+                    <div class="pill" onclick="selectBank('富途/券商', this)">📈 富途/券商</div>
+                    <div class="pill" onclick="selectBank('其他/現金', this)">💵 現金/其他</div>
+                </div>
+            </div>
+
+            <!-- 第二層：選擇戶口類別 -->
+            <div class="form-group">
+                <label>2️⃣ 選擇戶口類別</label>
+                <div class="pill-group" id="account-type-pills">
+                    <div class="pill active" onclick="selectAccountType('儲蓄 Saving', this)">💰 儲蓄 Saving</div>
+                    <div class="pill" onclick="selectAccountType('往來 Current', this)">💳 往來 Current</div>
+                    <div class="pill" onclick="selectAccountType('投資 Investment', this)">📈 投資股票</div>
+                    <div class="pill" onclick="selectAccountType('定期 Deposit', this)">🔒 定期存款</div>
+                    <div class="pill" onclick="selectAccountType('信用卡 Credit', this)">💳 信用卡負債</div>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="asset-amount">當前資產金額 ($)</label>
+                <label for="asset-amount">當前資產結餘 ($)</label>
                 <input type="number" id="asset-amount" placeholder="例如：50000" inputmode="decimal">
             </div>
 
             <div class="form-group">
                 <label for="asset-note">備註說明</label>
-                <input type="text" id="asset-note" placeholder="例如：8月定時更新 / 薪水入帳後">
+                <input type="text" id="asset-note" placeholder="例如：月結更新 / 出糧後結餘">
             </div>
 
             <div class="form-group">
@@ -420,7 +433,7 @@
             <div class="card-title">💰 當前預估總資產</div>
             <div id="total-net-worth" style="font-size: 1.6rem; font-weight: bold; color: var(--primary); text-align: center; margin: 8px 0;">$0</div>
             <div class="form-group">
-                <label>📊 各帳戶最新結餘</label>
+                <label>📊 各戶口最新結餘</label>
                 <div id="asset-overview">尚無數據</div>
             </div>
         </div>
