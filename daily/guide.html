@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ Daily Adv 進階功能使用指南</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📖</text></svg>">
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-light: #e0f2fe;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px 12px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 28px 24px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+    }
+
+    header {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      color: var(--primary);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--primary-light);
+      color: var(--primary);
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .back-btn:hover { background: #bae6fd; }
+
+    .quick-nav {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .nav-card {
+      background: #f1f5f9;
+      padding: 10px 14px;
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+    .nav-card:hover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .feature-section {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .feature-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.15rem;
+      font-weight: bold;
+      color: #1e293b;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    kbd {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.8rem;
+      font-family: monospace;
+      color: #334155;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    }
+
+    .tag-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    ul, ol { margin: 8px 0; padding-left: 20px; }
+    li { margin-bottom: 6px; font-size: 0.92rem; }
+
+    .tip-box {
+      background: #fffbe0;
+      border-left: 4px solid #f59e0b;
+      padding: 10px 14px;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.85rem;
+      color: #78350f;
+      margin-top: 12px;
+    }
+
+    code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>⚡ Daily Adv 進階功能指南</h1>
+      <a href="daily_adv.html" class="back-btn">⬅ 返回 Daily Adv</a>
+    </header>
+
+    <!-- 快速選單 -->
+    <div class="quick-nav">
+      <a href="#cmd" class="nav-card">🔍 ⌘K 指令選單</a>
+      <a href="#voice" class="nav-card">🎙️ 廣東話語音</a>
+      <a href="#sync" class="nav-card">⚡ 跨分頁同步</a>
+      <a href="#paste" class="nav-card">🖼️ 剪貼簿貼圖</a>
+      <a href="#offline" class="nav-card">📡 離線暫存佇列</a>
+    </div>
+
+    <!-- 功能 1 -->
+    <section id="cmd" class="feature-section">
+      <div class="feature-header">
+        <span>🔍 1. 全域命令面板 (Command Palette)</span>
+        <span class="tag-badge">快捷操作</span>
+      </div>
+      <p>無需使用滑鼠即可在各個子系統與模組之間實現極速切換。</p>
+      <ul>
+        <li><strong>觸發方式</strong>：在頁面任何位置按下 <kbd>⌘ Command</kbd> + <kbd>K</kbd> (Mac) 或 <kbd>Ctrl</kbd> + <kbd>K</kbd> (Windows)。</li>
+        <li><strong>關鍵字搜尋</strong>：彈窗開啟後，直接輸入網頁關鍵字（例如：<code>/log</code>、<code>projects</code>、<code>數學</code>、<code>SOP</code>）。</li>
+        <li><strong>快速跳轉</strong>：按下方向鍵或直接點擊選項，即可瞬間跳轉至目標頁面。</li>
+        <li><strong>關閉選單</strong>：按下 <kbd>ESC</kbd> 鍵或點擊視窗外區域。</li>
+      </ul>
+    </section>
+
+    <!-- 功能 2 -->
+    <section id="voice" class="feature-section">
+      <div class="feature-header">
+        <span>🎙️ 2. 廣東話語音速記 (Web Speech API)</span>
+        <span class="tag-badge">原生 AI 語音</span>
+      </div>
+      <p>免去打字麻煩，使用語音即時將說話轉為文字輸入。</p>
+      <ul>
+        <li><strong>使用位置</strong>：頂部快速輸入欄旁的 <code>🎙️</code> 按鈕，以及編輯對話框（Modal）內容欄旁邊。</li>
+        <li><strong>操作步驟</strong>：
+          <ol>
+            <li>點擊 <code>🎙️</code> 按鈕，按鈕會變成紅色 <code>🔴</code>，代表正在聆聽。</li>
+            <li>用正常語速說出內容（預設辨識語言為<strong>廣東話 zh-HK</strong>）。</li>
+            <li>說完後系統會自動轉換文字並填入文字框，按鈕自動回復為 <code>🎙️</code>。</li>
+          </ol>
+        </li>
+      </ul>
+      <div class="tip-box">
+        💡 <strong>小貼士</strong>：講話時可以直接連同標籤一起講，例如：「<em>買牛奶 #family</em>」，系統會完美記錄標籤並自動套用色彩分類！
+      </div>
+    </section>
+
+    <!-- 功能 3 -->
+    <section id="sync" class="feature-section">
+      <div class="feature-header">
+        <span>⚡ 3. 跨分頁即時資料同步 (BroadcastChannel)</span>
+        <span class="tag-badge">無感同步</span>
+      </div>
+      <p>解決同時開啟多個頁面（例如同時開啟 <code>daily_adv.html</code> 與 <code>logging.html</code>）時資料不一致的問題。</p>
+      <ul>
+        <li><strong>運作機制</strong>：當你在其中一個分頁新增、修改、完成或刪除任何事項時，系統會自動向其他開啟的分頁發送背景廣播。</li>
+        <li><strong>使用者體驗</strong>：其他分頁收到通知後會自動重新讀取最新資料並更新畫面，<strong>完全不需要手動按 F5 重新整理</strong>。</li>
+      </ul>
+    </section>
+
+    <!-- 功能 4 -->
+    <section id="paste" class="feature-section">
+      <div class="feature-header">
+        <span>🖼️ 4. 剪貼簿圖片直接貼上 (Clipboard API)</span>
+        <span class="tag-badge">多媒體備註</span>
+      </div>
+      <p>允許直接將螢幕截圖或剪貼簿中的圖片貼入事項備註中。</p>
+      <ul>
+        <li><strong>操作步驟</strong>：
+          <ol>
+            <li>使用電腦截圖工具（例如 <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>4</kbd> 或 <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>）複製圖片。</li>
+            <li>在編輯對話框的<strong>「備註 (Remarks)」</strong>文字框中按下 <kbd>Ctrl</kbd> + <kbd>V</kbd> / <kbd>⌘</kbd> + <kbd>V</kbd>。</li>
+            <li>系統會自動將圖片轉為 Base64 Markdown 格式：<code>![截圖](data:image/...)</code>。</li>
+          </ol>
+        </li>
+      </ul>
+    </section>
+
+    <!-- 功能 5 -->
+    <section id="offline" class="feature-section">
+      <div class="feature-header">
+        <span>📡 5. 離線暫存與自動連線佇列 (Offline Queue)</span>
+        <span class="tag-badge">高可用性</span>
+      </div>
+      <p>確保在網路不穩定或離線環境下，新增與修改的事項絕對不會遺失。</p>
+      <ul>
+        <li><strong>斷網保護</strong>：當偵測到無網路連線時，所有新增/編輯/完成的操作會安全地暫存於瀏覽器的 <code>LocalStorage</code> 佇列中，頂部會顯示黃色提示。</li>
+        <li><strong>恢復連線自動補發</strong>：當網路恢復時（<code>online</code> 事件觸發），系統會自動背景排隊補發所有請求至 Google Apps Script，並將資料寫回雲端 Google Sheets。</li>
+      </ul>
+      <div class="tip-box">
+        🛡️ <strong>資料安全保障</strong>：即便關閉頁面，離線暫存的佇列依然會在下次開啟並連線時自動上傳。
+      </div>
+    </section>
+  </div>
+
+</body>
+</html>
