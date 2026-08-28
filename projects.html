@@ -21,7 +21,6 @@
     .login-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; max-width: 400px; width: 100%; }
     .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 12px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: none; }
 
-    /* ☰ 藍本抽屜導覽列樣式 */
     .nav-bar-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px 12px 12px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px; }
     .nav-bar-title { font-size: 1.1rem; font-weight: bold; color: var(--header-bg); display: flex; align-items: center; gap: 6px; }
     .hamburger-btn { background: #f1f5f9; border: 1px solid var(--border-color); font-size: 1.3rem; padding: 4px 10px; border-radius: 8px; cursor: pointer; color: #334155; }
@@ -40,6 +39,7 @@
     .controls-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; background: #f1f5f9; padding: 10px; border-radius: 8px; }
     .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
     .project-card { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .task-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 0.85rem; }
   </style>
 </head>
 <body>
@@ -72,14 +72,17 @@
     <div class="controls-bar">
       <div style="display:flex; align-items:center; gap:10px;">
         <span id="userInfo" style="font-size:0.82rem; color:#475569;"></span>
-        <button onclick="openTaskModal()" style="background:var(--primary-color); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:bold; cursor:pointer;">➕ 新增專案項目</button>
+        <button onclick="loadProjectData()" style="background:var(--primary-color); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:bold; cursor:pointer;">↻ 重新整理專案</button>
       </div>
     </div>
 
+    <div id="loadingStatus" style="font-weight:bold; color:var(--primary-color); margin-bottom:10px;">⏳ 正在從 Google Sheet 讀取專案資料...</div>
     <div id="projectsGrid" class="projects-grid"></div>
   </div>
 
   <script>
+    let projectRows = [];
+
     function openNavDrawer() { document.getElementById('navDrawer').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); }
     function closeNavDrawer() { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); }
 
@@ -99,6 +102,62 @@
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('mainContainer').style.display = 'block';
         loadNavbar();
+        loadProjectData(); // 關鍵修復：呼叫讀取函式
+      }
+    }
+
+    function loadProjectData() {
+      const SHEET_ID = (typeof CONFIG !== 'undefined') ? (CONFIG.PROJECTS_SHEET_ID || CONFIG.FT_SHEET_ID || '') : '';
+      const GID = (typeof CONFIG !== 'undefined' && CONFIG.GIDS && CONFIG.GIDS.PROJECTS) ? CONFIG.GIDS.PROJECTS : '0';
+      if (!SHEET_ID) {
+        document.getElementById('loadingStatus').textContent = '❌ CONFIG 中缺少 SHEET_ID';
+        return;
+      }
+
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}&t=${new Date().getTime()}`;
+
+      Papa.parse(csvUrl, {
+        download: true, header: true, skipEmptyLines: true,
+        complete: (results) => {
+          projectRows = results.data.map((item, index) => {
+            const v = Object.values(item);
+            return {
+              id: item.ID || v[0] || `P_${index}`,
+              projectTitle: item.Project || item['專案名稱'] || v[1] || '未命名專案',
+              signifier: item.Signifier || v[2] || '• Task',
+              task: item.Task || item['項目'] || v[3] || '',
+              priority: item.Priority || item['重要程度'] || v[4] || '普通',
+              status: item.Status || item['狀態'] || '進行中',
+              remarks: item.Remarks || item['備註'] || v[5] || ''
+            };
+          });
+          renderProjects();
+          document.getElementById('loadingStatus').style.display = 'none';
+        },
+        error: () => {
+          document.getElementById('loadingStatus').textContent = '⚠️ 專案資料讀取失敗，請檢查權限';
+        }
+      });
+    }
+
+    function renderProjects() {
+      const grid = document.getElementById('projectsGrid');
+      grid.innerHTML = '';
+
+      const groups = {};
+      projectRows.forEach(item => {
+        if (!groups[item.projectTitle]) groups[item.projectTitle] = [];
+        groups[item.projectTitle].push(item);
+      });
+
+      for (const [projName, items] of Object.entries(groups)) {
+        const card = document.createElement('div');
+        card.className = 'project-card';
+        card.innerHTML = `
+          <div style="font-weight:bold; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">📁 ${projName} (${items.length})</div>
+          <div>${items.map(i => `<div class="task-item">${i.signifier} <b>${i.task}</b> ${i.remarks ? `<br><small>💬 ${i.remarks}</small>` : ''}</div>`).join('')}</div>
+        `;
+        grid.appendChild(card);
       }
     }
 
