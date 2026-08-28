@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>⚡ 日軌流光 </title>
   
-  <!-- 📝 WebApp / PWA / Favicon 📝 圖示設定 -->
+  <!-- 📝 WebApp / PWA / Favicon 圖示設定 -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
 
@@ -20,6 +20,7 @@
       --primary: #0284c7;
       --bg-color: #f8fafc;
       --border-color: #e2e8f0;
+      --header-bg: #1e293b;
     }
 
     * { box-sizing: border-box; }
@@ -40,6 +41,7 @@
     .auth-card {
       background: #fff; border-radius: 16px; width: 100%; max-width: 360px;
       padding: 28px 20px; text-align: center;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
     }
 
     .container {
@@ -48,21 +50,28 @@
       display: none;
     }
 
-    /* ☰ 三劃抽屜式導覽列樣式 */
-    .hamburger-btn {
-      background: #f1f5f9;
+    /* ☰ 三劃抽屜式導覽列樣式 (藍本規範) */
+    .btn-hamburger {
+      background: #ffffff;
       border: 1px solid var(--border-color);
-      font-size: 1.3rem;
-      padding: 4px 10px;
+      color: var(--primary);
       border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 1.2rem;
+      line-height: 1;
+      font-weight: bold;
       cursor: pointer;
-      color: #334155;
-      transition: background 0.2s;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
-    .hamburger-btn:hover { background: #e2e8f0; }
+    .btn-hamburger:hover {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
 
     .nav-drawer {
       position: fixed;
@@ -454,50 +463,17 @@
       opacity: 0.9;
       font-weight: normal;
     }
-    /* 🍔 三劃漢堡選單按鈕樣式 */
-.btn-hamburger {
-  background: #ffffff;
-  border: 1px solid var(--border-color);
-  color: var(--primary);
-  border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 1.2rem;
-  line-height: 1;
-  font-weight: bold;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-
-.btn-hamburger:hover {
-  background: var(--primary);
-  color: #ffffff;
-  border-color: var(--primary);
-}
-
-/* 📱 若想在固定畫面最右上角 (可選)：
-   解開以下註解可將按鈕置頂固定在畫面右上方
-*/
-/*
-.btn-hamburger {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 1000;
-}
-*/
   </style>
 </head>
 <body>
 
+  <!-- Google 登入驗證遮罩 Modal -->
   <div id="authOverlay" class="auth-overlay">
     <div class="auth-card">
       <h3 style="margin-top:0;">⚡ 日軌流光</h3>
       <p style="color:#64748b; font-size:0.85rem;">請先驗證 Google 帳號</p>
       <div id="googleSignInContainer" style="display:flex; justify-content:center; min-height:40px;"></div>
+      <div id="loginErr" style="color: #ff3b30; font-size: 0.8rem; margin-top: 8px; white-space: pre-line;"></div>
     </div>
   </div>
 
@@ -514,31 +490,31 @@
     </div>
 
     <div class="header-bar">
-  <div class="title-group">✨ 日軌流光</div>
-  
-  <div class="top-actions">
-    <a href="recurring.html" class="btn-bubble" style="background:#e0f2fe; color:#0284c7; border-color:#bae6fd;">
-      🔄 <span class="btn-text">重複規則</span>
-    </a>
-    <button class="btn-bubble btn-overdue" onclick="openOverdueModal()">
-      ⚠️ <span class="btn-text">逾期工作</span> <span id="overdueBadgeCount" class="badge-pill">0</span>
-    </button>
-    <button class="btn-bubble btn-backlog" onclick="openBacklogModal()">
-      📥 <span class="btn-text">未有日期</span> <span id="backlogBadgeCount" class="badge-pill">0</span>
-    </button>
-    <button class="btn-bubble btn-completed" onclick="openCompletedModal()">
-      ✅ <span class="btn-text">已完成</span> <span id="completedBadgeCount" class="badge-pill">0</span>
-    </button>
-    <button class="btn-bubble" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openArchivedModal()">
-      📦 <span class="btn-text">典藏庫</span> <span id="archivedBadgeCount" class="badge-pill">0</span>
-    </button>
+      <div class="title-group">✨ 日軌流光</div>
+      
+      <div class="top-actions">
+        <a href="recurring.html" class="btn-bubble" style="background:#e0f2fe; color:#0284c7; border-color:#bae6fd;">
+          🔄 <span class="btn-text">重複規則</span>
+        </a>
+        <button class="btn-bubble btn-overdue" onclick="openOverdueModal()">
+          ⚠️ <span class="btn-text">逾期工作</span> <span id="overdueBadgeCount" class="badge-pill">0</span>
+        </button>
+        <button class="btn-bubble btn-backlog" onclick="openBacklogModal()">
+          📥 <span class="btn-text">未有日期</span> <span id="backlogBadgeCount" class="badge-pill">0</span>
+        </button>
+        <button class="btn-bubble btn-completed" onclick="openCompletedModal()">
+          ✅ <span class="btn-text">已完成</span> <span id="completedBadgeCount" class="badge-pill">0</span>
+        </button>
+        <button class="btn-bubble" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openArchivedModal()">
+          📦 <span class="btn-text">典藏庫</span> <span id="archivedBadgeCount" class="badge-pill">0</span>
+        </button>
 
-    <!-- 🍔 右上角三劃選單按鈕（內建開啟對話框邏輯） -->
-<button type="button" class="btn-hamburger" onclick="const p=document.getElementById('cmdPalette'); if(p){ p.open ? p.close() : p.showModal(); }" title="開啟選單">
-  ☰
-</button>
-  </div>
-</div>
+        <!-- 🍔 右上角三劃選單按鈕（觸發抽屜導覽列） -->
+        <button type="button" class="btn-hamburger" onclick="openNavDrawer()" title="開啟選單">
+          ☰
+        </button>
+      </div>
+    </div>
 
     <div class="app-body-layout">
       
@@ -665,6 +641,23 @@
   </div>
 
   <script>
+    /* 預設選單清單 (備援機制) */
+    const DEFAULT_NAV_ITEMS = [
+      { href: '../index.html', label: '📊 日誌主頁' },
+      { href: 'daily_2.html', label: '⚡ 速記清單' },
+      { href: 'daily_adv.html', label: '⚡ 進階速記日誌' },
+      { href: 'daily_monthly_2.html', label: '📅 速記月視圖' },
+      { href: '../monthly_2.html', label: '📅 Monthly Log' },
+      { href: '../projects_2.html', label: '📁 專案管理' },
+      { href: '../ideas.html', label: '💡 靈感 Ideas' },
+      { href: '../memo_2.html', label: '📐 數學日誌' },
+      { href: '../ct_memo_2.html', label: '🏫 班主任事務' },
+      { href: '../tracker_2.html', label: '🎯 Habit Tracker' },
+      { href: '../procedures_2.html', label: '📋 Procedures' },
+      { href: '../book-writer_2.html', label: '📖 Book Writer' },
+      { href: '../logging_2.html', label: '✍️ 快速 Logging' }
+    ];
+
     /* ☰ 抽屜導覽列 JavaScript 控制項 */
     function openNavDrawer() {
       document.getElementById('navDrawer').classList.add('open');
@@ -677,30 +670,130 @@
     }
 
     function loadNavbar() {
-      // 由於 daily_adv.html 位於 daily/ 資料夾下，因此需要往上一層抓取 ../nav.html
+      const navContainer = document.getElementById('navbar');
+      if (!navContainer) return;
+
+      // 優先讀取 ../nav.html，失敗則嘗試 nav.html
       fetch('../nav.html')
-        .then(response => response.text())
+        .catch(() => fetch('nav.html'))
+        .then(response => {
+          if (!response.ok) throw new Error('無法讀取 nav.html');
+          return response.text();
+        })
         .then(data => {
-          const navContainer = document.getElementById('navbar');
-          if (navContainer) {
-            navContainer.innerHTML = data;
-            
-            // 取得目前的完整相對路徑並進行 active 高亮標示
-            const currentFilename = window.location.pathname.split('/').pop() || 'daily_adv.html';
-            
-            navContainer.querySelectorAll('.nav-btn').forEach(link => {
-              const href = link.getAttribute('href') || '';
-              if (href.includes(currentFilename)) {
-                link.classList.add('active');
-              }
-            });
+          if (data.trim().length > 0) {
+            renderNavLinks(navContainer, data);
+          } else {
+            throw new Error('nav.html 內容空白');
           }
-        }).catch(err => console.log('導覽列載入失敗:', err));
+        })
+        .catch(err => {
+          console.warn('導覽列載入失敗，已啟用預設備援選單:', err);
+          const fallbackHtml = DEFAULT_NAV_ITEMS.map(
+            item => `<a href="${item.href}" class="nav-btn">${item.label}</a>`
+          ).join('');
+          renderNavLinks(navContainer, fallbackHtml);
+        });
     }
 
-    // 頁面載入時觸發導覽列讀取
+    function renderNavLinks(container, htmlContent) {
+      container.innerHTML = htmlContent;
+      const currentFilename = window.location.pathname.split('/').pop() || 'daily_adv_2.html';
+      
+      container.querySelectorAll('.nav-btn').forEach(link => {
+        const href = link.getAttribute('href') || '';
+        if (href.includes(currentFilename) || (currentFilename === 'daily_adv_2.html' && href.includes('daily_adv'))) {
+          link.classList.add('active');
+        } else {
+          link.classList.remove('active');
+        }
+      });
+    }
+
+    /* 🔒 Google 登入與 localStorage 持久化驗證邏輯 */
+    function parseJwt(token) {
+      try {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+      } catch (e) { return null; }
+    }
+
+    function handleCredentialResponse(response) {
+      const payload = parseJwt(response.credential);
+      if (!payload || !payload.email) {
+        document.getElementById('loginErr').innerText = "❌ 驗證失敗：無法讀取登入資訊";
+        return;
+      }
+
+      const userEmail = payload.email.toLowerCase().trim();
+
+      if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
+        const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
+        if (!cleanList.includes(userEmail)) {
+          document.getElementById('loginErr').innerText = `⚠️ 存取被拒：\n${userEmail}\n未獲授權使用此系統。`;
+          return;
+        }
+      }
+
+      localStorage.setItem("user_google_email", userEmail);
+      localStorage.setItem("google_user", JSON.stringify({
+        name: payload.name,
+        email: userEmail,
+        picture: payload.picture
+      }));
+
+      checkLoginStatus();
+    }
+
+    function checkLoginStatus() {
+      const savedEmail = localStorage.getItem("user_google_email");
+      
+      if (savedEmail && typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
+        const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
+        if (cleanList.includes(savedEmail.toLowerCase().trim())) {
+          document.getElementById('authOverlay').style.display = 'none';
+          document.getElementById('mainContainer').style.display = 'block';
+          
+          if (window.google && window.google.accounts && window.google.accounts.id) {
+            window.google.accounts.id.cancel();
+          }
+
+          if (typeof window.initDailyApp === 'function') {
+            window.initDailyApp();
+          }
+          return true;
+        }
+      }
+
+      document.getElementById('authOverlay').style.display = 'flex';
+      document.getElementById('mainContainer').style.display = 'none';
+      return false;
+    }
+
+    function initGoogleSignIn() {
+      if (checkLoginStatus()) return;
+
+      if (window.google && google.accounts && google.accounts.id) {
+        const clientId = (typeof CONFIG !== 'undefined' && CONFIG.GOOGLE_CLIENT_ID) 
+          ? CONFIG.GOOGLE_CLIENT_ID 
+          : "972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com";
+
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleCredentialResponse
+        });
+
+        google.accounts.id.renderButton(
+          document.getElementById("googleSignInContainer"),
+          { theme: "outline", size: "large" }
+        );
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       loadNavbar();
+      checkLoginStatus();
     });
   </script>
 
