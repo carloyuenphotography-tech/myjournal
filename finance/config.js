@@ -2,7 +2,7 @@
 
 const CONFIG = {
     // Google Apps Script 部署 URL
-    gasUrl: "https://script.google.com/macros/s/AKfycbz_dU-9n00eBA8EoSahFfcIVu1hxcS_g4TIovKNiCIEFhy42vBFJVJHc_RKqhcBkIcakQ/exec",
+    gasUrl: "https://script.google.com/macros/s/AKfycbxKbkW6nne5PaWl-D-Ykxv6ouZgUNX17P4xAzmd1ekLR_cK9qG2KEeOgJt-pG9yiT8h1A/exec",
     
     // Google Sheet ID
     sheetId: "1-1xCCblZ3JkoGWHJ4LUtVIuIzbDktw1ukBOjApEVbzA",
