@@ -12,7 +12,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   
   <script src="config.js"></script>
-  <script src="allowed-emails.js"></script>
   
   <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
   
@@ -21,6 +20,7 @@
       --primary-color: #0284c7; 
       --bg-color: #f8fafc; 
       --border-color: #cbd5e1; 
+      --header-bg: #1e293b;
     }
     body { 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
@@ -56,10 +56,99 @@
 
     .container { max-width: 1300px; margin: 0 auto; background: #fff; padding: 16px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: none; }
     
-    .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; overflow-x: auto; white-space: nowrap; }
-    .nav-tabs::-webkit-scrollbar { display: none; }
-    .nav-btn { padding: 8px 14px; font-size: 0.88rem; border-radius: 6px; text-decoration: none; background: #e2e8f0; color: #475569; font-weight: bold; }
-    .nav-btn.active { background: var(--primary-color); color: #fff; }
+    /* ☰ 三劃抽屜式導覽列樣式 (Blueprint 藍本規範) */
+    .nav-bar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 12px 12px 12px;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 16px;
+    }
+    .nav-bar-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--header-bg);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hamburger-btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      font-size: 1.3rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #334155;
+      transition: background 0.2s;
+    }
+    .hamburger-btn:hover { background: #e2e8f0; }
+
+    .nav-drawer {
+      position: fixed;
+      top: 0;
+      right: -280px;
+      width: 280px;
+      height: 100%;
+      background: #ffffff;
+      box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+      z-index: 10000;
+      transition: right 0.3s ease;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .nav-drawer.open { right: 0; }
+
+    .nav-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      font-weight: bold;
+      color: #1e293b;
+    }
+    .nav-drawer-close {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #64748b;
+    }
+
+    .nav-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.4);
+      z-index: 9999;
+      display: none;
+      backdrop-filter: blur(2px);
+    }
+    .nav-overlay.open { display: block; }
+
+    .nav-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .nav-btn {
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      text-decoration: none;
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: bold;
+      transition: all 0.2s ease;
+      display: block;
+    }
+    .nav-btn:hover { background: #e2e8f0; }
+    .nav-btn.active { background: var(--primary-color); color: #ffffff; }
 
     .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
     .page-title { font-size: 1.15rem; font-weight: bold; color: var(--primary-color); }
@@ -189,7 +278,20 @@
   </div>
 
   <div class="container" id="mainContainer">
-    <div id="navbar" class="nav-tabs"></div>
+    <!-- ☰ 頂部與抽屜式導覽列 -->
+    <div class="nav-bar-header">
+      <div class="nav-bar-title">📖 Book Writer 管理中心</div>
+      <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
+    </div>
+
+    <div id="navOverlay" class="nav-overlay" onclick="closeNavDrawer()"></div>
+    <div id="navDrawer" class="nav-drawer">
+      <div class="nav-drawer-header">
+        <span>🧭 功能選單</span>
+        <button class="nav-drawer-close" onclick="closeNavDrawer()">✕</button>
+      </div>
+      <div id="navbar" class="nav-tabs"></div>
+    </div>
 
     <div class="header-bar">
       <div class="page-title">📖 實體書寫作與大綱管理 - 《非一般晴天》</div>
@@ -294,29 +396,162 @@
   <script src="book-writer.js"></script>
 
 <script>
-function loadGlobalNavbar() {
-  fetch('nav.html')
-    .then(res => res.text())
-    .then(data => {
+    /* 預設選單清單 (備援機制) */
+    const DEFAULT_NAV_ITEMS = [
+      { href: 'index.html', label: '📊 日誌主頁' },
+      { href: 'daily_2.html', label: '⚡ 速記清單' },
+      { href: 'daily_adv.html', label: '⚡ 進階速記日誌' },
+      { href: 'daily_monthly_2.html', label: '📅 速記月視圖' },
+      { href: 'monthly_2.html', label: '📅 Monthly Log' },
+      { href: 'projects_2.html', label: '📁 專案管理' },
+      { href: 'ideas.html', label: '💡 靈感 Ideas' },
+      { href: 'memo_2.html', label: '📐 數學日誌' },
+      { href: 'ct_memo_2.html', label: '🏫 班主任事務' },
+      { href: 'tracker_2.html', label: '🎯 Habit Tracker' },
+      { href: 'procedures_2.html', label: '📋 Procedures' },
+      { href: 'book-writer_2.html', label: '📖 Book Writer' },
+      { href: 'logging_2.html', label: '✍️ 快速 Logging' }
+    ];
+
+    /* ☰ 抽屜導覽列控制項 */
+    function openNavDrawer() {
+      document.getElementById('navDrawer').classList.add('open');
+      document.getElementById('navOverlay').classList.add('open');
+    }
+
+    function closeNavDrawer() {
+      document.getElementById('navDrawer').classList.remove('open');
+      document.getElementById('navOverlay').classList.remove('open');
+    }
+
+    function loadNavbar() {
       const navContainer = document.getElementById('navbar');
-      if (navContainer) {
-        navContainer.innerHTML = data;
-        const currentPath = window.location.pathname.split('/').pop() || 'daily.html';
-        navContainer.querySelectorAll('.nav-btn').forEach(link => {
-          if (link.getAttribute('href') === currentPath) {
-            link.classList.add('active');
+      if (!navContainer) return;
+
+      fetch('nav.html')
+        .then(res => {
+          if (!res.ok) throw new Error('無法讀取 nav.html');
+          return res.text();
+        })
+        .then(data => {
+          if (data.trim().length > 0) {
+            renderNavLinks(navContainer, data);
           } else {
-            link.classList.remove('active');
+            throw new Error('nav.html 內容空白');
           }
+        })
+        .catch(err => {
+          console.warn('導覽列載入失敗，已啟用預設備援選單:', err);
+          const fallbackHtml = DEFAULT_NAV_ITEMS.map(
+            item => `<a href="${item.href}" class="nav-btn">${item.label}</a>`
+          ).join('');
+          renderNavLinks(navContainer, fallbackHtml);
         });
+    }
+
+    function renderNavLinks(container, htmlContent) {
+      container.innerHTML = htmlContent;
+      const currentPath = window.location.pathname.split('/').pop() || 'book-writer.html';
+      container.querySelectorAll('.nav-btn').forEach(link => {
+        const href = link.getAttribute('href') || '';
+        if (href.includes(currentPath) || (currentPath.includes('book-writer') && href.includes('book-writer'))) {
+          link.classList.add('active');
+        } else {
+          link.classList.remove('active');
+        }
+      });
+    }
+
+    /* 🔒 Google 登入與 localStorage 持久化驗證邏輯 */
+    function parseJwt(token) {
+      try {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+      } catch (e) { return null; }
+    }
+
+    function handleCredentialResponse(response) {
+      const payload = parseJwt(response.credential);
+      if (!payload || !payload.email) {
+        document.getElementById('loginErr').innerText = "❌ 驗證失敗：無法讀取登入資訊";
+        return;
       }
-    }).catch(err => console.error('導覽列載入失敗:', err));
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', loadGlobalNavbar);
-} else {
-  loadGlobalNavbar();
-}
+
+      const userEmail = payload.email.toLowerCase().trim();
+
+      if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
+        const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
+        if (!cleanList.includes(userEmail)) {
+          document.getElementById('loginErr').innerText = `⚠️ 存取被拒：\n${userEmail}\n未獲授權使用此系統。`;
+          return;
+        }
+      }
+
+      localStorage.setItem("user_google_email", userEmail);
+      localStorage.setItem("google_user", JSON.stringify({
+        name: payload.name,
+        email: userEmail,
+        picture: payload.picture
+      }));
+
+      checkLoginStatus();
+    }
+
+    function checkLoginStatus() {
+      const savedEmail = localStorage.getItem("user_google_email");
+      
+      if (savedEmail && typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
+        const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
+        if (cleanList.includes(savedEmail.toLowerCase().trim())) {
+          document.getElementById('authOverlay').style.display = 'none';
+          document.getElementById('mainContainer').style.display = 'block';
+          
+          if (window.google && window.google.accounts && window.google.accounts.id) {
+            window.google.accounts.id.cancel();
+          }
+
+          const user = JSON.parse(localStorage.getItem('google_user') || '{}');
+          const userElem = document.getElementById('userInfo');
+          if (userElem) userElem.textContent = `👤 ${user.name || savedEmail}`;
+
+          return true;
+        }
+      }
+
+      document.getElementById('authOverlay').style.display = 'flex';
+      document.getElementById('mainContainer').style.display = 'none';
+      return false;
+    }
+
+    function logout() {
+      localStorage.removeItem("user_google_email");
+      localStorage.removeItem("google_user");
+      location.reload();
+    }
+
+    function initGoogleSignIn() {
+      if (checkLoginStatus()) return;
+
+      if (window.google && google.accounts && google.accounts.id) {
+        const clientId = "972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com";
+
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleCredentialResponse
+        });
+
+        google.accounts.id.renderButton(
+          document.getElementById("googleSignInContainer"),
+          { theme: "outline", size: "large" }
+        );
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadNavbar();
+      checkLoginStatus();
+    });
 </script>
 
 </body>
