@@ -4,18 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
-<!-- iOS 主畫面 Icon (Apple Touch Icon) -->
-<link rel="apple-touch-icon" sizes="180x180" href="math_memo_icon.png">
-
-<!-- 瀏覽器分頁 Favicon -->
-<link rel="icon" type="image/png" sizes="32x32" href="math_memo_icon.png">
-
-<!-- Android / Chrome WebApp 設定 -->
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="數學科 Memo">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-
+  <link rel="apple-touch-icon" sizes="180x180" href="math_memo_icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="math_memo_icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="數學科 Memo">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <title>數學科 Teaching Memo App</title>
   <style>
@@ -77,6 +71,24 @@
       flex-shrink: 0;
     }
 
+    /* ☰ 三劃選單按鈕樣式 */
+    .btn-hamburger {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      color: var(--primary);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 1.2rem;
+      line-height: 1;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .btn-hamburger:hover { background: var(--primary); color: #fff; }
+
     .controls {
       display: flex;
       flex-direction: column;
@@ -129,11 +141,6 @@
       box-sizing: border-box;
     }
 
-    select.filter-select {
-      background-color: #fff;
-      flex-shrink: 0;
-    }
-
     .btn-archive {
       background: #6c757d;
       color: white;
@@ -171,102 +178,6 @@
       overflow-y: auto;
     }
 
-    .memo-card.class-2A { border-left-color: var(--color-2a); }
-    .memo-card.class-2B { border-left-color: var(--color-2b); }
-    .memo-card.class-4E { border-left-color: var(--color-4e); }
-
-    .badge-group { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
-    .badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; color: white; font-weight: bold; }
-    .badge.class-2A { background-color: var(--color-2a); }
-    .badge.class-2B { background-color: var(--color-2b); }
-    .badge.class-4E { background-color: var(--color-4e); }
-    .badge.cycle-day { background-color: #6c757d; }
-
-    .memo-date { font-size: 12px; color: #666; margin-bottom: 2px; }
-    .memo-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    
-    .memo-title { 
-      font-size: 17px; 
-      font-weight: bold; 
-      margin-top: 2px; 
-      margin-bottom: 2px;
-      color: #1a1a1a;
-    }
-
-    .tag { color: var(--primary); cursor: pointer; font-weight: 500; margin-right: 4px; font-size: 12px; }
-    .action-btn { cursor: pointer; font-size: 15px; margin-left: 6px; user-select: none; }
-
-    .memo-body {
-      margin-top: 4px;
-      padding-top: 6px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-    }
-
-    .teaching-content {
-      font-size: 15px;
-      line-height: 1.4;
-      font-weight: 500;
-      color: #222;
-      margin: 4px 0 8px 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .reminder-box {
-      background-color: #fff1f0;
-      border-left: 4px solid #ff4d4f;
-      color: #cf1322;
-      font-size: 15px;
-      font-weight: bold;
-      padding: 6px 10px;
-      border-radius: 4px;
-      margin-top: 4px;
-      margin-bottom: 8px;
-      line-height: 1.3;
-    }
-
-    .hw-container {
-      margin-top: auto;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 8px;
-    }
-
-    .hw-header-title { font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 6px; }
-
-    .hw-item {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 5px;
-      padding: 6px 8px;
-      margin-bottom: 4px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .hw-item:last-child { margin-bottom: 0; }
-
-    .hw-item-top { display: flex; justify-content: space-between; align-items: center; }
-    .hw-item-title { font-size: 13px; font-weight: bold; color: #1e293b; }
-
-    .hw-badges { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
-    .pill { font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 600; }
-    .pill-location { background: #e0f2fe; color: #0369a1; }
-    .pill-collect-收齊 { background: #dcfce7; color: #15803d; }
-    .pill-collect-未收齊 { background: #fee2e2; color: #b91c1c; }
-    .pill-collect-收集中 { background: #fef3c7; color: #b45309; }
-
-    .pill-marking-完成批改 { background: #dcfce7; color: #15803d; }
-    .pill-marking-未批改 { background: #f1f5f9; color: #475569; }
-    .pill-marking-批改中 { background: #fef3c7; color: #b45309; }
-
-    .pill-missing { background: #fee2e2; color: #b91c1c; border: 1px dashed #f87171; }
-
-    /* 防溢出的修正 Modal 樣式 */
     .modal {
       display: none;
       position: fixed;
@@ -293,48 +204,13 @@
 
     .form-group { margin-bottom: 10px; width: 100%; }
     .form-group label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px; }
-    
-    /* 修正輸入框，防止日期與下拉選單超出 Modal */
     .form-group input, .form-group textarea, .form-group select {
       width: 100% !important;
-      max-width: 100% !important;
       padding: 8px;
       box-sizing: border-box !important;
       font-size: 13px;
       border-radius: 6px;
       border: 1px solid var(--border);
-      background-color: #fcfcfc;
-    }
-
-    /* 重新設計的 Modal 內部功課編輯列（防水卡片包裹式） */
-    .hw-form-row {
-      background: #f8fafc;
-      padding: 10px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      position: relative;
-    }
-
-    .hw-form-row-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-
-    .btn-del-hw {
-      background: #ef4444;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      width: 22px;
-      height: 22px;
-      font-size: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
   </style>
 </head>
@@ -344,11 +220,13 @@
     <div id="navbar" class="nav-tabs"></div>
     <header>
       <h2>📐 數學科 Teaching Memo</h2>
-      <button class="icon-btn-add" onclick="openModal()" title="新增 Memo">➕</button>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="icon-btn-add" onclick="openModal()" title="新增 Memo">➕</button>
+        <button type="button" class="btn-hamburger" onclick="toggleNavMenu()" title="切換選單">☰</button>
+      </div>
     </header>
 
     <div class="controls">
-      <!-- 第一列：班別按鈕 + 位置選單 -->
       <div class="control-row">
         <button class="filter-btn btn-class-all active" onclick="filterClass('ALL', this)">全部</button>
         <button class="filter-btn btn-class-2a" onclick="filterClass('2A', this)">2A</button>
@@ -365,7 +243,6 @@
         </select>
       </div>
 
-      <!-- 第二列：搜尋欄（左）與 查看典藏按鈕（右）放在同一行 -->
       <div style="display: flex; gap: 6px; width: 100%; align-items: center;">
         <input type="text" id="searchInput" placeholder="搜尋關鍵字或 #Hashtag..." oninput="renderMemos()" style="flex: 1; min-width: 0;">
         <button class="btn-archive" onclick="toggleArchiveView(this)">📦 典藏</button>
@@ -377,7 +254,6 @@
     </div>
   </div>
 
-  <!-- 主 Memo Modal -->
   <div id="memoModal" class="modal">
     <div class="modal-content">
       <h3 id="modalTitle" style="margin-top:0;">新增教學 Memo</h3>
@@ -438,7 +314,6 @@
     </div>
   </div>
 
-  <!-- 單獨修改功課狀態 Modal -->
   <div id="hwQuickEditModal" class="modal">
     <div class="modal-content">
       <h3 style="margin-top:0;" id="quickHwTitle">✏️ 修改功課狀態</h3>
@@ -489,6 +364,13 @@
   <script src="memo.js"></script>
 
 <script>
+function toggleNavMenu() {
+  const nav = document.getElementById('navbar');
+  if (nav) {
+    nav.style.display = (nav.style.display === 'none' || getComputedStyle(nav).display === 'none') ? 'flex' : 'none';
+  }
+}
+
 function loadGlobalNavbar() {
   fetch('nav.html')
     .then(res => res.text())
@@ -496,7 +378,7 @@ function loadGlobalNavbar() {
       const navContainer = document.getElementById('navbar');
       if (navContainer) {
         navContainer.innerHTML = data;
-        const currentPath = window.location.pathname.split('/').pop() || 'daily.html';
+        const currentPath = window.location.pathname.split('/').pop() || 'memo_2.html';
         navContainer.querySelectorAll('.nav-btn').forEach(link => {
           if (link.getAttribute('href') === currentPath) {
             link.classList.add('active');
