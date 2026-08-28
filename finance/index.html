@@ -399,7 +399,25 @@
                 </div>
             </div>
 
-            <!-- 第二層：選擇戶口類別 -->
+            <!-- ================= 頁面 2：資產紀錄 ================= -->
+    <div id="page-assets" class="page-content">
+        <div class="card">
+            <div class="card-title">🏦 更新銀行/資產結餘</div>
+
+            <!-- 1️⃣ 選擇銀行 -->
+            <div class="form-group">
+                <label>1️⃣ 選擇銀行 / 金融機構</label>
+                <div class="pill-group" id="bank-pills">
+                    <div class="pill active" onclick="selectBank('HSBC', this)">🏦 HSBC</div>
+                    <div class="pill" onclick="selectBank('恒生銀行', this)">🏦 恒生</div>
+                    <div class="pill" onclick="selectBank('中國銀行', this)">🏦 中銀</div>
+                    <div class="pill" onclick="selectBank('渣打銀行', this)">🏦 渣打</div>
+                    <div class="pill" onclick="selectBank('富途/券商', this)">📈 富途/券商</div>
+                    <div class="pill" onclick="selectBank('其他/現金', this)">💵 現金/其他</div>
+                </div>
+            </div>
+
+            <!-- 2️⃣ 選擇戶口類別 -->
             <div class="form-group">
                 <label>2️⃣ 選擇戶口類別</label>
                 <div class="pill-group" id="account-type-pills">
@@ -409,6 +427,15 @@
                     <div class="pill" onclick="selectAccountType('定期 Deposit', this)">🔒 定期存款</div>
                     <div class="pill" onclick="selectAccountType('信用卡 Credit', this)">💳 信用卡負債</div>
                 </div>
+            </div>
+
+            <!-- 3️⃣ 戶口尾數或暱稱 (帶有自動記憶按鈕) -->
+            <div class="form-group">
+                <label>3️⃣ 戶口尾數 / 暱稱 (可選)</label>
+                <!-- 常用快捷按鈕（系統自動產生） -->
+                <div class="pill-group" id="account-no-pills" style="margin-bottom: 8px;"></div>
+                <!-- 自訂輸入框 -->
+                <input type="text" id="asset-account-no" placeholder="可輸入尾數 (如: 1234) 或暱稱 (如: 出糧戶)">
             </div>
 
             <div class="form-group">
