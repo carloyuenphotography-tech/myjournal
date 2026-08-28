@@ -9,6 +9,8 @@ const CONFIG = {
     
     // 各分頁的 GID
     GIDS: {
-        FINANCE: '0'
-    }
+    FINANCE: '0',        // 記帳明細分頁 (gid=0)
+    BUDGET: '12345678',  // 預算規劃分頁
+    REPORT: '87654321'   // 統計報表分頁
+}
 };
