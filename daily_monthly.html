@@ -4,15 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>📅 Daily Monthly View - 速記月視圖</title>
-  <!-- 載入 PapaParse 與 Google SDK -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <!-- 引入 SortableJS 支援拖曳排序 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   
-  <!-- 載入設定檔與白名單 -->
   <script src="config.js"></script>
   <script src="allowed-emails.js"></script>
-  
   <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
   
   <style>
@@ -29,7 +25,6 @@
       padding: 12px; 
     }
     
-    /* 🔒 Google 登入驗證遮罩 */
     .auth-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -66,6 +61,24 @@
     .user-profile { font-size: 0.8rem; color: #475569; display: flex; align-items: center; gap: 8px; }
     .logout-btn { background: #f1f5f9; border: 1px solid var(--border-color); padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
 
+    /* ☰ 三劃選單按鈕樣式 */
+    .btn-hamburger {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      color: var(--primary-color);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 1.2rem;
+      line-height: 1;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .btn-hamburger:hover { background: var(--primary-color); color: #fff; }
+
     .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); }
     .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .filter-select { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; outline: none; background-color: #ffffff; color: #334155; }
@@ -73,14 +86,6 @@
     .month-nav-bar { display: flex; align-items: center; gap: 8px; background: #eff6ff; padding: 6px 12px; border-radius: 8px; border: 1px solid #bfdbfe; margin-bottom: 16px; }
     .nav-arrow-btn { background: #ffffff; border: 1px solid #93c5fd; padding: 4px 10px; border-radius: 6px; font-weight: bold; color: #1d4ed8; cursor: pointer; }
     .nav-arrow-btn:hover { background: #dbeafe; }
-
-    .hashtag-pill { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 1px 6px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; margin: 0 2px; }
-    .hashtag-pill:hover { background: var(--primary-color); color: #ffffff; }
-
-    .type-badge { font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; flex-shrink: 0; }
-    .type-badge.Task { background: #e0e7ff; color: #3730a3; }
-    .type-badge.Event { background: #fef3c7; color: #92400e; }
-    .type-badge.Note, .type-badge.筆記 { background: #f1f5f9; color: #475569; }
 
     .month-board-grid {
       display: grid;
@@ -125,32 +130,6 @@
       background: #f8fafc;
     }
 
-    .month-board.current-month {
-      border: 2px solid #6366f1;
-      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25);
-    }
-    .month-board.current-month .month-header {
-      background: #4f46e5;
-    }
-
-    .mini-log-card {
-      background: #fff;
-      border: 1px solid var(--border-color);
-      border-left: 4px solid var(--primary-color);
-      border-radius: 6px;
-      padding: 10px;
-      cursor: grab;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-      flex-shrink: 0;
-    }
-    .mini-log-card:active { cursor: grabbing; }
-    .mini-log-card:hover { border-color: var(--primary-color); }
-    .mini-log-card.done { border-left-color: #22c55e; opacity: 0.7; }
-    
-    .status-btn { padding: 2px 6px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; }
-    .status-btn.todo { background: #fee2e2; color: #dc2626; }
-    .status-btn.done { background: #dcfce7; color: #16a34a; }
-    
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; }
     .modal-box { background:#fff; width:100%; max-width:480px; border-radius:12px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
     .form-group { margin-bottom: 10px; }
@@ -189,9 +168,12 @@
 
     <div class="header-bar">
       <div class="page-title">⚡ Daily Logs - 月度總覽 (Monthly View)</div>
-      <div class="user-profile">
-        <span id="userInfo"></span>
-        <button class="logout-btn" onclick="logout()">登出</button>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="user-profile">
+          <span id="userInfo"></span>
+          <button class="logout-btn" onclick="logout()">登出</button>
+        </div>
+        <button type="button" class="btn-hamburger" onclick="toggleNavMenu()" title="切換選單">☰</button>
       </div>
     </div>
 
@@ -297,6 +279,13 @@
   <script src="daily_monthly.js"></script>
 
 <script>
+function toggleNavMenu() {
+  const nav = document.getElementById('navbar');
+  if (nav) {
+    nav.style.display = (nav.style.display === 'none' || getComputedStyle(nav).display === 'none') ? 'flex' : 'none';
+  }
+}
+
 function loadGlobalNavbar() {
   fetch('nav.html')
     .then(res => res.text())
@@ -304,7 +293,7 @@ function loadGlobalNavbar() {
       const navContainer = document.getElementById('navbar');
       if (navContainer) {
         navContainer.innerHTML = data;
-        const currentPath = window.location.pathname.split('/').pop() || 'daily.html';
+        const currentPath = window.location.pathname.split('/').pop() || 'daily_monthly_2.html';
         navContainer.querySelectorAll('.nav-btn').forEach(link => {
           if (link.getAttribute('href') === currentPath) {
             link.classList.add('active');
