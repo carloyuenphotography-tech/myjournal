@@ -2,81 +2,53 @@
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ 進階速記日誌 - Daily Advanced Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>⚡ 日軌流光 </title>
+  
+  <!-- 📝 WebApp / PWA / Favicon 📝 圖示設定 -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
 
+  <script src="daily_adv.js?v=2.5"></script>
+  <script src="../config.js"></script>
+  <script src="../allowed-emails.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script src="config.js"></script>
-  <script src="allowed-emails.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-
+  
   <style>
     :root {
-      --primary-color: #6366f1;
+      --primary: #0284c7;
       --bg-color: #f8fafc;
       --border-color: #e2e8f0;
-      --header-bg: #1e293b;
     }
 
     * { box-sizing: border-box; }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-color);
-      color: #1e293b;
+      color: #0f172a;
       margin: 0;
-      padding: 8px;
+      padding: 10px;
     }
 
-    #loginOverlay {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(248, 250, 252, 0.95);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      gap: 16px;
+    .auth-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.85);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 9999; padding: 16px;
     }
-    .login-card {
-      background: white;
-      padding: 40px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      text-align: center;
-      max-width: 400px;
-      width: 100%;
+    .auth-card {
+      background: #fff; border-radius: 16px; width: 100%; max-width: 360px;
+      padding: 28px 20px; text-align: center;
     }
-    #mainContent { display: none; }
 
     .container {
-      max-width: 1150px;
-      margin: 0 auto;
-      background: #ffffff;
-      padding: 12px;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      max-width: 1200px; margin: 0 auto; background: #fff;
+      padding: 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: none;
     }
 
-    /* ☰ 三劃抽屜式導覽列樣式 (藍本規範) */
-    .nav-bar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 12px 12px 12px;
-      border-bottom: 2px solid var(--border-color);
-      margin-bottom: 16px;
-    }
-    .nav-bar-title {
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: var(--header-bg);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+    /* ☰ 三劃抽屜式導覽列樣式 */
     .hamburger-btn {
       background: #f1f5f9;
       border: 1px solid var(--border-color);
@@ -86,6 +58,9 @@
       cursor: pointer;
       color: #334155;
       transition: background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .hamburger-btn:hover { background: #e2e8f0; }
 
@@ -152,107 +127,383 @@
       display: block;
     }
     .nav-btn:hover { background: #e2e8f0; }
-    .nav-btn.active { background: var(--primary-color); color: #ffffff; }
+    .nav-btn.active { background: var(--primary); color: #ffffff; }
 
-    /* 控制列與輸入框 */
-    .controls-bar {
+    .header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);
+    }
+    .title-group { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
+
+    .top-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    
+    .btn-bubble {
+      border-radius: 20px; padding: 6px 12px; font-size: 0.8rem; font-weight: bold;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 4px; border: 1px solid transparent;
+      transition: all 0.2s; text-decoration: none;
+    }
+    .btn-bubble:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    .btn-backlog { background: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
+    .btn-overdue { background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
+    .btn-completed { background: #f0fdf4; color: #166534; border-color: #86efac; }
+
+    .badge-pill {
+      background: rgba(0,0,0,0.15); color: inherit; padding: 1px 7px;
+      border-radius: 10px; font-size: 0.72rem;
+    }
+
+    .app-body-layout {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-      gap: 8px;
-      background: #f8fafc;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 10px;
     }
-    .user-profile { font-size: 0.82rem; color: #475569; display: flex; align-items: center; gap: 8px; }
-    .logout-btn { background: #ffffff; border: 1px solid var(--border-color); padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
 
-    .daily-box {
-      background-color: #f0fdf4;
-      border: 1px solid #86efac;
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 16px;
-    }
-    .daily-header {
+    .sidebar-categories {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px dashed #a7f3d0;
-      padding-bottom: 8px;
-      margin-bottom: 10px;
+      flex-direction: row;
+      overflow-x: auto;
+      gap: 6px;
+      padding-bottom: 4px;
+      position: relative;
+      z-index: 200;
     }
-    .daily-title { font-size: 1rem; font-weight: bold; color: #166534; display: flex; align-items: center; gap: 6px; }
+    .sidebar-categories::-webkit-scrollbar { height: 4px; }
+    .sidebar-categories::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-    .btn-date-nav {
-      padding: 3px 8px;
-      font-size: 0.78rem;
-      border: 1px solid #a7f3d0;
-      background: #ffffff;
-      color: #166534;
-      border-radius: 6px;
-      cursor: pointer;
+    .sidebar-title {
+      font-size: 0.85rem;
       font-weight: bold;
+      color: #64748b;
+      margin-bottom: 6px;
+      display: none;
     }
-    .btn-date-nav:hover { background: #dcfce7; }
 
-    .daily-list { display: flex; flex-direction: column; gap: 8px; }
-
-    .daily-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 10px 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    .cat-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: #f8fafc;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #475569;
       cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      user-select: none;
     }
-    .daily-card.status-done { opacity: 0.65; }
-    .daily-card.status-done .daily-card-title { text-decoration: line-through; }
+    .cat-btn:hover { background: #e2e8f0; color: #0f172a; }
+    .cat-btn.active {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #0284c7;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+    }
+
+    .main-content-area {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ⚡ 快速輸入區 */
+    .quick-input-card {
+      background: #f8fafc; border: 1px solid var(--border-color);
+      border-radius: 10px; padding: 10px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .quick-input-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .quick-input-row select {
+      padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color);
+      font-size: 0.85rem; font-weight: bold; background: #fff; outline: none;
+    }
+    .quick-input-row input[type="text"] {
+      flex: 1; min-width: 150px; padding: 6px 10px; border-radius: 6px;
+      border: 1px solid var(--border-color); font-size: 0.85rem;
+    }
+    .quick-input-row input[type="date"] {
+      padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color);
+      font-size: 0.8rem; color: #334155; background: #fff; outline: none;
+    }
+    .btn-add-quick {
+      background: var(--primary); color: #fff; border: none; padding: 5px 14px;
+      border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.82rem; white-space: nowrap;
+    }
+
+    .timeline-container { display: flex; flex-direction: column; gap: 16px; margin-top: 6px; }
+
+    .day-block { display: flex; gap: 12px; position: relative; }
+    .day-date-col { width: 50px; flex-shrink: 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
+    .day-weekday { font-size: 0.7rem; font-weight: bold; color: #64748b; text-transform: uppercase; }
+    .day-number {
+      font-size: 1.2rem; font-weight: bold; width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center; border-radius: 50%;
+      margin-top: 2px; color: #334155;
+    }
+    
+    .day-block.is-today .day-number { background: var(--primary); color: #fff; }
+    .day-block.is-today .day-weekday { color: var(--primary); font-weight: bold; }
+
+    .day-block.is-tomorrow .day-number { background: #0284c7; color: #fff; opacity: 0.85; }
+    .day-block.is-tomorrow .day-weekday { color: #0284c7; font-weight: bold; }
+
+    .day-content-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+
+    .pending-tasks-pill {
+      background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 12px;
+      padding: 3px 10px; font-size: 0.75rem; color: #475569; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 6px; width: fit-content;
+    }
+
+    .task-card {
+      background: #38bdf8; color: #fff; border-radius: 8px; padding: 10px 12px;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.15s ease;
+    }
+    .task-card:active { transform: scale(0.99); opacity: 0.9; }
+    .task-card.type-Event { background: #0284c7; }
+    .task-card.type-Task { background: #2563eb; }
+    .task-card.type-Note { background: #64748b; }
+
+    .task-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+    .task-title { font-weight: bold; font-size: 0.88rem; line-height: 1.35; word-break: break-word; }
+    .task-remarks {
+      font-size: 0.75rem; opacity: 0.9; margin-top: 4px;
+      white-space: pre-wrap; word-break: break-word;
+    }
+
+    .drag-handle {
+      cursor: grab;
+      padding: 4px 6px;
+      font-size: 1.1rem;
+      opacity: 0.7;
+      user-select: none;
+      touch-action: none;
+    }
+    .drag-handle:active { cursor: grabbing; opacity: 1; }
+    .sortable-ghost { opacity: 0.4; background: #cbd5e1 !important; }
 
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 23, 42, 0.5); display: none; justify-content: center; align-items: center;
-      z-index: 10000; padding: 16px; backdrop-filter: blur(2px);
+      background: rgba(0,0,0,0.45); display: none; justify-content: center; align-items: center;
+      z-index: 1000; padding: 16px;
     }
     .modal-card {
-      background: #fff; border-radius: 16px; width: 100%; max-width: 480px;
-      padding: 20px; max-height: 85vh; display: flex; flex-direction: column;
+      background: #fff; border-radius: 16px; width: 100%; max-width: 460px;
+      padding: 26px 18px 18px 18px; max-height: 85vh; display: flex; flex-direction: column;
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
+    .modal-header {
+      font-size: 1rem; font-weight: bold; margin-bottom: 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);
+    }
+    .modal-body { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+    .modal-actions-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 14px; flex-wrap: wrap; gap: 6px;
+    }
+
+    .fab-btn {
+      position: fixed; bottom: 20px; right: 20px; width: 52px; height: 52px;
+      border-radius: 50%; background: var(--primary); color: #fff; font-size: 1.5rem;
+      border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; z-index: 900;
+    }
+
+    .month-divider {
+      background: rgba(248, 250, 252, 0.95); backdrop-filter: blur(8px);
+      padding: 8px 12px; margin: 12px 0 6px 0; border-bottom: 2px solid #cbd5e1;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .month-divider .month-text { font-size: 15px; font-weight: 700; color: #1e293b; }
+    .month-divider .year-badge { background-color: #e2e8f0; color: #475569; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; }
+
+    @media (max-width: 520px) {
+      .btn-bubble .btn-text { display: none; }
+      .btn-bubble { padding: 5px 9px; font-size: 0.85rem; }
+    }
+
+    @media (min-width: 900px) {
+      .container {
+        max-width: 100% !important; padding: 20px;
+        background: #f8fafc; box-shadow: none;
+      }
+
+      .app-body-layout {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 20px;
+      }
+
+      .sidebar-categories {
+        width: 200px;
+        flex-shrink: 0;
+        flex-direction: column;
+        background: #ffffff;
+        padding: 16px 12px;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        position: sticky;
+        top: 16px;
+        z-index: 200;
+      }
+      .sidebar-title {
+        display: block;
+        padding-left: 8px;
+        margin-bottom: 8px;
+      }
+      .cat-btn {
+        width: 100%;
+        border-radius: 10px;
+        padding: 9px 12px;
+        justify-content: flex-start;
+        border: none;
+        background: transparent;
+        font-size: 0.88rem;
+      }
+      .cat-btn:hover { background: #f1f5f9; }
+      .cat-btn.active {
+        background: #e0f2fe;
+        color: #0284c7;
+        font-weight: bold;
+        box-shadow: none;
+      }
+
+      .timeline-container {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .month-divider {
+        flex: 0 0 100%;
+        width: 100%;
+        border-radius: 10px;
+        margin: 0 0 8px 0;
+      }
+
+      .day-block {
+        flex: 0 0 280px;
+        width: 280px;
+        background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;
+        padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        flex-direction: column; gap: 12px;
+      }
+      .day-date-col {
+        width: 100%; flex-direction: row; justify-content: space-between;
+        align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;
+      }
+      .day-number { font-size: 1.1rem; width: 32px; height: 32px; }
+      .day-content-col { width: 100%; }
+
+      .modal-card { max-width: 680px !important; padding: 24px !important; }
+      .form-row-inline { display: flex; gap: 16px; }
+      .form-row-inline label { flex: 1; }
+    }
+
+    .modal-card textarea { min-height: 140px; line-height: 1.5; font-size: 14px; resize: vertical; font-family: inherit; margin-top: 4px; }
+
+    @media all and (display-mode: standalone) {
+      body { padding: 4px; }
+      .container { padding: 8px; border-radius: 8px; }
+      .header-bar { padding-bottom: 8px; gap: 6px; }
+      .title-group { font-size: 0.95rem; }
+      .btn-bubble { padding: 4px 8px; font-size: 0.8rem; }
+      .quick-input-card { padding: 6px; gap: 6px; }
+      .quick-input-row input[type="text"] { padding: 4px 8px; font-size: 0.8rem; }
+      .btn-add-quick { padding: 4px 10px; font-size: 0.8rem; }
+      .day-date-col { width: 42px; }
+      .day-number { width: 28px; height: 28px; font-size: 1rem; }
+      .day-weekday { font-size: 0.65rem; }
+      .task-card { padding: 8px 10px; border-radius: 6px; }
+      .task-title { font-size: 0.78rem; }
+      .task-remarks { font-size: 0.7rem; }
+      .timeline-container { gap: 10px; margin-top: 10px; }
+    }
+
+    /* 📍 地點與時間組合徽章 */
+    .location-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      padding: 3px 8px;
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      width: fit-content;
+      backdrop-filter: blur(4px);
+    }
+
+    .location-badge .loc-time {
+      padding-left: 6px;
+      border-left: 1px solid rgba(255, 255, 255, 0.4);
+      opacity: 0.9;
+      font-weight: normal;
+    }
+    /* 🍔 三劃漢堡選單按鈕樣式 */
+.btn-hamburger {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  color: var(--primary);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 1.2rem;
+  line-height: 1;
+  font-weight: bold;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.btn-hamburger:hover {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+/* 📱 若想在固定畫面最右上角 (可選)：
+   解開以下註解可將按鈕置頂固定在畫面右上方
+*/
+/*
+.btn-hamburger {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 1000;
+}
+*/
   </style>
 </head>
 <body>
 
-  <!-- Google 登入遮罩 (使用 localStorage 持久化) -->
-  <div id="loginOverlay">
-    <div class="login-card">
-      <h2>⚡ 進階速記日誌</h2>
-      <p style="color: #8e8e93; font-size: 0.9rem; margin-bottom: 20px;">請先透過 Google 帳號驗證身分</p>
-      
-      <div id="g_id_onload" 
-           data-client_id="972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com" 
-           data-callback="handleCredentialResponse">
-      </div>
-      <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"></div>
-
-      <div id="loginErr" style="color: #ff3b30; font-size: 0.85rem; margin-top: 12px; white-space: pre-line;"></div>
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <h3 style="margin-top:0;">⚡ 日軌流光</h3>
+      <p style="color:#64748b; font-size:0.85rem;">請先驗證 Google 帳號</p>
+      <div id="googleSignInContainer" style="display:flex; justify-content:center; min-height:40px;"></div>
     </div>
   </div>
 
-  <div id="mainContent" class="container">
-    <!-- ☰ 頂部與抽屜式導覽列 (完全照 Blueprint 藍本構建) -->
-    <div class="nav-bar-header">
-      <div class="nav-bar-title">⚡ 進階速記日誌 (Daily Advanced)</div>
-      <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
-    </div>
-
+  <div class="container" id="mainContainer">
+    
+    <!-- ☰ 抽屜式導覽列與遮罩 -->
     <div id="navOverlay" class="nav-overlay" onclick="closeNavDrawer()"></div>
     <div id="navDrawer" class="nav-drawer">
       <div class="nav-drawer-header">
@@ -262,90 +513,159 @@
       <div id="navbar" class="nav-tabs"></div>
     </div>
 
-    <div class="controls-bar">
-      <div class="user-profile">
-        <span id="userInfo"></span>
-        <button class="logout-btn" onclick="logout()">登出</button>
-      </div>
-      <button onclick="openModal()" style="background:var(--primary-color); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:bold; cursor:pointer;">➕ 新增日誌事項</button>
-    </div>
+    <div class="header-bar">
+  <div class="title-group">✨ 日軌流光</div>
+  
+  <div class="top-actions">
+    <a href="recurring.html" class="btn-bubble" style="background:#e0f2fe; color:#0284c7; border-color:#bae6fd;">
+      🔄 <span class="btn-text">重複規則</span>
+    </a>
+    <button class="btn-bubble btn-overdue" onclick="openOverdueModal()">
+      ⚠️ <span class="btn-text">逾期工作</span> <span id="overdueBadgeCount" class="badge-pill">0</span>
+    </button>
+    <button class="btn-bubble btn-backlog" onclick="openBacklogModal()">
+      📥 <span class="btn-text">未有日期</span> <span id="backlogBadgeCount" class="badge-pill">0</span>
+    </button>
+    <button class="btn-bubble btn-completed" onclick="openCompletedModal()">
+      ✅ <span class="btn-text">已完成</span> <span id="completedBadgeCount" class="badge-pill">0</span>
+    </button>
+    <button class="btn-bubble" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openArchivedModal()">
+      📦 <span class="btn-text">典藏庫</span> <span id="archivedBadgeCount" class="badge-pill">0</span>
+    </button>
 
-    <!-- 當日日誌卡片區塊 -->
-    <div class="daily-box">
-      <div class="daily-header">
-        <div class="daily-title">📌 當日速記與清單</div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span id="dailyDateDisplay" style="font-size: 0.85rem; color: #166534; font-weight: bold;"></span>
-          <button class="btn-date-nav" onclick="changeDailyDate(-1)">◀</button>
-          <button class="btn-date-nav" onclick="changeDailyDate(1)">▶</button>
+    <!-- 🍔 右上角三劃選單按鈕（內建開啟對話框邏輯） -->
+<button type="button" class="btn-hamburger" onclick="const p=document.getElementById('cmdPalette'); if(p){ p.open ? p.close() : p.showModal(); }" title="開啟選單">
+  ☰
+</button>
+  </div>
+</div>
+
+    <div class="app-body-layout">
+      
+      <!-- 🗂️ 分類看板選單 (由 JS 動態生成) -->
+      <aside class="sidebar-categories" id="sidebarCategories">
+        <div class="sidebar-title">看板分類</div>
+      </aside>
+
+      <main class="main-content-area">
+        <!-- ⚡ Rapid Logging 快速輸入區 (支援類型、分類選單) -->
+        <form class="quick-input-card" onsubmit="handleQuickSubmit(event)">
+          <div class="quick-input-row">
+            <select id="quickType" title="類型">
+              <option value="Task">• 任務</option>
+              <option value="Event">o 事件</option>
+              <option value="筆記">- 筆記</option>
+            </select>
+            <select id="quickCategory" title="分類"></select>
+            <input type="text" id="quickContent" placeholder="⚡ 快速記下事項..." required>
+          </div>
+          <div class="quick-input-row" style="justify-content: space-between; gap: 6px;">
+            <input type="date" id="quickDate">
+            <label style="font-size:0.78rem; color:#64748b; display:flex; align-items:center; gap:4px; cursor:pointer;">
+              <input type="checkbox" id="quickIsBacklog" onchange="toggleQuickDateInput(this)"> 無日期
+            </label>
+            <button type="submit" class="btn-add-quick">新增</button>
+          </div>
+        </form>
+
+        <div id="statusMessage" style="font-size:0.8rem; color:var(--primary); margin:8px 0 0 0;">⏳ 載入中...</div>
+
+        <div id="timelineContainer" class="timeline-container"></div>
+      </main>
+
+    </div>
+  </div>
+
+  <button class="fab-btn" onclick="openAddModal()">＋</button>
+
+  <div id="overdueModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>⚠️ 逾期未完成工作 (Overdue)</span>
+        <button style="border:none; background:none; cursor:pointer; font-size:1.2rem;" onclick="closeOverdueModal()">✕</button>
+      </div>
+      <div id="overdueModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="backlogModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>📥 未有日期工作 (Backlog)</span>
+        <button style="border:none; background:none; cursor:pointer; font-size:1.2rem;" onclick="closeBacklogModal()">✕</button>
+      </div>
+      <div id="backlogModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="completedModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>✅ 已完成工作紀錄 (Completed)</span>
+        <button style="border:none; background:none; cursor:pointer; font-size:1.2rem;" onclick="closeCompletedModal()">✕</button>
+      </div>
+      <div id="completedModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="archivedModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>📦 典藏庫 (Archived)</span>
+        <button style="border:none; background:none; cursor:pointer; font-size:1.2rem;" onclick="closeArchivedModal()">✕</button>
+      </div>
+      <div id="archivedModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ✏️ 編輯 / 操作事項 Modal -->
+  <div id="itemModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span id="modalFormTitle">✏️ 編輯事項</span>
+        <button style="border:none; background:none; cursor:pointer; font-size:1.2rem;" onclick="closeItemModal()">✕</button>
+      </div>
+      <form id="itemForm" onsubmit="handleFormSubmit(event)">
+        <input type="hidden" id="modalItemId">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div class="form-row-inline">
+            <label style="font-size:0.8rem; font-weight:bold;">日期 (留空轉為「未有日期」)：
+              <input type="date" id="modalDate" style="width:100%; padding:6px; margin-top:4px;">
+            </label>
+            <label style="font-size:0.8rem; font-weight:bold;">類型：
+              <select id="modalType" style="width:100%; padding:6px; margin-top:4px;" onchange="updateModalButtonsState()">
+                <option value="Task">Task (任務)</option>
+                <option value="Event">Event (事件)</option>
+                <option value="筆記">筆記 (Note)</option>
+              </select>
+            </label>
+          </div>
+          <label style="font-size:0.8rem; font-weight:bold;">內容：
+            <input type="text" id="modalContent" required style="width:100%; padding:6px; margin-top:4px;">
+          </label>
+          <label style="font-size:0.8rem; font-weight:bold;">備註 (Remarks)：
+            <textarea id="modalRemarks" style="width:100%; padding:6px;" placeholder="可輸入詳細備註..."></textarea>
+          </label>
         </div>
-      </div>
-      <div id="dailyList" class="daily-list">
-        <div style="color: #64748b; font-size: 0.85rem;">⏳ 載入日誌資料中...</div>
-      </div>
+
+        <div class="modal-actions-bar">
+          <div style="display:flex; gap:6px;">
+            <button type="button" id="btnDelete" onclick="deleteCurrentItem()" style="background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">🗑️ 刪除</button>
+            <button type="button" id="btnArchive" onclick="archiveFromModal()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">📦 典藏</button>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" id="btnAssignTodayModal" onclick="assignToTodayFromModal()" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">📅 排至今天</button>
+            <button type="button" id="btnToggleDoneModal" onclick="toggleDoneFromModal()" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; display:none;">✅ 完成</button>
+            <button type="button" onclick="closeItemModal()" style="background:#f1f5f9; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;">取消</button>
+            <button type="submit" style="background:var(--primary); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">儲存</button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 
   <script>
-    function parseJwt(token) {
-      try {
-        var base64Url = token.split('.')[1];
-        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
-      } catch (e) { return null; }
-    }
-
-    function handleCredentialResponse(response) {
-      const payload = parseJwt(response.credential);
-      if (!payload || !payload.email) {
-        document.getElementById('loginErr').innerText = "❌ 驗證失敗：無法讀取登入資訊";
-        return;
-      }
-      const userEmail = payload.email.toLowerCase().trim();
-      
-      if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
-        const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
-        if (!cleanList.includes(userEmail)) {
-          document.getElementById('loginErr').innerText = `⚠️ 存取被拒：\n${userEmail}\n未獲授權使用此系統。`;
-          return;
-        }
-      }
-
-      localStorage.setItem("user_google_email", userEmail);
-      localStorage.setItem("google_user", JSON.stringify({ name: payload.name, email: userEmail, picture: payload.picture }));
-      initializeApp();
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      const savedEmail = localStorage.getItem("user_google_email");
-      if (savedEmail && typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
-        const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
-        if (cleanList.includes(savedEmail.toLowerCase().trim())) {
-          initializeApp();
-          return;
-        }
-      }
-      document.getElementById('loginOverlay').style.display = 'flex';
-      document.getElementById('mainContent').style.display = 'none';
-    });
-
-    function logout() {
-      localStorage.removeItem("user_google_email");
-      localStorage.removeItem("google_user");
-      location.reload();
-    }
-
-    function initializeApp() {
-      document.getElementById('loginOverlay').style.display = 'none';
-      document.getElementById('mainContent').style.display = 'block';
-      
-      const user = JSON.parse(localStorage.getItem('google_user') || '{}');
-      if (user.name) document.getElementById('userInfo').textContent = `👤 ${user.name}`;
-
-      loadNavbar();
-    }
-
-    /* ☰ 抽屜選單控制 (Blueprint 標準) */
+    /* ☰ 抽屜導覽列 JavaScript 控制項 */
     function openNavDrawer() {
       document.getElementById('navDrawer').classList.add('open');
       document.getElementById('navOverlay').classList.add('open');
@@ -357,19 +677,33 @@
     }
 
     function loadNavbar() {
-      fetch('nav.html')
+      // 由於 daily_adv.html 位於 daily/ 資料夾下，因此需要往上一層抓取 ../nav.html
+      fetch('../nav.html')
         .then(response => response.text())
         .then(data => {
           const navContainer = document.getElementById('navbar');
           if (navContainer) {
             navContainer.innerHTML = data;
-            const currentPath = window.location.pathname.split('/').pop() || 'daily_adv.html';
+            
+            // 取得目前的完整相對路徑並進行 active 高亮標示
+            const currentFilename = window.location.pathname.split('/').pop() || 'daily_adv.html';
+            
             navContainer.querySelectorAll('.nav-btn').forEach(link => {
-              if (link.getAttribute('href') === currentPath) link.classList.add('active');
+              const href = link.getAttribute('href') || '';
+              if (href.includes(currentFilename)) {
+                link.classList.add('active');
+              }
             });
           }
         }).catch(err => console.log('導覽列載入失敗:', err));
     }
+
+    // 頁面載入時觸發導覽列讀取
+    window.addEventListener('DOMContentLoaded', () => {
+      loadNavbar();
+    });
   </script>
+
+  <script src="https://accounts.google.com/gsi/client" onload="initGoogleSignIn()" async defer></script>
 </body>
 </html>
