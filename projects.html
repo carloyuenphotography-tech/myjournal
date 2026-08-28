@@ -48,9 +48,26 @@
     .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; font-size: 0.8rem; color: #475569; }
     .logout-btn { background: #f1f5f9; border: 1px solid var(--border-color); padding: 3px 7px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
 
+    /* ☰ 三劃選單按鈕樣式 */
+    .btn-hamburger {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      color: var(--primary-color);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 1.2rem;
+      line-height: 1;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .btn-hamburger:hover { background: var(--primary-color); color: #fff; }
+
     .controls-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; background: #f1f5f9; padding: 10px; border-radius: 8px; }
     
-    /* 📁 專案看板網格 */
     .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
     .project-card { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; flex-direction: column; gap: 10px; }
     .project-card.archived { background: #f1f5f9; border-color: #94a3b8; opacity: 0.85; }
@@ -87,7 +104,6 @@
 
     .hashtag-pill { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 1px 5px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
 
-    /* Modal 視窗 */
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; padding: 12px; }
     .modal-box { background:#fff; width:100%; max-width:480px; border-radius:12px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
     .form-group { margin-bottom: 10px; }
@@ -122,6 +138,7 @@
         <span id="userInfo"></span>
         <button class="logout-btn" onclick="logout()">登出</button>
       </div>
+      <button type="button" class="btn-hamburger" onclick="toggleNavMenu()" title="切換選單">☰</button>
     </div>
 
     <div class="controls-bar">
@@ -217,10 +234,16 @@
     let GID = '';
     let API_URL = '';
 
+    function toggleNavMenu() {
+      const nav = document.getElementById('navbar');
+      if (nav) {
+        nav.style.display = (nav.style.display === 'none' || getComputedStyle(nav).display === 'none') ? 'flex' : 'none';
+      }
+    }
+
     window.onload = () => {
       loadNavbar();
       if (typeof CONFIG !== 'undefined') {
-        // 🛠️ 修正：正確讀取專屬的 PROJECTS 設定，避免抓到 FT 或預設 GID=0
         SHEET_ID = CONFIG.PROJECTS_SHEET_ID || CONFIG.FT_SHEET_ID || '';
         GID = (CONFIG.GIDS && CONFIG.GIDS.PROJECTS) ? CONFIG.GIDS.PROJECTS : '0';
         API_URL = (CONFIG.API_URLS && CONFIG.API_URLS.PROJECTS) ? CONFIG.API_URLS.PROJECTS : (CONFIG.API_URLS?.FT || '');
@@ -246,13 +269,14 @@
           return;
         }
       }
-      sessionStorage.setItem('google_user', JSON.stringify({ name: payload.name, email: userEmail, picture: payload.picture }));
-      sessionStorage.setItem('google_token', response.credential);
+      localStorage.setItem('user_google_email', userEmail);
+      localStorage.setItem('google_user', JSON.stringify({ name: payload.name, email: userEmail, picture: payload.picture }));
+      localStorage.setItem('google_token', response.credential);
       checkLoginStatus();
     }
 
     function checkLoginStatus() {
-      const userStr = sessionStorage.getItem('google_user');
+      const userStr = localStorage.getItem('google_user');
       if (userStr) {
         if (window.google?.accounts?.id) window.google.accounts.id.cancel();
         const user = JSON.parse(userStr);
@@ -267,8 +291,9 @@
     }
 
     function logout() {
-      sessionStorage.removeItem('google_user');
-      sessionStorage.removeItem('google_token');
+      localStorage.removeItem('user_google_email');
+      localStorage.removeItem('google_user');
+      localStorage.removeItem('google_token');
       location.reload();
     }
 
@@ -279,7 +304,7 @@
           const navContainer = document.getElementById('navbar');
           if (navContainer) {
             navContainer.innerHTML = data;
-            const currentPath = window.location.pathname.split('/').pop() || 'projects.html';
+            const currentPath = window.location.pathname.split('/').pop() || 'projects_2.html';
             navContainer.querySelectorAll('.nav-btn').forEach(link => {
               if (link.getAttribute('href') === currentPath) link.classList.add('active');
             });
@@ -542,32 +567,5 @@
       }
     }
   </script>
-
-<script>
-function loadGlobalNavbar() {
-  fetch('nav.html')
-    .then(res => res.text())
-    .then(data => {
-      const navContainer = document.getElementById('navbar');
-      if (navContainer) {
-        navContainer.innerHTML = data;
-        const currentPath = window.location.pathname.split('/').pop() || 'daily.html';
-        navContainer.querySelectorAll('.nav-btn').forEach(link => {
-          if (link.getAttribute('href') === currentPath) {
-            link.classList.add('active');
-          } else {
-            link.classList.remove('active');
-          }
-        });
-      }
-    }).catch(err => console.error('導覽列載入失敗:', err));
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', loadGlobalNavbar);
-} else {
-  loadGlobalNavbar();
-}
-</script>
-
 </body>
 </html>
