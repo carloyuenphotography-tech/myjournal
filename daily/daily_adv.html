@@ -533,10 +533,10 @@
       📦 <span class="btn-text">典藏庫</span> <span id="archivedBadgeCount" class="badge-pill">0</span>
     </button>
 
-    <!-- 🍔 新增：右上角三劃選單按鈕 -->
-    <button type="button" class="btn-hamburger" onclick="toggleCmdPalette()" title="開啟選單 (⌘K)">
-      ☰
-    </button>
+    <!-- 🍔 右上角三劃選單按鈕（內建開啟對話框邏輯） -->
+<button type="button" class="btn-hamburger" onclick="const p=document.getElementById('cmdPalette'); if(p){ p.open ? p.close() : p.showModal(); }" title="開啟選單">
+  ☰
+</button>
   </div>
 </div>
 
