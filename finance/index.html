@@ -62,7 +62,7 @@
             border-radius: 6px;
         }
 
-        /* 下拉選單選單 (Menu Dropdown) */
+        /* 下拉選單 (Menu Dropdown) */
         .nav-menu {
             display: none;
             position: absolute;
@@ -111,7 +111,7 @@
             display: block;
         }
 
-        /* Card通用樣式 */
+        /* Card 通用樣式 */
         .card {
             background: var(--card-bg);
             border-radius: var(--radius);
@@ -281,14 +281,14 @@
 <body>
 
     <header>
-        <h1 id="page-title">💸 日常記帳</h1>
+        <h1 id="page-title">🏦 資產紀錄</h1>
         <button class="menu-btn" onclick="toggleMenu()">☰</button>
     </header>
 
     <!-- 漢堡下拉選單 -->
     <div class="nav-menu" id="nav-menu">
-        <div class="nav-item active" id="nav-finance" onclick="switchPage('finance')">💸 日常記帳</div>
-        <div class="nav-item" id="nav-assets" onclick="switchPage('assets')">🏦 資產紀錄</div>
+        <div class="nav-item" id="nav-finance" onclick="switchPage('finance')">💸 日常記帳</div>
+        <div class="nav-item active" id="nav-assets" onclick="switchPage('assets')">🏦 資產紀錄</div>
     </div>
 
     <!-- 連線狀態卡片 -->
@@ -300,7 +300,7 @@
     </div>
 
     <!-- ================= 頁面 1：日常記帳 ================= -->
-    <div id="page-finance" class="page-content active">
+    <div id="page-finance" class="page-content">
         <div class="card">
             <div class="card-title">📝 快速輸入</div>
 
@@ -382,25 +382,7 @@
     </div>
 
     <!-- ================= 頁面 2：資產紀錄 ================= -->
-    <div id="page-assets" class="page-content">
-        <div class="card">
-            <div class="card-title">🏦 更新銀行/資產結餘</div>
-
-            <!-- 第一層：選擇銀行 -->
-            <div class="form-group">
-                <label>1️⃣ 選擇銀行 / 金融機構</label>
-                <div class="pill-group" id="bank-pills">
-                    <div class="pill active" onclick="selectBank('HSBC', this)">🏦 HSBC</div>
-                    <div class="pill" onclick="selectBank('恒生銀行', this)">🏦 恒生</div>
-                    <div class="pill" onclick="selectBank('中國銀行', this)">🏦 中銀</div>
-                    <div class="pill" onclick="selectBank('渣打銀行', this)">🏦 渣打</div>
-                    <div class="pill" onclick="selectBank('富途/券商', this)">📈 富途/券商</div>
-                    <div class="pill" onclick="selectBank('其他/現金', this)">💵 現金/其他</div>
-                </div>
-            </div>
-
-            <!-- ================= 頁面 2：資產紀錄 ================= -->
-    <div id="page-assets" class="page-content">
+    <div id="page-assets" class="page-content active">
         <div class="card">
             <div class="card-title">🏦 更新銀行/資產結餘</div>
 
@@ -429,12 +411,10 @@
                 </div>
             </div>
 
-            <!-- 3️⃣ 戶口尾數或暱稱 (帶有自動記憶按鈕) -->
+            <!-- 3️⃣ 戶口尾數或暱稱 -->
             <div class="form-group">
                 <label>3️⃣ 戶口尾數 / 暱稱 (可選)</label>
-                <!-- 常用快捷按鈕（系統自動產生） -->
                 <div class="pill-group" id="account-no-pills" style="margin-bottom: 8px;"></div>
-                <!-- 自訂輸入框 -->
                 <input type="text" id="asset-account-no" placeholder="可輸入尾數 (如: 1234) 或暱稱 (如: 出糧戶)">
             </div>
 
@@ -473,12 +453,10 @@
 
     <!-- 腳本邏輯 -->
     <script>
-        // 切換選單顯示/隱藏
         function toggleMenu() {
             document.getElementById('nav-menu').classList.toggle('show');
         }
 
-        // 頁面切換控制
         function switchPage(page) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -496,23 +474,22 @@
             document.getElementById('nav-menu').classList.remove('show');
         }
 
-        // 點擊頁面其他地方自動收起 Menu
         document.addEventListener('click', function(e) {
             const menu = document.getElementById('nav-menu');
             const btn = document.querySelector('.menu-btn');
-            if (!menu.contains(e.target) && !btn.contains(e.target)) {
+            if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
                 menu.classList.remove('show');
             }
         });
 
-        // ====== 日常記帳 JS 邏輯 ======
         let currentType = 'expense';
         let currentMember = '爸爸';
         let currentCategory = '餐飲';
         let records = JSON.parse(localStorage.getItem('family_records') || '[]');
 
         window.onload = function() {
-            document.getElementById('input-date').valueAsDate = new Date();
+            const inputDate = document.getElementById('input-date');
+            if (inputDate) inputDate.valueAsDate = new Date();
             
             const statusEl = document.getElementById('sheet-status');
             if (typeof CONFIG !== 'undefined' && CONFIG.gasUrl && CONFIG.gasUrl.includes('script.google.com')) {
@@ -618,6 +595,7 @@
 
         function renderRecords() {
             const listEl = document.getElementById('records-list');
+            if (!listEl) return;
             listEl.innerHTML = '';
 
             let totalExp = 0, totalInc = 0;
@@ -657,20 +635,24 @@
                 listEl.appendChild(item);
             });
 
-            document.getElementById('total-expense').innerText = `$${totalExp.toLocaleString()}`;
-            document.getElementById('total-income').innerText = `$${totalInc.toLocaleString()}`;
+            const totalExpEl = document.getElementById('total-expense');
+            const totalIncEl = document.getElementById('total-income');
+            if (totalExpEl) totalExpEl.innerText = `$${totalExp.toLocaleString()}`;
+            if (totalIncEl) totalIncEl.innerText = `$${totalInc.toLocaleString()}`;
 
             const breakdownEl = document.getElementById('member-breakdown');
-            if (Object.keys(memberExp).length === 0) {
-                breakdownEl.innerText = '尚無支出數據';
-            } else {
-                let html = '<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">';
-                for (const [member, amt] of Object.entries(memberExp)) {
-                    const percent = totalExp > 0 ? Math.round((amt / totalExp) * 100) : 0;
-                    html += `<div style="background:#F3F4F6; padding: 4px 8px; border-radius: 6px;">${member}: <b>$${amt.toLocaleString()}</b> (${percent}%)</div>`;
+            if (breakdownEl) {
+                if (Object.keys(memberExp).length === 0) {
+                    breakdownEl.innerText = '尚無支出數據';
+                } else {
+                    let html = '<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">';
+                    for (const [member, amt] of Object.entries(memberExp)) {
+                        const percent = totalExp > 0 ? Math.round((amt / totalExp) * 100) : 0;
+                        html += `<div style="background:#F3F4F6; padding: 4px 8px; border-radius: 6px;">${member}: <b>$${amt.toLocaleString()}</b> (${percent}%)</div>`;
+                    }
+                    html += '</div>';
+                    breakdownEl.innerHTML = html;
                 }
-                html += '</div>';
-                breakdownEl.innerHTML = html;
             }
         }
 
