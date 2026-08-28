@@ -479,28 +479,31 @@
     </div>
 
     <div class="header-bar">
-      <div style="display:flex; align-items:center; gap:10px;">
-        <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
-        <div class="title-group">✨ 日軌流光</div>
-      </div>
-      <div class="top-actions">
-        <a href="recurring.html" class="btn-bubble" style="background:#e0f2fe; color:#0284c7; border-color:#bae6fd;">
-          🔄 <span class="btn-text">重複規則</span>
-        </a>
-        <button class="btn-bubble btn-overdue" onclick="openOverdueModal()">
-          ⚠️ <span class="btn-text">逾期工作</span> <span id="overdueBadgeCount" class="badge-pill">0</span>
-        </button>
-        <button class="btn-bubble btn-backlog" onclick="openBacklogModal()">
-          📥 <span class="btn-text">未有日期</span> <span id="backlogBadgeCount" class="badge-pill">0</span>
-        </button>
-        <button class="btn-bubble btn-completed" onclick="openCompletedModal()">
-          ✅ <span class="btn-text">已完成</span> <span id="completedBadgeCount" class="badge-pill">0</span>
-        </button>
-        <button class="btn-bubble" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openArchivedModal()">
-          📦 <span class="btn-text">典藏庫</span> <span id="archivedBadgeCount" class="badge-pill">0</span>
-        </button>
-      </div>
-    </div>
+  <div class="title-group">✨ 日軌流光</div>
+  
+  <div class="top-actions">
+    <a href="recurring.html" class="btn-bubble" style="background:#e0f2fe; color:#0284c7; border-color:#bae6fd;">
+      🔄 <span class="btn-text">重複規則</span>
+    </a>
+    <button class="btn-bubble btn-overdue" onclick="openOverdueModal()">
+      ⚠️ <span class="btn-text">逾期工作</span> <span id="overdueBadgeCount" class="badge-pill">0</span>
+    </button>
+    <button class="btn-bubble btn-backlog" onclick="openBacklogModal()">
+      📥 <span class="btn-text">未有日期</span> <span id="backlogBadgeCount" class="badge-pill">0</span>
+    </button>
+    <button class="btn-bubble btn-completed" onclick="openCompletedModal()">
+      ✅ <span class="btn-text">已完成</span> <span id="completedBadgeCount" class="badge-pill">0</span>
+    </button>
+    <button class="btn-bubble" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openArchivedModal()">
+      📦 <span class="btn-text">典藏庫</span> <span id="archivedBadgeCount" class="badge-pill">0</span>
+    </button>
+
+    <!-- 🍔 新增：右上角三劃選單按鈕 -->
+    <button type="button" class="btn-hamburger" onclick="toggleCmdPalette()" title="開啟選單 (⌘K)">
+      ☰
+    </button>
+  </div>
+</div>
 
     <div class="app-body-layout">
       
