@@ -16,6 +16,10 @@
 <meta name="apple-mobile-web-app-title" content="2A班主任Memo">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
+  <!-- Google Identity Services SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="allowed-emails.js"></script>
+
   <title>🏫 2A 班主任事務 Memo App</title>
   <style>
     :root {
@@ -24,6 +28,7 @@
       --primary: #ea580c; /* 班主任主題色：橘色 */
       --text: #1e293b;
       --border: #e2e8f0;
+      --header-bg: #1e293b;
     }
 
     * { box-sizing: border-box; }
@@ -37,8 +42,135 @@
       -webkit-text-size-adjust: 100%;
     }
 
-    .container { max-width: 1100px; margin: 0 auto; }
+    /* 🔒 Google 登入驗證遮罩 Modal */
+    .auth-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .auth-card {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      padding: 28px 20px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+    .auth-title { font-size: 1.25rem; font-weight: bold; color: #0f172a; margin-bottom: 8px; }
+    .auth-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 20px; }
+    .google-btn-wrapper {
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; display: none; }
     
+    /* ☰ 三劃抽屜式導覽列樣式 (Blueprint 藍本規範) */
+    .nav-bar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 10px 14px;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 12px;
+    }
+    .nav-bar-title {
+      font-size: 1.05rem;
+      font-weight: bold;
+      color: var(--header-bg);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hamburger-btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      font-size: 1.2rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #334155;
+      transition: background 0.2s;
+    }
+    .hamburger-btn:hover { background: #e2e8f0; }
+
+    .nav-drawer {
+      position: fixed;
+      top: 0;
+      right: -280px;
+      width: 280px;
+      height: 100%;
+      background: #ffffff;
+      box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+      z-index: 10000;
+      transition: right 0.3s ease;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .nav-drawer.open { right: 0; }
+
+    .nav-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      font-weight: bold;
+      color: #1e293b;
+    }
+    .nav-drawer-close {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #64748b;
+    }
+
+    .nav-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.4);
+      z-index: 9999;
+      display: none;
+      backdrop-filter: blur(2px);
+    }
+    .nav-overlay.open { display: block; }
+
+    .nav-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .nav-btn {
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      text-decoration: none;
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: bold;
+      transition: all 0.2s ease;
+      display: block;
+    }
+    .nav-btn:hover { background: #e2e8f0; }
+    .nav-btn.active { background: var(--primary); color: #ffffff; }
+
     header {
       display: flex;
       justify-content: space-between;
@@ -54,6 +186,14 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    .header-user-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .user-info { font-size: 0.8rem; color: #64748b; font-weight: bold; }
+    .logout-btn { background: #f1f5f9; border: 1px solid var(--border); padding: 3px 7px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
 
     .icon-btn-add {
       background: var(--primary);
@@ -314,11 +454,45 @@
 </head>
 <body>
 
-  <div class="container">
-    <div id="navbar" class="nav-tabs"></div>
+  <!-- 🔒 Google 登入驗證遮罩 Modal -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-title">🏫 2A 班主任事務 Memo</div>
+      <div class="auth-desc">請登入 Google 帳號以驗證身分</div>
+      <div class="google-btn-wrapper">
+        <div id="g_id_onload" 
+             data-client_id="972558989435-armd41776e7ueo4d57ud3i4i9p27hdb7.apps.googleusercontent.com" 
+             data-callback="handleCredentialResponse">
+        </div>
+        <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large"></div>
+        <div id="loginErr" style="color: #ff3b30; font-size: 0.8rem; margin-top: 4px; white-space: pre-line;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" id="mainContainer">
+    <!-- ☰ 頂部與抽屜式導覽列 -->
+    <div class="nav-bar-header">
+      <div class="nav-bar-title">🧭 導覽選單</div>
+      <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
+    </div>
+
+    <div id="navOverlay" class="nav-overlay" onclick="closeNavDrawer()"></div>
+    <div id="navDrawer" class="nav-drawer">
+      <div class="nav-drawer-header">
+        <span>🧭 功能選單</span>
+        <button class="nav-drawer-close" onclick="closeNavDrawer()">✕</button>
+      </div>
+      <div id="navbar" class="nav-tabs"></div>
+    </div>
+
     <header>
       <h2>🏫 2A 班主任事務 Memo</h2>
-      <button class="icon-btn-add" onclick="openModal()" title="新增 Memo">➕</button>
+      <div class="header-user-group">
+        <span id="userInfo" class="user-info"></span>
+        <button class="logout-btn" onclick="logout()">登出</button>
+        <button class="icon-btn-add" onclick="openModal()" title="新增 Memo">➕</button>
+      </div>
     </header>
 
     <div class="controls">
@@ -425,31 +599,146 @@
   <script src="ct_memo_gas.js"></script>
   <script src="ct_memo.js"></script>
 
-<script>
-function loadGlobalNavbar() {
-  fetch('nav.html')
-    .then(res => res.text())
-    .then(data => {
+  <script>
+    /* 預設選單清單 (備援機制) */
+    const DEFAULT_NAV_ITEMS = [
+      { href: 'index.html', label: '📊 日誌主頁' },
+      { href: 'daily_2.html', label: '⚡ 速記清單' },
+      { href: 'daily_adv.html', label: '⚡ 進階速記日誌' },
+      { href: 'daily_monthly_2.html', label: '📅 速記月視圖' },
+      { href: 'monthly_2.html', label: '📅 Monthly Log' },
+      { href: 'projects_2.html', label: '📁 專案管理' },
+      { href: 'ideas.html', label: '💡 靈感 Ideas' },
+      { href: 'memo_2.html', label: '📐 數學日誌' },
+      { href: 'ct_memo_2.html', label: '🏫 班主任事務' },
+      { href: 'tracker_2.html', label: '🎯 Habit Tracker' },
+      { href: 'procedures_2.html', label: '📋 Procedures' },
+      { href: 'book-writer_2.html', label: '📖 Book Writer' },
+      { href: 'logging_2.html', label: '✍️ 快速 Logging' }
+    ];
+
+    /* ☰ 抽屜導覽列控制項 */
+    function openNavDrawer() {
+      document.getElementById('navDrawer').classList.add('open');
+      document.getElementById('navOverlay').classList.add('open');
+    }
+
+    function closeNavDrawer() {
+      document.getElementById('navDrawer').classList.remove('open');
+      document.getElementById('navOverlay').classList.remove('open');
+    }
+
+    function loadNavbar() {
       const navContainer = document.getElementById('navbar');
-      if (navContainer) {
-        navContainer.innerHTML = data;
-        const currentPath = window.location.pathname.split('/').pop() || 'daily.html';
-        navContainer.querySelectorAll('.nav-btn').forEach(link => {
-          if (link.getAttribute('href') === currentPath) {
-            link.classList.add('active');
+      if (!navContainer) return;
+
+      fetch('nav.html')
+        .then(res => {
+          if (!res.ok) throw new Error('無法讀取 nav.html');
+          return res.text();
+        })
+        .then(data => {
+          if (data.trim().length > 0) {
+            renderNavLinks(navContainer, data);
           } else {
-            link.classList.remove('active');
+            throw new Error('nav.html 內容空白');
           }
+        })
+        .catch(err => {
+          console.warn('導覽列載入失敗，已啟用預設備援選單:', err);
+          const fallbackHtml = DEFAULT_NAV_ITEMS.map(
+            item => `<a href="${item.href}" class="nav-btn">${item.label}</a>`
+          ).join('');
+          renderNavLinks(navContainer, fallbackHtml);
         });
+    }
+
+    function renderNavLinks(container, htmlContent) {
+      container.innerHTML = htmlContent;
+      const currentPath = window.location.pathname.split('/').pop() || 'ct_memo.html';
+      container.querySelectorAll('.nav-btn').forEach(link => {
+        const href = link.getAttribute('href') || '';
+        if (href.includes(currentPath) || (currentPath.includes('ct_memo') && href.includes('ct_memo'))) {
+          link.classList.add('active');
+        } else {
+          link.classList.remove('active');
+        }
+      });
+    }
+
+    /* 🔒 Google 登入與 localStorage 持久化驗證邏輯 */
+    function parseJwt(token) {
+      try {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+      } catch (e) { return null; }
+    }
+
+    function handleCredentialResponse(response) {
+      const payload = parseJwt(response.credential);
+      if (!payload || !payload.email) {
+        document.getElementById('loginErr').innerText = "❌ 驗證失敗：無法讀取登入資訊";
+        return;
       }
-    }).catch(err => console.error('導覽列載入失敗:', err));
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', loadGlobalNavbar);
-} else {
-  loadGlobalNavbar();
-}
-</script>
+
+      const userEmail = payload.email.toLowerCase().trim();
+
+      if (typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
+        const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
+        if (!cleanList.includes(userEmail)) {
+          document.getElementById('loginErr').innerText = `⚠️ 存取被拒：\n${userEmail}\n未獲授權使用此系統。`;
+          return;
+        }
+      }
+
+      localStorage.setItem("user_google_email", userEmail);
+      localStorage.setItem("google_user", JSON.stringify({
+        name: payload.name,
+        email: userEmail,
+        picture: payload.picture
+      }));
+
+      checkLoginStatus();
+    }
+
+    function checkLoginStatus() {
+      const savedEmail = localStorage.getItem("user_google_email");
+      
+      if (savedEmail && typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
+        const cleanList = ALLOWED_EMAILS.map(e => e.toLowerCase().trim());
+        if (cleanList.includes(savedEmail.toLowerCase().trim())) {
+          document.getElementById('authOverlay').style.display = 'none';
+          document.getElementById('mainContainer').style.display = 'block';
+          
+          if (window.google && window.google.accounts && window.google.accounts.id) {
+            window.google.accounts.id.cancel();
+          }
+
+          const user = JSON.parse(localStorage.getItem('google_user') || '{}');
+          const userElem = document.getElementById('userInfo');
+          if (userElem) userElem.textContent = `👤 ${user.name || savedEmail}`;
+
+          return true;
+        }
+      }
+
+      document.getElementById('authOverlay').style.display = 'flex';
+      document.getElementById('mainContainer').style.display = 'none';
+      return false;
+    }
+
+    function logout() {
+      localStorage.removeItem("user_google_email");
+      localStorage.removeItem("google_user");
+      location.reload();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadNavbar();
+      checkLoginStatus();
+    });
+  </script>
 
 </body>
 </html>
