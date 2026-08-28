@@ -265,7 +265,7 @@ function closeModal() {
 }
 
 async function saveMemo() {
-  const memoId = document.getElementById('formMemoId'].value;
+  const memoId = document.getElementById('formMemoId').value;
   
   const hwRows = document.querySelectorAll('.hw-form-row');
   const homeworkList = [];
