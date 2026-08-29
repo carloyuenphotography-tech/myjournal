@@ -174,7 +174,6 @@ function checkLoginStatus() {
   }
 }
 
-// 🔑 手動登出工具函式（必要時可在 Console 呼叫 logout() 或於介面加入按鈕）
 function logout() {
   if (confirm('確定要登出系統嗎？')) {
     localStorage.removeItem("user_google_email");
@@ -372,8 +371,26 @@ function renderTimeline() {
 
   const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
+  let lastMonthYearKey = null;
+
   sortedDates.forEach(dateVal => {
     const d = new Date(dateVal);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const monthYearKey = `${year}-${month}`;
+
+    // 💡 需求 1：加入月份在卡片之間，以便辨識月份
+    if (monthYearKey !== lastMonthYearKey) {
+      lastMonthYearKey = monthYearKey;
+      const monthDivider = document.createElement('div');
+      monthDivider.className = 'month-divider';
+      monthDivider.innerHTML = `
+        <span class="month-text">🗓️ ${year} 年 ${month} 月</span>
+        <span class="year-badge">${year}</span>
+      `;
+      container.appendChild(monthDivider);
+    }
+
     const weekdayStr = weekdays[d.getDay()];
     const dateParts = dateVal.split('-');
     const dayNum = dateParts[2] ? parseInt(dateParts[2], 10) : d.getDate();
@@ -494,8 +511,6 @@ function sortReverseChronological(items) {
     return String(b.id).localeCompare(String(a.id));
   });
 }
-
-/* ⚡ Modal 開啟/對話框視窗渲染 */
 
 function openOverdueModal() {
   renderOverdueModal();
@@ -997,98 +1012,7 @@ function handleFormSubmit(e) {
   refreshAllViews();
 }
 
-
-// =========================================================
-// 🚀 新增功能 1. 原生 Command Palette (⌘K / Ctrl+K) 選單
-// =========================================================
-document.addEventListener('keydown', (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-    e.preventDefault();
-    const palette = document.getElementById('cmdPalette');
-    if (palette) {
-      palette.open ? palette.close() : palette.showModal();
-      const input = document.getElementById('cmdInput');
-      if (input) input.focus();
-    }
-  }
-});
-
-function filterCmdList() {
-  const query = (document.getElementById('cmdInput')?.value || '').toLowerCase();
-  const items = document.querySelectorAll('.cmd-item');
-  items.forEach(item => {
-    const text = item.textContent.toLowerCase();
-    item.style.display = text.includes(query) ? 'block' : 'none';
-  });
-}
-
-function navigateCmd(url) {
-  const palette = document.getElementById('cmdPalette');
-  if (palette) palette.close();
-  window.location.href = url;
-}
-
-
-// =========================================================
-// 🚀 新增功能 2. 廣東話 / 中文語音速記 (Web Speech API)
-// =========================================================
-let voiceRecognition = null;
-let isRecognizingVoice = false;
-
-function toggleVoiceInput(targetInputId, btnId) {
-  const micBtn = document.getElementById(btnId);
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    alert('你的瀏覽器不支援語音辨識，請使用 Chrome 或 Safari。');
-    return;
-  }
-
-  if (isRecognizingVoice) {
-    if (voiceRecognition) voiceRecognition.stop();
-    return;
-  }
-
-  voiceRecognition = new SpeechRecognition();
-  voiceRecognition.lang = 'zh-HK'; // 廣東話
-  voiceRecognition.continuous = false;
-  voiceRecognition.interimResults = false;
-
-  voiceRecognition.onstart = () => {
-    isRecognizingVoice = true;
-    if (micBtn) {
-      micBtn.textContent = '🔴';
-      micBtn.style.background = '#ef4444';
-    }
-  };
-
-  voiceRecognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    const inputEl = document.getElementById(targetInputId);
-    if (inputEl) {
-      inputEl.value += (inputEl.value ? ' ' : '') + transcript;
-    }
-  };
-
-  voiceRecognition.onerror = (e) => {
-    console.error('語音辨識出錯:', e);
-  };
-
-  voiceRecognition.onend = () => {
-    isRecognizingVoice = false;
-    if (micBtn) {
-      micBtn.textContent = '🎙️';
-      micBtn.style.background = '#0284c7';
-    }
-  };
-
-  voiceRecognition.start();
-}
-
-
-// =========================================================
-// 🚀 新增功能 3. 跨分頁即時資料同步 (BroadcastChannel API)
-// =========================================================
+// 🚀 跨分頁即時資料同步 (BroadcastChannel API)[cite: 17]
 const dailyBroadcastChannel = new BroadcastChannel('daily_adv_sync_channel');
 
 dailyBroadcastChannel.onmessage = (event) => {
@@ -1102,37 +1026,7 @@ function notifyTabsDataChanged() {
   dailyBroadcastChannel.postMessage({ action: 'REFRESH_DATA', timestamp: Date.now() });
 }
 
-
-// =========================================================
-// 🚀 新增功能 4. 剪貼簿截圖直接貼上 (Clipboard API)
-// =========================================================
-document.addEventListener('paste', (e) => {
-  const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
-  if (!items) return;
-
-  const activeEl = document.activeElement;
-  if (!activeEl || (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA')) return;
-
-  for (let item of items) {
-    if (item.type.indexOf('image') !== -1) {
-      const file = item.getAsFile();
-      const reader = new FileReader();
-
-      reader.onload = (event) => {
-        const base64Data = event.target.result;
-        activeEl.value += ` ![截圖](${base64Data}) `;
-        alert('🖼️ 已成功貼上剪貼簿圖片！');
-      };
-
-      reader.readAsDataURL(file);
-    }
-  }
-});
-
-
-// =========================================================
-// 🚀 新增功能 7. 離線暫存佇列 (Offline Queue & Sync)
-// =========================================================
+// 🚀 離線暫存佇列 (Offline Queue & Sync)[cite: 17]
 function saveToOfflineQueue(action, paramsObj) {
   let queue = JSON.parse(localStorage.getItem('daily_adv_offline_queue') || '[]');
   queue.push({ action, paramsObj, timestamp: new Date().getTime() });
@@ -1176,10 +1070,6 @@ async function syncOfflineQueue() {
 
 window.addEventListener('online', syncOfflineQueue);
 
-
-// =========================================================
-// ⚙️ 修改後的 syncToSheet (結合離線佇列與廣播機制)
-// =========================================================
 function syncToSheet(action, paramsObj) {
   if (!navigator.onLine) {
     saveToOfflineQueue(action, paramsObj);
