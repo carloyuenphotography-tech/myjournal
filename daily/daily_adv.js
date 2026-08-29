@@ -268,7 +268,7 @@ function autoEmojiReplace(text) {
     'lunch': '🍽️ 午餐',
     'buy': '🛒 購買',
     '升旗': '🇨🇳 升旗',
-    'Check': '🔎'
+    'Check': '🔎',
     '不': '❌ 不'
   };
   let processed = text;
