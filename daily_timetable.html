@@ -6,7 +6,7 @@
   <title>📅 每日詳細時間表與當值導覽</title>
   <!-- PapaParse 用於解析 CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <!-- 載入全站統一設定 -->
+  <!-- 載入全站統一設定 (config.js 需包含 DAILY_SHEET_ID) -->
   <script src="config.js"></script>
   <style>
     :root {
@@ -165,21 +165,19 @@
   </div>
 
   <script>
-    // 檔案路徑設定
     const CALENDAR_CSV = 'Sch Calendar-Grid view.csv';
     const GOOGLE_SHEET_ID = (typeof CONFIG !== 'undefined' && CONFIG.DAILY_SHEET_ID) ? CONFIG.DAILY_SHEET_ID : '';
     
-    // Google Sheets 讀取連結 (假設你有 3 個分頁: Settings, Cycle_Timetable, Daily_Schedule)
+    // Google Sheets 讀取分頁
     const SETTINGS_CSV = GOOGLE_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Settings` : '';
     const CYCLE_CSV = GOOGLE_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Cycle_Timetable` : '';
     const DAILY_SCHEDULE_CSV = GOOGLE_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Daily_Schedule` : '';
 
-    let calendarMap = {}; // 日期 -> { weekday, cycleDay, holiday, activity }
+    let calendarMap = {}; 
     let settingsRows = [];
     let cycleRows = [];
     let dailyScheduleRows = [];
 
-    // 取得今天的 YYYY-MM-DD 字串
     function getTodayStr() {
       const now = new Date();
       return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -192,60 +190,67 @@
     });
 
     function loadAllData() {
+      let loadedCount = 0;
+      const totalSources = 4;
+
+      function checkComplete() {
+        loadedCount++;
+        if (loadedCount >= totalSources) {
+          document.getElementById('loading').style.display = 'none';
+          renderDay(currentDateStr);
+        }
+      }
+
       // 1. 載入校曆
       Papa.parse(CALENDAR_CSV, {
         download: true, header: true, skipEmptyLines: true,
         complete: (res) => {
-          res.data.forEach(row => {
-            if (!row.Date) return;
-            const parts = row.Date.split('/');
-            if (parts.length === 3) {
-              const formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-              calendarMap[formattedDate] = {
-                weekday: row['Weekday'] || '',
-                cycleDay: row['Cycle Day'] || '',
-                holiday: row['Sch Holiday/Special Sch Day'] || '',
-                activity: row['Special Activity'] || ''
-              };
-            }
-          });
-          checkAndRender();
-        }
+          if (res.data) {
+            res.data.forEach(row => {
+              if (!row.Date) return;
+              const parts = row.Date.split('/');
+              if (parts.length === 3) {
+                const formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                calendarMap[formattedDate] = {
+                  weekday: (row['Weekday'] || '').trim(),
+                  cycleDay: (row['Cycle Day'] || '').trim(),
+                  holiday: (row['Sch Holiday/Special Sch Day'] || '').trim(),
+                  activity: (row['Special Activity'] || '').trim()
+                };
+              }
+            });
+          }
+          checkComplete();
+        },
+        error: () => checkComplete()
       });
 
-      // 2. 載入基本設定 (Settings)
+      // 2. 載入 Settings
       if (SETTINGS_CSV) {
         Papa.parse(SETTINGS_CSV, {
           download: true, header: true, skipEmptyLines: true,
-          complete: (res) => { settingsRows = res.data; checkAndRender(); }
+          complete: (res) => { if (res.data) settingsRows = res.data; checkComplete(); },
+          error: () => checkComplete()
         });
-      }
+      } else { checkComplete(); }
 
-      // 3. 載入 Cycle 課堂 (Cycle_Timetable)
+      // 3. 載入 Cycle_Timetable
       if (CYCLE_CSV) {
         Papa.parse(CYCLE_CSV, {
           download: true, header: true, skipEmptyLines: true,
-          complete: (res) => { cycleRows = res.data; checkAndRender(); }
+          complete: (res) => { if (res.data) cycleRows = res.data; checkComplete(); },
+          error: () => checkComplete()
         });
-      }
+      } else { checkComplete(); }
 
-      // 4. 載入每日下午與當值 (Daily_Schedule)
+      // 4. 載入 Daily_Schedule
       if (DAILY_SCHEDULE_CSV) {
         Papa.parse(DAILY_SCHEDULE_CSV, {
           download: true, header: true, skipEmptyLines: true,
-          complete: (res) => { dailyScheduleRows = res.data; checkAndRender(); }
+          complete: (res) => { if (res.data) dailyScheduleRows = res.data; checkComplete(); },
+          error: () => checkComplete()
         });
-      }
-    }
-
-    let loadedCount = 0;
-    function checkAndRender() {
-      loadedCount++;
-      // 當校曆與資料載入後即可渲染
-      if (Object.keys(calendarMap).length > 0) {
-        document.getElementById('loading').style.display = 'none';
-        renderDay(currentDateStr);
-      }
+      } else { checkComplete(); }
     }
 
     function changeDate(days) {
@@ -265,11 +270,13 @@
       const d = new Date(dateStr);
       const weekdayNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
       const jsWeekday = weekdayNames[d.getDay()];
+      const currentWeekday = calInfo?.weekday || jsWeekday;
 
-      dateDisplay.textContent = `${dateStr} (${calInfo?.weekday || jsWeekday})`;
+      dateDisplay.textContent = `${dateStr} (${currentWeekday})`;
 
       let badgeHtml = '';
-      if (calInfo?.cycleDay && calInfo.cycleDay !== '-') badgeHtml += `<span class="badge badge-cycle">Cycle Day ${calInfo.cycleDay}</span>`;
+      const cycleDay = calInfo?.cycleDay ? calInfo.cycleDay.trim().toUpperCase() : '';
+      if (cycleDay && cycleDay !== '-') badgeHtml += `<span class="badge badge-cycle">Cycle Day ${cycleDay}</span>`;
       if (calInfo?.holiday) badgeHtml += `<span class="badge badge-holiday">${calInfo.holiday}</span>`;
       if (calInfo?.activity) badgeHtml += `<span class="badge badge-activity">${calInfo.activity}</span>`;
       metaBadges.innerHTML = badgeHtml;
@@ -282,28 +289,25 @@
         return;
       }
 
-      // 判斷是否為星期五 (Fri) 還是星期一至四 (Mon-Thu)
-      const isFri = (calInfo?.weekday === '星期五' || jsWeekday === '星期五');
-
-      // 組合當日完整時間軸
+      const isFri = (currentWeekday === '星期五');
       let timeline = [];
 
-      // 1. USSR (固定早讀 / 當值)
-      const ussrStart = "07:30";
-      const ussrEnd = "08:00";
+      // 1. USSR
       timeline.push({
-        time: `${ussrStart} - ${ussrEnd}`,
+        time: "07:30 - 08:00",
         type: 'duty',
         title: 'USSR (閱讀/當值)',
         desc: 'Assembly Hall / 閱讀',
         badge: 'USSR'
       });
 
-      // 2. L1 - L4 循環課堂
-      const cycleDay = calInfo?.cycleDay ? calInfo.cycleDay.trim().toUpperCase() : '';
-      const dayClasses = cycleRows.filter(r => (r['Cycle_Day'] || '').trim().toUpperCase() === cycleDay);
+      // 2. 尋找當天 Cycle Day 的課堂資料（加強相容性比對）
+      const dayClasses = cycleRows.filter(r => {
+        const rowDay = (r['Cycle_Day'] || r['Cycle'] || r['循環日'] || '').trim().toUpperCase();
+        return rowDay === cycleDay;
+      });
 
-      // 時間對照對應
+      // 3. L1 - L4 時間軸
       const lTimes = isFri ? [
         {p:'L1', s:'08:05', e:'08:45'}, {p:'L2', s:'08:45', e:'09:25'},
         {p:'L3', s:'09:40', e:'10:20'}, {p:'L4', s:'10:20', e:'11:00'}
@@ -313,17 +317,34 @@
       ];
 
       lTimes.forEach(lt => {
-        const cls = dayClasses.find(c => (c['Period'] || '').trim().toUpperCase() === lt.p);
-        timeline.push({
-          time: `${lt.s} - ${lt.e}`,
-          type: 'class',
-          title: cls ? `${cls['Subject']} (${cls['Classroom']})` : `${lt.p} (未填寫)`,
-          desc: `循環日 Day ${cycleDay}`,
-          badge: lt.p
+        const cls = dayClasses.find(c => {
+          const p = (c['Period'] || c['節次'] || '').trim().toUpperCase();
+          return p === lt.p;
         });
+
+        const subject = cls ? (cls['Subject'] || cls['科目'] || '') : '';
+        const classroom = cls ? (cls['Classroom'] || cls['課室'] || cls['地點'] || '') : '';
+
+        if (subject) {
+          timeline.push({
+            time: `${lt.s} - ${lt.e}`,
+            type: 'class',
+            title: `${subject} ${classroom ? '(' + classroom + ')' : ''}`,
+            desc: `循環日 Day ${cycleDay}`,
+            badge: lt.p
+          });
+        } else {
+          timeline.push({
+            time: `${lt.s} - ${lt.e}`,
+            type: 'class',
+            title: `${lt.p} (自習/空堂)`,
+            desc: `循環日 Day ${cycleDay}`,
+            badge: lt.p
+          });
+        }
       });
 
-      // 3. Break (小休)
+      // 4. Break
       timeline.push({
         time: isFri ? "11:00 - 11:10" : "11:20 - 11:30",
         type: 'break',
@@ -332,7 +353,7 @@
         badge: 'Break'
       });
 
-      // 4. L5 - L6 循環課堂
+      // 5. L5 - L6 時間軸
       const l56Times = isFri ? [
         {p:'L5', s:'11:10', e:'11:50'}, {p:'L6', s:'11:50', e:'12:30'}
       ] : [
@@ -340,17 +361,34 @@
       ];
 
       l56Times.forEach(lt => {
-        const cls = dayClasses.find(c => (c['Period'] || '').trim().toUpperCase() === lt.p);
-        timeline.push({
-          time: `${lt.s} - ${lt.e}`,
-          type: 'class',
-          title: cls ? `${cls['Subject']} (${cls['Classroom']})` : `${lt.p} (未填寫)`,
-          desc: `循環日 Day ${cycleDay}`,
-          badge: lt.p
+        const cls = dayClasses.find(c => {
+          const p = (c['Period'] || c['節次'] || '').trim().toUpperCase();
+          return p === lt.p;
         });
+
+        const subject = cls ? (cls['Subject'] || cls['科目'] || '') : '';
+        const classroom = cls ? (cls['Classroom'] || cls['課室'] || cls['地點'] || '') : '';
+
+        if (subject) {
+          timeline.push({
+            time: `${lt.s} - ${lt.e}`,
+            type: 'class',
+            title: `${subject} ${classroom ? '(' + classroom + ')' : ''}`,
+            desc: `循環日 Day ${cycleDay}`,
+            badge: lt.p
+          });
+        } else {
+          timeline.push({
+            time: `${lt.s} - ${lt.e}`,
+            type: 'class',
+            title: `${lt.p} (自習/空堂)`,
+            desc: `循環日 Day ${cycleDay}`,
+            badge: lt.p
+          });
+        }
       });
 
-      // 5. Lunch (午飯與遊玩)
+      // 6. Lunch
       timeline.push({
         time: isFri ? "12:30 - 13:15" : "12:50 - 13:45",
         type: 'break',
@@ -359,27 +397,26 @@
         badge: 'Lunch'
       });
 
-      // 6. 下午活動與放學當值 (從 Daily_Schedule 讀取當天對應的星期行程)
-      const weekdayFull = calInfo?.weekday || jsWeekday;
-      const matchedSchedules = dailyScheduleRows.filter(r => (r['Weekday'] || '').trim() === weekdayFull);
+      // 7. 下午活動與當值 (從 Daily_Schedule 讀取)
+      const matchedSchedules = dailyScheduleRows.filter(r => (r['Weekday'] || '').trim() === currentWeekday);
 
       if (matchedSchedules.length > 0) {
         matchedSchedules.forEach(ds => {
-          const isDuty = (ds['Event_Type'] || '').includes('當值') || (ds['Event_Type'] || '').includes('Duty');
+          const eventType = ds['Event_Type'] || '';
+          const isDuty = eventType.includes('當值') || eventType.includes('Duty');
           timeline.push({
             time: `${ds['Start_Time']} - ${ds['End_Time']}`,
             type: isDuty ? 'duty' : 'activity',
-            title: ds['Activity_Or_Duty_Name'] || ds['Event_Type'],
+            title: ds['Activity_Or_Duty_Name'] || eventType,
             desc: ds['Venue_Or_Details'] || '',
             badge: ds['Time_Slot'] || '下午'
           });
         });
       } else {
-        // 預設備用下午行程
         timeline.push({
           time: isFri ? "13:15 - 15:25" : "13:45 - 17:15",
           type: 'activity',
-          title: isFri ? 'Class Teacher Period / 早期放學當值' : '下午課業 / 當值安排',
+          title: isFri ? 'Class Teacher Period / 放學當值' : '下午活動與當值安排',
           desc: '請於 Daily_Schedule 表格中補充詳細安排',
           badge: '下午'
         });
