@@ -9,7 +9,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
 
-  <script src="daily_adv.js?v=2.5"></script>
+  <script src="daily_adv.js?v=2.6"></script>
   <script src="../config.js"></script>
   <script src="../allowed-emails.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -30,6 +30,7 @@
       color: #0f172a;
       margin: 0;
       padding: 10px;
+      padding-top: 54px; /* 預留絕對定位漢堡按鈕的空間 */
     }
 
     .auth-overlay {
@@ -50,14 +51,18 @@
       display: none;
     }
 
-    /* ☰ 三劃抽屜式導覽列樣式 (藍本規範) */
+    /* ☰ 三劃抽屜式導覽列樣式 (固定於畫面最右上方，不與按鈕群組並列) */
     .btn-hamburger {
+      position: fixed;
+      top: 10px;
+      right: 12px;
+      z-index: 950;
       background: #ffffff;
       border: 1px solid var(--border-color);
       color: var(--primary);
       border-radius: 8px;
-      padding: 4px 10px;
-      font-size: 1.2rem;
+      padding: 6px 12px;
+      font-size: 1.25rem;
       line-height: 1;
       font-weight: bold;
       cursor: pointer;
@@ -65,7 +70,7 @@
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
     .btn-hamburger:hover {
       background: var(--primary);
@@ -144,7 +149,7 @@
     }
     .title-group { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
 
-    .top-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .top-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-right: 40px; }
     
     .btn-bubble {
       border-radius: 20px; padding: 6px 12px; font-size: 0.8rem; font-weight: bold;
@@ -327,10 +332,12 @@
       display: flex; align-items: center; justify-content: center; z-index: 900;
     }
 
+    /* 📅 月份分隔列樣式 */
     .month-divider {
       background: rgba(248, 250, 252, 0.95); backdrop-filter: blur(8px);
-      padding: 8px 12px; margin: 12px 0 6px 0; border-bottom: 2px solid #cbd5e1;
+      padding: 8px 12px; margin: 16px 0 8px 0; border-bottom: 2px solid #cbd5e1;
       display: flex; align-items: center; gap: 10px;
+      flex: 0 0 100%; width: 100%; border-radius: 8px;
     }
     .month-divider .month-text { font-size: 15px; font-weight: 700; color: #1e293b; }
     .month-divider .year-badge { background-color: #e2e8f0; color: #475569; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; }
@@ -395,13 +402,6 @@
         gap: 16px;
       }
 
-      .month-divider {
-        flex: 0 0 100%;
-        width: 100%;
-        border-radius: 10px;
-        margin: 0 0 8px 0;
-      }
-
       .day-block {
         flex: 0 0 280px;
         width: 280px;
@@ -424,7 +424,7 @@
     .modal-card textarea { min-height: 140px; line-height: 1.5; font-size: 14px; resize: vertical; font-family: inherit; margin-top: 4px; }
 
     @media all and (display-mode: standalone) {
-      body { padding: 4px; }
+      body { padding: 4px; padding-top: 50px; }
       .container { padding: 8px; border-radius: 8px; }
       .header-bar { padding-bottom: 8px; gap: 6px; }
       .title-group { font-size: 0.95rem; }
@@ -467,6 +467,11 @@
 </head>
 <body>
 
+  <!-- 🍔 固定於畫面右上角的三劃抽屜選單按鈕 -->
+  <button type="button" class="btn-hamburger" onclick="openNavDrawer()" title="開啟選單">
+    ☰
+  </button>
+
   <!-- Google 登入驗證遮罩 Modal -->
   <div id="authOverlay" class="auth-overlay">
     <div class="auth-card">
@@ -507,11 +512,6 @@
         </button>
         <button class="btn-bubble" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openArchivedModal()">
           📦 <span class="btn-text">典藏庫</span> <span id="archivedBadgeCount" class="badge-pill">0</span>
-        </button>
-
-        <!-- 🍔 右上角三劃選單按鈕（觸發抽屜導覽列） -->
-        <button type="button" class="btn-hamburger" onclick="openNavDrawer()" title="開啟選單">
-          ☰
         </button>
       </div>
     </div>
@@ -698,11 +698,11 @@
 
     function renderNavLinks(container, htmlContent) {
       container.innerHTML = htmlContent;
-      const currentFilename = window.location.pathname.split('/').pop() || 'daily_adv_2.html';
+      const currentFilename = window.location.pathname.split('/').pop() || 'daily_adv.html';
       
       container.querySelectorAll('.nav-btn').forEach(link => {
         const href = link.getAttribute('href') || '';
-        if (href.includes(currentFilename) || (currentFilename === 'daily_adv_2.html' && href.includes('daily_adv'))) {
+        if (href.includes(currentFilename) || (currentFilename.includes('daily_adv') && href.includes('daily_adv'))) {
           link.classList.add('active');
         } else {
           link.classList.remove('active');
