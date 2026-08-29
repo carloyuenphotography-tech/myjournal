@@ -267,7 +267,8 @@ function autoEmojiReplace(text) {
     'email': '✉️ 電郵',
     'lunch': '🍽️ 午餐',
     'buy': '🛒 購買',
-    '升旗': '🇨🇳 升旗'
+    '升旗': '🇨🇳 升旗',
+    'Check': '🔎'
   };
   let processed = text;
   for (let [keyword, emojiStr] of Object.entries(emojiMap)) {
