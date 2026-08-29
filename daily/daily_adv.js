@@ -9,7 +9,7 @@ const CATEGORIES = [
   { id: 'finance',  name: '💰 財務/購物', tag: '#finance',  bg: '#ffedd5', color: '#9a3412' },
   { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' },
   { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',    bg: '#1E1542', color: '#C5BCDE' },
-  { id: 'std',      name: '🎓 學生',     tag: '#std',      bg: '#e0e7ff', color: '#3730a3' },
+  { id: 'std',      name: '🎓 學生',      tag: '#std',      bg: '#e0e7ff', color: '#3730a3' },
 ];
 
 let allLogs = [];
@@ -261,6 +261,25 @@ function toggleQuickDateInput(chk) {
   }
 }
 
+/* ⚡ 自動將特定字眼轉成 Emoji */
+function autoEmojiReplace(text) {
+  const emojiMap = {
+    'meeting': '📅 開會',
+    'exam': '📝 考試',
+    'pay': '💰 繳費',
+    'call': '📞 電話',
+    'email': '✉️ 電郵',
+    'lunch': '🍽️ 午餐',
+    'buy': '🛒 購買'
+  };
+  let processed = text;
+  for (let [keyword, emojiStr] of Object.entries(emojiMap)) {
+    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+    processed = processed.replace(regex, emojiStr);
+  }
+  return processed;
+}
+
 function handleQuickSubmit(e) {
   e.preventDefault();
   const type = document.getElementById('quickType').value;
@@ -270,6 +289,9 @@ function handleQuickSubmit(e) {
   const quickDateVal = document.getElementById('quickDate').value;
 
   if (!content) return;
+
+  // 套用自動 Emoji 轉換
+  content = autoEmojiReplace(content);
 
   let remarks = '';
   const targetCatObj = CATEGORIES.find(c => c.id === catId);
@@ -404,17 +426,26 @@ function renderTimeline() {
 
     let dayItems = filteredLogs.filter(i => i.date === dateVal);
 
-    // 套用拖曳順序
+    // 💡 修正後：結合拖曳順序與 #urgent / #important 自動置頂排序
     const savedOrder = getDayOrder(dateVal);
-    if (savedOrder && Array.isArray(savedOrder)) {
-     dayItems.sort((a, b) => {
-  const isUrgentA = (a.content + a.remarks).includes('#urgent') || (a.content + a.remarks).includes('#important');
-  const isUrgentB = (b.content + b.remarks).includes('#urgent') || (b.content + b.remarks).includes('#important');
-  if (isUrgentA && !isUrgentB) return -1;
-  if (!isUrgentA && isUrgentB) return 1;
-  return 0;
-});
-    }
+    dayItems.sort((a, b) => {
+      const isUrgentA = (a.content + a.remarks).includes('#urgent') || (a.content + a.remarks).includes('#important');
+      const isUrgentB = (b.content + b.remarks).includes('#urgent') || (b.content + b.remarks).includes('#important');
+      
+      // 如果其中一項是緊急而另一項不是，緊急的排在前面
+      if (isUrgentA && !isUrgentB) return -1;
+      if (!isUrgentA && isUrgentB) return 1;
+
+      // 其次套用儲存的拖曳順序
+      if (savedOrder && Array.isArray(savedOrder)) {
+        let idxA = savedOrder.indexOf(String(a.id));
+        let idxB = savedOrder.indexOf(String(b.id));
+        if (idxA === -1) idxA = 999;
+        if (idxB === -1) idxB = 999;
+        return idxA - idxB;
+      }
+      return 0;
+    });
 
     const pendingCount = dayItems.filter(i => !isNoteType(i.type)).length;
 
@@ -943,23 +974,6 @@ function unarchiveItem(id) {
     status: 'Pending' 
   });
 }
-function autoEmojiReplace(text) {
-  const emojiMap = {
-    'meeting': '📅 開會',
-    'exam': '📝 考試',
-    'pay': '💰 繳費',
-    'call': '📞 電話',
-    'email': '✉️ 電郵',
-    'lunch': '🍽️ 午餐',
-    'buy': '🛒 購買'
-  };
-  let processed = text;
-  for (let [keyword, emojiStr] of Object.entries(emojiMap)) {
-    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-    processed = processed.replace(regex, emojiStr);
-  }
-  return processed;
-}
 
 function assignToTodayFromModal() {
   const id = document.getElementById('modalItemId').value;
@@ -1007,10 +1021,13 @@ function handleFormSubmit(e) {
   const id = document.getElementById('modalItemId').value;
   const date = document.getElementById('modalDate').value.trim();
   const type = document.getElementById('modalType').value;
-  const content = document.getElementById('modalContent').value.trim();
+  let content = document.getElementById('modalContent').value.trim();
   const remarks = document.getElementById('modalRemarks').value.trim();
 
   if (!content) return;
+
+  // ⚡ 讓透過 Modal 編輯或新增時也能自動轉成 Emoji
+  content = autoEmojiReplace(content);
 
   if (id) {
     const target = allLogs.find(l => String(l.id) === String(id));
