@@ -943,6 +943,23 @@ function unarchiveItem(id) {
     status: 'Pending' 
   });
 }
+function autoEmojiReplace(text) {
+  const emojiMap = {
+    'meeting': '📅 開會',
+    'exam': '📝 考試',
+    'pay': '💰 繳費',
+    'call': '📞 電話',
+    'email': '✉️ 電郵',
+    'lunch': '🍽️ 午餐',
+    'buy': '🛒 購買'
+  };
+  let processed = text;
+  for (let [keyword, emojiStr] of Object.entries(emojiMap)) {
+    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+    processed = processed.replace(regex, emojiStr);
+  }
+  return processed;
+}
 
 function assignToTodayFromModal() {
   const id = document.getElementById('modalItemId').value;
