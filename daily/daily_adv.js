@@ -269,7 +269,8 @@ function autoEmojiReplace(text) {
     'buy': '🛒 購買',
     '升旗': '🇨🇳 升旗',
     'Check': '🔎',
-    '不': '❌ 不'
+    '不': '❌ 不',
+    'Nikon': '📷 Nikon'
   };
   let processed = text;
   for (let [keyword, emojiStr] of Object.entries(emojiMap)) {
