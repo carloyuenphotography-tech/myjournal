@@ -407,13 +407,13 @@ function renderTimeline() {
     // 套用拖曳順序
     const savedOrder = getDayOrder(dateVal);
     if (savedOrder && Array.isArray(savedOrder)) {
-      dayItems.sort((a, b) => {
-        let idxA = savedOrder.indexOf(String(a.id));
-        let idxB = savedOrder.indexOf(String(b.id));
-        if (idxA === -1) idxA = 999;
-        if (idxB === -1) idxB = 999;
-        return idxA - idxB;
-      });
+     dayItems.sort((a, b) => {
+  const isUrgentA = (a.content + a.remarks).includes('#urgent') || (a.content + a.remarks).includes('#important');
+  const isUrgentB = (b.content + b.remarks).includes('#urgent') || (b.content + b.remarks).includes('#important');
+  if (isUrgentA && !isUrgentB) return -1;
+  if (!isUrgentA && isUrgentB) return 1;
+  return 0;
+});
     }
 
     const pendingCount = dayItems.filter(i => !isNoteType(i.type)).length;
