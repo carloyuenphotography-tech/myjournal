@@ -60,7 +60,6 @@ window.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 🔑 改用 localStorage 讀取憑證（關閉瀏覽器後依然保留登入狀態）
   const savedEmail = localStorage.getItem("user_google_email") || 
                     (localStorage.getItem("google_user") ? JSON.parse(localStorage.getItem("google_user")).email : null);
 
@@ -72,7 +71,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   checkLoginStatus();
 
-  // 離線佇列檢查與同步監聽
   if (navigator.onLine) syncOfflineQueue();
 });
 
@@ -151,7 +149,6 @@ function handleCredentialResponse(response) {
         return;
       }
     }
-    // 🔑 將憑證寫入 localStorage 實現持久化免重新登入
     localStorage.setItem("user_google_email", userEmail);
     localStorage.setItem('google_user', JSON.stringify({ name: payload.name, email: userEmail, picture: payload.picture }));
     initializeApp();
@@ -167,7 +164,6 @@ function parseJwt(token) {
 }
 
 function checkLoginStatus() {
-  // 🔑 檢查 localStorage
   if (localStorage.getItem('google_user')) initializeApp();
   else {
     if (document.getElementById('authOverlay')) document.getElementById('authOverlay').style.display = 'flex';
@@ -290,7 +286,6 @@ function handleQuickSubmit(e) {
 
   if (!content) return;
 
-  // 套用自動 Emoji 轉換
   content = autoEmojiReplace(content);
 
   let remarks = '';
@@ -359,7 +354,6 @@ function updateAllBadges() {
   if (document.getElementById('archivedBadgeCount')) document.getElementById('archivedBadgeCount').textContent = archivedCount;
 }
 
-/* ⚡ LocalStorage 儲存卡片拖曳順序 */
 function saveDayOrder(dateStr, cardIds) {
   try {
     const savedOrders = JSON.parse(localStorage.getItem('daily_card_orders') || '{}');
@@ -402,7 +396,6 @@ function renderTimeline() {
     const month = d.getMonth() + 1;
     const monthYearKey = `${year}-${month}`;
 
-    // 💡 需求 1：加入月份在卡片之間，以便辨識月份
     if (monthYearKey !== lastMonthYearKey) {
       lastMonthYearKey = monthYearKey;
       const monthDivider = document.createElement('div');
@@ -426,17 +419,14 @@ function renderTimeline() {
 
     let dayItems = filteredLogs.filter(i => i.date === dateVal);
 
-    // 💡 修正後：結合拖曳順序與 #urgent / #important 自動置頂排序
     const savedOrder = getDayOrder(dateVal);
     dayItems.sort((a, b) => {
       const isUrgentA = (a.content + a.remarks).includes('#urgent') || (a.content + a.remarks).includes('#important');
       const isUrgentB = (b.content + b.remarks).includes('#urgent') || (b.content + b.remarks).includes('#important');
       
-      // 如果其中一項是緊急而另一項不是，緊急的排在前面
       if (isUrgentA && !isUrgentB) return -1;
       if (!isUrgentA && isUrgentB) return 1;
 
-      // 其次套用儲存的拖曳順序
       if (savedOrder && Array.isArray(savedOrder)) {
         let idxA = savedOrder.indexOf(String(a.id));
         let idxB = savedOrder.indexOf(String(b.id));
@@ -478,7 +468,6 @@ function renderTimeline() {
   initSortable();
 }
 
-/* ⚡ 初始化 SortableJS 拖曳排序 */
 function initSortable() {
   if (typeof Sortable === 'undefined') return;
 
@@ -509,9 +498,11 @@ function createTaskCard(item) {
   card.onclick = (e) => { e.stopPropagation(); openEditModal(item); };
 
   let displayTitle = item.content;
+  let displayRemarks = item.remarks || '';
   let locationBadgeHtml = '';
 
-  const match = displayTitle.match(/@([^\s#(\[]+)(?:\((.*?)\))?/);
+  // 1. 先從標題尋找 @地點(時間)
+  let match = displayTitle.match(/@([^\s#(\[]+)(?:\((.*?)\))?/);
   if (match) {
     const locText = match[1];
     const timeText = match[2];
@@ -522,12 +513,26 @@ function createTaskCard(item) {
         ${timeText ? `<span class="loc-time">🕒 ${timeText}</span>` : ''}
       </span>
     `;
+  } else {
+    // 2. 如果標題沒有，擴充從備註尋找 @地點(時間)
+    match = displayRemarks.match(/@([^\s#(\[]+)(?:\((.*?)\))?/);
+    if (match) {
+      const locText = match[1];
+      const timeText = match[2];
+      displayRemarks = displayRemarks.replace(/@[^\s#]+(\(.*?\))?/, '').trim();
+      locationBadgeHtml = `
+        <span class="location-badge">
+          📍 ${locText}
+          ${timeText ? `<span class="loc-time">🕒 ${timeText}</span>` : ''}
+        </span>
+      `;
+    }
   }
 
   card.innerHTML = `
     <div class="task-info">
       <div class="task-title">${displayTitle}</div>
-      ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+      ${displayRemarks ? `<div class="task-remarks">💬 ${displayRemarks}</div>` : ''}
       ${locationBadgeHtml}
     </div>
     <div class="drag-handle" title="拖曳排序" onclick="event.stopPropagation()">⋮⋮</div>
@@ -1026,7 +1031,6 @@ function handleFormSubmit(e) {
 
   if (!content) return;
 
-  // ⚡ 讓透過 Modal 編輯或新增時也能自動轉成 Emoji
   content = autoEmojiReplace(content);
 
   if (id) {
@@ -1047,12 +1051,10 @@ function handleFormSubmit(e) {
   refreshAllViews();
 }
 
-// 🚀 跨分頁即時資料同步 (BroadcastChannel API)[cite: 17]
 const dailyBroadcastChannel = new BroadcastChannel('daily_adv_sync_channel');
 
 dailyBroadcastChannel.onmessage = (event) => {
   if (event.data && event.data.action === 'REFRESH_DATA') {
-    console.log('⚡ 偵測到其他分頁資料更新，自動刷新清單...');
     loadLogsData();
   }
 };
@@ -1061,7 +1063,6 @@ function notifyTabsDataChanged() {
   dailyBroadcastChannel.postMessage({ action: 'REFRESH_DATA', timestamp: Date.now() });
 }
 
-// 🚀 離線暫存佇列 (Offline Queue & Sync)[cite: 17]
 function saveToOfflineQueue(action, paramsObj) {
   let queue = JSON.parse(localStorage.getItem('daily_adv_offline_queue') || '[]');
   queue.push({ action, paramsObj, timestamp: new Date().getTime() });
@@ -1088,7 +1089,6 @@ async function syncOfflineQueue() {
       await fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' });
       await new Promise(r => setTimeout(r, 350));
     } catch (err) {
-      console.error('離線紀錄同步失敗，將排隊至下次連線:', err);
       remainingQueue = queue.slice(i);
       break;
     }
@@ -1120,7 +1120,6 @@ function syncToSheet(action, paramsObj) {
       notifyTabsDataChanged();
     })
     .catch((err) => {
-      console.warn('網路連線中斷，轉入離線佇列:', err);
       saveToOfflineQueue(action, paramsObj);
     });
 }
