@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📅 每日詳細時間表與當值導覽</title>
+  <title>📅 3天詳細時間表與當值導覽</title>
   <!-- PapaParse 用於解析 CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <!-- 載入全站統一設定 (config.js 需包含 DAILY_SHEET_ID) -->
@@ -26,12 +26,13 @@
       padding: 12px;
     }
     .container {
-      max-width: 800px;
+      max-width: 1400px;
       margin: 0 auto;
       background: #ffffff;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
     }
     .header-bar {
       display: flex;
@@ -42,7 +43,7 @@
       margin-bottom: 16px;
     }
     .title {
-      font-size: 1.2rem;
+      font-size: 1.25rem;
       font-weight: bold;
       color: var(--header-bg);
       display: flex;
@@ -54,14 +55,14 @@
       align-items: center;
       justify-content: space-between;
       background: #f1f5f9;
-      padding: 10px 14px;
+      padding: 12px 18px;
       border-radius: 10px;
       margin-bottom: 20px;
     }
     .btn-nav {
       background: #ffffff;
       border: 1px solid #cbd5e1;
-      padding: 6px 12px;
+      padding: 8px 16px;
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
@@ -69,17 +70,53 @@
       transition: all 0.2s;
     }
     .btn-nav:hover { background: #e2e8f0; }
-    .current-date-label {
-      font-size: 1rem;
+    .current-range-label {
+      font-size: 1.05rem;
       font-weight: bold;
       color: #0f172a;
       text-align: center;
     }
+
+    /* 🖥️ 桌面版三欄式並排佈局 */
+    .three-day-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1024px) {
+      .three-day-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .day-column {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .day-column-header {
+      background: #ffffff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .day-column-title {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #0f172a;
+    }
+
     .meta-badges {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
-      margin-top: 4px;
+      margin-top: 6px;
       justify-content: center;
     }
     .badge {
@@ -92,98 +129,276 @@
     .badge-holiday { background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3; }
     .badge-activity { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
 
+    /* 🌟 時段區塊 (Section Dividers) */
+    .time-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #ffffff;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .section-header {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 4px;
+      border-bottom: 2px dashed #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     /* 時間軸卡片樣式 */
     .timeline-list {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
     .time-card {
       background: #ffffff;
       border: 1px solid var(--border-color);
       border-left: 4px solid var(--primary-color);
       border-radius: 8px;
-      padding: 12px 16px;
+      padding: 10px 12px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      transition: all 0.2s ease;
     }
-    .time-card.duty { border-left-color: var(--duty-color); background-color: #fff7ed; }
-    .time-card.holiday-card { border-left-color: #e11d48; background-color: #fff1f2; text-align: center; justify-content: center; padding: 24px; font-size: 1.1rem; font-weight: bold; color: #9f1239; }
+    /* 當值卡片：醒目橙色邊框與暖色背景 */
+    .time-card.duty { 
+      border-left-color: var(--duty-color); 
+      background-color: #fff7ed; 
+    }
+    /* 課堂卡片：藍色 */
+    .time-card.class {
+      border-left-color: var(--class-color);
+      background-color: #f0f9ff;
+    }
+    /* 一般活動卡片：主題藍色 */
+    .time-card.activity {
+      border-left-color: var(--primary-color);
+      background-color: #eff6ff;
+    }
+    /* 預設/無當值框架：淺灰色 */
+    .time-card.is-free {
+      opacity: 0.55;
+      background-color: #fafafa;
+      border-left-color: #cbd5e1;
+    }
+    .time-card.is-free:hover { opacity: 0.85; }
+
+    .time-card.holiday-card { 
+      border-left-color: #e11d48; 
+      background-color: #fff1f2; 
+      text-align: center; 
+      justify-content: center; 
+      padding: 20px; 
+      font-size: 0.95rem; 
+      font-weight: bold; 
+      color: #9f1239; 
+    }
+
+    .time-card.no-cycle-card {
+      border-left-color: #94a3b8;
+      background-color: #f1f5f9;
+      text-align: center;
+      justify-content: center;
+      padding: 24px 16px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #475569;
+    }
 
     .time-slot-info {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: #64748b;
       font-weight: 600;
       margin-bottom: 2px;
     }
     .time-content-title {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: bold;
       color: #1e293b;
     }
     .time-content-desc {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: #475569;
       margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
     .time-badge {
-      font-size: 0.8rem;
-      padding: 4px 8px;
-      border-radius: 6px;
+      font-size: 0.75rem;
+      padding: 3px 6px;
+      border-radius: 5px;
       background: #f1f5f9;
       font-weight: bold;
       color: #334155;
       white-space: nowrap;
     }
-    #loading { text-align: center; padding: 20px; font-weight: bold; color: #0284c7; }
+    #loading { text-align: center; padding: 24px; font-weight: bold; color: #0284c7; }
+
+    /* 底部狀態與診斷列 */
+    .status-footer {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .status-dot {
+      height: 10px; width: 10px; background-color: #ef4444; border-radius: 50%; display: inline-block; margin-right: 6px;
+    }
+    .status-dot.success { background-color: #22c55e; }
+    .diagnostic-box {
+      background: #0f172a;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      font-family: monospace;
+      font-size: 0.78rem;
+      max-height: 150px;
+      overflow-y: auto;
+      display: none;
+      margin-top: 6px;
+    }
+    .btn-diag {
+      background: #334155; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.78rem;
+    }
+    .btn-diag:hover { background: #475569; }
   </style>
 </head>
 <body>
 
   <div class="container">
     <div class="header-bar">
-      <div class="title">📅 每日詳細時間表與當值</div>
+      <div class="title">📅 3天詳細時間表與當值導覽 (桌面版)</div>
       <a href="index.html" style="font-size: 0.85rem; text-decoration: none; color: #2563eb; font-weight: bold;">🏠 返回主頁</a>
     </div>
 
-    <!-- 日期導覽列 -->
+    <!-- 3天範圍導覽列 -->
     <div class="date-nav-bar">
-      <button class="btn-nav" onclick="changeDate(-1)">◀ 前一天</button>
+      <button class="btn-nav" onclick="changeDateRange(-1)">◀ 前一天</button>
       <div>
-        <div id="dateDisplay" class="current-date-label">載入中...</div>
-        <div id="metaBadges" class="meta-badges"></div>
+        <div id="rangeDisplay" class="current-range-label">載入中...</div>
       </div>
-      <button class="btn-nav" onclick="changeDate(1)">後一天 ▶</button>
+      <button class="btn-nav" onclick="changeDateRange(1)">後一天 ▶</button>
     </div>
 
-    <div id="loading">⏳ 正在載入校曆與時間表資料...</div>
+    <div id="loading">⏳ 正在載入校曆與遠端 Google Sheet 資料...</div>
+    
+    <!-- 三天並排網格容器 -->
+    <div id="threeDayContainer" class="three-day-grid"></div>
+  </div>
 
-    <!-- 當日時間軸列表 -->
-    <div id="timelineContainer" class="timeline-list"></div>
+  <!-- 底部狀態與診斷列 -->
+  <div class="status-footer">
+    <div class="status-row">
+      <div>
+        <span id="statusDot" class="status-dot"></span>
+        <span id="statusText">系統狀態：正在連接資料來源...</span>
+      </div>
+      <div>
+        <button class="btn-diag" onclick="toggleDiagnostic()">🔍 診斷面板</button>
+      </div>
+    </div>
+    <div id="diagnosticBox" class="diagnostic-box"></div>
   </div>
 
   <script>
     const CALENDAR_CSV = 'Sch Calendar-Grid view.csv';
     const GOOGLE_SHEET_ID = (typeof CONFIG !== 'undefined' && CONFIG.DAILY_SHEET_ID) ? CONFIG.DAILY_SHEET_ID : '';
     
-    // Google Sheets 讀取分頁
-    const SETTINGS_CSV = GOOGLE_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Settings` : '';
     const CYCLE_CSV = GOOGLE_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Cycle_Timetable` : '';
     const DAILY_SCHEDULE_CSV = GOOGLE_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Daily_Schedule` : '';
+    const DAILY_SETTINGS_CSV = GOOGLE_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Daily_Settings` : '';
 
     let calendarMap = {}; 
-    let settingsRows = [];
     let cycleRows = [];
-    let dailyScheduleRows = [];
+    let dailyRows = [];
+    let settingsRows = [];
+    let diagLog = [];
+
+    const WEEKDAY_MAP = {
+      '星期一': 'monday', 'mon': 'monday', 'monday': 'monday',
+      '星期二': 'tue', 'tuesday': 'tuesday',
+      '星期三': 'wednesday', 'wed': 'wednesday', 'wednesday': 'wednesday',
+      '星期四': 'thursday', 'thu': 'thursday', 'thursday': 'thursday',
+      '星期五': 'friday', 'fri': 'friday', 'friday': 'friday',
+      '星期六': 'saturday', 'sat': 'saturday', 'saturday': 'saturday',
+      '星期日': 'sunday', 'sun': 'sunday', 'sunday': 'sunday'
+    };
+
+    function normalizeWeekday(str) {
+      if (!str) return '';
+      const cleanStr = String(str).trim().toLowerCase();
+      return WEEKDAY_MAP[cleanStr] || cleanStr;
+    }
+
+    function formatTimeStr(timeVal) {
+      if (!timeVal) return '';
+      let s = String(timeVal).trim();
+      if (s.length === 4 && s.includes(':')) return '0' + s;
+      return s;
+    }
+
+    function getProp(obj, possibleKeys) {
+      if (!obj) return '';
+      for (let k of possibleKeys) {
+        for (let objKey in obj) {
+          if (String(objKey).trim().toLowerCase() === String(k).toLowerCase()) {
+            let val = obj[objKey];
+            return (val !== null && val !== undefined) ? String(val) : '';
+          }
+        }
+      }
+      return '';
+    }
+
+    function logDiag(msg) {
+      const time = new Date().toLocaleTimeString();
+      diagLog.push(`[${time}] ${msg}`);
+      const box = document.getElementById('diagnosticBox');
+      if (box) box.innerHTML = diagLog.join('<br>');
+    }
+
+    function toggleDiagnostic() {
+      const box = document.getElementById('diagnosticBox');
+      box.style.display = box.style.display === 'block' ? 'none' : 'block';
+    }
 
     function getTodayStr() {
       const now = new Date();
       return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     }
 
-    let currentDateStr = getTodayStr();
+    function addDays(dateStr, days) {
+      const parts = dateStr.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setDate(d.getDate() + days);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    let startDateStr = getTodayStr();
 
     window.addEventListener('DOMContentLoaded', () => {
       loadAllData();
@@ -195,119 +410,144 @@
 
       function checkComplete() {
         loadedCount++;
+        logDiag(`資料源載入進度: ${loadedCount}/${totalSources}`);
         if (loadedCount >= totalSources) {
           document.getElementById('loading').style.display = 'none';
-          renderDay(currentDateStr);
+          setSystemStatus(true, "所有資料源載入完成");
+          renderThreeDays(startDateStr);
         }
       }
 
-      // 1. 載入校曆
       Papa.parse(CALENDAR_CSV, {
         download: true, header: true, skipEmptyLines: true,
         complete: (res) => {
           if (res.data) {
             res.data.forEach(row => {
               if (!row.Date) return;
-              const parts = row.Date.split('/');
+              const parts = String(row.Date).split('/');
               if (parts.length === 3) {
                 const formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
                 calendarMap[formattedDate] = {
-                  weekday: (row['Weekday'] || '').trim(),
-                  cycleDay: (row['Cycle Day'] || '').trim(),
-                  holiday: (row['Sch Holiday/Special Sch Day'] || '').trim(),
-                  activity: (row['Special Activity'] || '').trim()
+                  weekday: String(row['Weekday'] || '').trim(),
+                  cycleDay: String(row['Cycle Day'] || '').trim(),
+                  holiday: String(row['Sch Holiday/Special Sch Day'] || '').trim(),
+                  activity: String(row['Special Activity'] || '').trim()
                 };
               }
             });
           }
           checkComplete();
         },
-        error: () => checkComplete()
+        error: (err) => { logDiag("校曆載入失敗: " + err); checkComplete(); }
       });
 
-      // 2. 載入 Settings
-      if (SETTINGS_CSV) {
-        Papa.parse(SETTINGS_CSV, {
-          download: true, header: true, skipEmptyLines: true,
-          complete: (res) => { if (res.data) settingsRows = res.data; checkComplete(); },
-          error: () => checkComplete()
-        });
-      } else { checkComplete(); }
-
-      // 3. 載入 Cycle_Timetable
       if (CYCLE_CSV) {
         Papa.parse(CYCLE_CSV, {
           download: true, header: true, skipEmptyLines: true,
           complete: (res) => { if (res.data) cycleRows = res.data; checkComplete(); },
-          error: () => checkComplete()
+          error: (err) => { logDiag("Cycle_Timetable失敗"); checkComplete(); }
         });
       } else { checkComplete(); }
 
-      // 4. 載入 Daily_Schedule
       if (DAILY_SCHEDULE_CSV) {
         Papa.parse(DAILY_SCHEDULE_CSV, {
           download: true, header: true, skipEmptyLines: true,
-          complete: (res) => { if (res.data) dailyScheduleRows = res.data; checkComplete(); },
-          error: () => checkComplete()
+          complete: (res) => { if (res.data) dailyRows = res.data; checkComplete(); },
+          error: (err) => { logDiag("Daily_Schedule失敗"); checkComplete(); }
+        });
+      } else { checkComplete(); }
+
+      if (DAILY_SETTINGS_CSV) {
+        Papa.parse(DAILY_SETTINGS_CSV, {
+          download: true, header: true, skipEmptyLines: true,
+          complete: (res) => { if (res.data) settingsRows = res.data; checkComplete(); },
+          error: (err) => { logDiag("Daily_Settings失敗"); checkComplete(); }
         });
       } else { checkComplete(); }
     }
 
-    function changeDate(days) {
-      const parts = currentDateStr.split('-');
-      const d = new Date(parts[0], parts[1] - 1, parts[2]);
-      d.setDate(d.getDate() + days);
-      currentDateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      renderDay(currentDateStr);
+    function setSystemStatus(isSuccess, text) {
+      const dot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      if (isSuccess) { dot.className = "status-dot success"; } 
+      else { dot.className = "status-dot"; }
+      statusText.textContent = "系統狀態：" + text;
     }
 
-    function renderDay(dateStr) {
-      const dateDisplay = document.getElementById('dateDisplay');
-      const metaBadges = document.getElementById('metaBadges');
-      const container = document.getElementById('timelineContainer');
+    function changeDateRange(days) {
+      startDateStr = addDays(startDateStr, days);
+      renderThreeDays(startDateStr);
+    }
 
+    function renderThreeDays(baseDateStr) {
+      const container = document.getElementById('threeDayContainer');
+      const rangeDisplay = document.getElementById('rangeDisplay');
+      
+      const day0 = baseDateStr;
+      const day1 = addDays(baseDateStr, 1);
+      const day2 = addDays(baseDateStr, 2);
+
+      rangeDisplay.textContent = `📅 展示範圍：${day0} 至 ${day2}`;
+      container.innerHTML = '';
+
+      const datesToRender = [day0, day1, day2];
+
+      datesToRender.forEach(dateStr => {
+        const colDiv = document.createElement('div');
+        colDiv.className = 'day-column';
+        colDiv.innerHTML = buildSingleDayHtml(dateStr);
+        container.appendChild(colDiv);
+      });
+    }
+
+    function buildSingleDayHtml(dateStr) {
       const calInfo = calendarMap[dateStr];
       const d = new Date(dateStr);
       const weekdayNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
       const jsWeekday = weekdayNames[d.getDay()];
-      const currentWeekday = calInfo?.weekday || jsWeekday;
-
-      dateDisplay.textContent = `${dateStr} (${currentWeekday})`;
+      const rawWeekday = calInfo?.weekday || jsWeekday;
+      const normalizedTargetWeekday = normalizeWeekday(rawWeekday);
 
       let badgeHtml = '';
       const cycleDay = calInfo?.cycleDay ? calInfo.cycleDay.trim().toUpperCase() : '';
-      if (cycleDay && cycleDay !== '-') badgeHtml += `<span class="badge badge-cycle">Cycle Day ${cycleDay}</span>`;
+      if (cycleDay && cycleDay !== '-' && cycleDay !== 'N/A') {
+        badgeHtml += `<span class="badge badge-cycle">Cycle Day ${cycleDay}</span>`;
+      }
       if (calInfo?.holiday) badgeHtml += `<span class="badge badge-holiday">${calInfo.holiday}</span>`;
       if (calInfo?.activity) badgeHtml += `<span class="badge badge-activity">${calInfo.activity}</span>`;
-      metaBadges.innerHTML = badgeHtml;
 
-      container.innerHTML = '';
+      let headerHtml = `
+        <div class="day-column-header">
+          <div class="day-column-title">${dateStr} (${rawWeekday})</div>
+          <div class="meta-badges">${badgeHtml}</div>
+        </div>
+      `;
 
-      // 若遇學校假期
       if (calInfo?.holiday) {
-        container.innerHTML = `<div class="time-card holiday-card">🚩 今日為學校假期：${calInfo.holiday}</div>`;
-        return;
+        return headerHtml + `<div class="time-card holiday-card">🚩 今日為學校假期：${calInfo.holiday}</div>`;
       }
 
-      const isFri = (currentWeekday === '星期五');
-      let timeline = [];
+      if (!cycleDay || cycleDay === '-' || cycleDay === 'N/A') {
+        let noCycleMsg = '📅 今日非循環日 (無課堂時間表)';
+        if (calInfo?.activity) {
+          noCycleMsg = `📌 特別活動：${calInfo.activity}`;
+        }
+        return headerHtml + `<div class="time-card no-cycle-card">${noCycleMsg}</div>`;
+      }
 
-      // 1. USSR
-      timeline.push({
-        time: "07:30 - 08:00",
-        type: 'duty',
-        title: 'USSR (閱讀/當值)',
-        desc: 'Assembly Hall / 閱讀',
-        badge: 'USSR'
-      });
+      const isFri = (normalizedTargetWeekday === 'friday');
 
-      // 2. 尋找當天 Cycle Day 的課堂資料（加強相容性比對）
+      // 🌟 三大時段陣列
+      let morningWeekly = [];
+      let cycleTimeline = [];
+      let afternoonWeekly = [];
+
+      // A. Cycle_Timetable (中間 Cycle 課堂區塊)
       const dayClasses = cycleRows.filter(r => {
-        const rowDay = (r['Cycle_Day'] || r['Cycle'] || r['循環日'] || '').trim().toUpperCase();
+        const rowDay = getProp(r, ['Cycle_Day', 'Cycle', '循環日']).trim().toUpperCase();
         return rowDay === cycleDay;
       });
 
-      // 3. L1 - L4 時間軸
       const lTimes = isFri ? [
         {p:'L1', s:'08:05', e:'08:45'}, {p:'L2', s:'08:45', e:'09:25'},
         {p:'L3', s:'09:40', e:'10:20'}, {p:'L4', s:'10:20', e:'11:00'}
@@ -317,43 +557,19 @@
       ];
 
       lTimes.forEach(lt => {
-        const cls = dayClasses.find(c => {
-          const p = (c['Period'] || c['節次'] || '').trim().toUpperCase();
-          return p === lt.p;
-        });
-
-        const subject = cls ? (cls['Subject'] || cls['科目'] || '') : '';
-        const classroom = cls ? (cls['Classroom'] || cls['課室'] || cls['地點'] || '') : '';
+        const cls = dayClasses.find(c => getProp(c, ['Period', '節次']).trim().toUpperCase() === lt.p);
+        const subject = cls ? getProp(cls, ['Subject', '科目']).trim() : '';
+        const classroom = cls ? getProp(cls, ['Classroom', '課室', '地點']).trim() : '';
 
         if (subject) {
-          timeline.push({
-            time: `${lt.s} - ${lt.e}`,
-            type: 'class',
-            title: `${subject} ${classroom ? '(' + classroom + ')' : ''}`,
-            desc: `循環日 Day ${cycleDay}`,
-            badge: lt.p
-          });
+          cycleTimeline.push({ time: `${lt.s} - ${lt.e}`, type: 'class', title: subject, location: classroom ? `📍 ${classroom}` : `📍 Day ${cycleDay}`, details: '', badge: lt.p });
         } else {
-          timeline.push({
-            time: `${lt.s} - ${lt.e}`,
-            type: 'class',
-            title: `${lt.p} (自習/空堂)`,
-            desc: `循環日 Day ${cycleDay}`,
-            badge: lt.p
-          });
+          cycleTimeline.push({ time: `${lt.s} - ${lt.e}`, type: 'free', title: `${lt.p}`, location: `📍 Day ${cycleDay}`, details: '', badge: lt.p });
         }
       });
 
-      // 4. Break
-      timeline.push({
-        time: isFri ? "11:00 - 11:10" : "11:20 - 11:30",
-        type: 'break',
-        title: '小休 (Break)',
-        desc: '校園小休',
-        badge: 'Break'
-      });
+      cycleTimeline.push({ time: isFri ? "11:00 - 11:10" : "11:20 - 11:30", type: 'free', title: '小休 (Break)', location: '📍 校園', details: '', badge: 'Break' });
 
-      // 5. L5 - L6 時間軸
       const l56Times = isFri ? [
         {p:'L5', s:'11:10', e:'11:50'}, {p:'L6', s:'11:50', e:'12:30'}
       ] : [
@@ -361,81 +577,136 @@
       ];
 
       l56Times.forEach(lt => {
-        const cls = dayClasses.find(c => {
-          const p = (c['Period'] || c['節次'] || '').trim().toUpperCase();
-          return p === lt.p;
-        });
-
-        const subject = cls ? (cls['Subject'] || cls['科目'] || '') : '';
-        const classroom = cls ? (cls['Classroom'] || cls['課室'] || cls['地點'] || '') : '';
+        const cls = dayClasses.find(c => getProp(c, ['Period', '節次']).trim().toUpperCase() === lt.p);
+        const subject = cls ? getProp(cls, ['Subject', '科目']).trim() : '';
+        const classroom = cls ? getProp(cls, ['Classroom', '課室', '地點']).trim() : '';
 
         if (subject) {
-          timeline.push({
-            time: `${lt.s} - ${lt.e}`,
-            type: 'class',
-            title: `${subject} ${classroom ? '(' + classroom + ')' : ''}`,
-            desc: `循環日 Day ${cycleDay}`,
-            badge: lt.p
-          });
+          cycleTimeline.push({ time: `${lt.s} - ${lt.e}`, type: 'class', title: subject, location: classroom ? `📍 ${classroom}` : `📍 Day ${cycleDay}`, details: '', badge: lt.p });
         } else {
-          timeline.push({
-            time: `${lt.s} - ${lt.e}`,
-            type: 'class',
-            title: `${lt.p} (自習/空堂)`,
-            desc: `循環日 Day ${cycleDay}`,
-            badge: lt.p
-          });
+          cycleTimeline.push({ time: `${lt.s} - ${lt.e}`, type: 'free', title: `${lt.p}`, location: `📍 Day ${cycleDay}`, details: '', badge: lt.p });
         }
       });
 
-      // 6. Lunch
-      timeline.push({
-        time: isFri ? "12:30 - 13:15" : "12:50 - 13:45",
-        type: 'break',
-        title: '午飯及午膳遊玩 (Lunch & Play Time)',
-        desc: '午休',
-        badge: 'Lunch'
+      const lunchSlots = isFri ? [
+        { p: 'Lunch', s: '12:30', e: '12:55', defaultTitle: '午飯 (Lunch)' },
+        { p: 'Lunch Play time', s: '12:55', e: '13:15', defaultTitle: '午膳遊玩 (Lunch Play)' }
+      ] : [
+        { p: 'Lunch', s: '12:50', e: '13:15', defaultTitle: '午飯 (Lunch)' },
+        { p: 'Lunch Play time', s: '13:15', e: '13:45', defaultTitle: '午膳遊玩 (Lunch Play)' }
+      ];
+
+      lunchSlots.forEach(ls => {
+        const cls = dayClasses.find(c => {
+          const p = getProp(c, ['Period', '節次']).trim().toLowerCase();
+          return p === ls.p.toLowerCase() || p.includes(ls.p.toLowerCase());
+        });
+
+        const classroom = cls ? getProp(cls, ['Classroom', '課室', '地點']).trim() : '';
+        const notes = cls ? getProp(cls, ['Teacher_Notes', 'Notes', '當值老師', '備註']).trim() : '';
+        const subj = cls ? getProp(cls, ['Subject', '科目']).trim() : '';
+
+        let isDuty = Boolean(notes || (subj && subj.toLowerCase() !== ls.p.toLowerCase()));
+
+        cycleTimeline.push({
+          time: `${ls.s} - ${ls.e}`, type: isDuty ? 'duty' : 'free', title: ls.defaultTitle, location: classroom ? `📍 ${classroom}` : '📍 學校', details: notes ? `👥 當值: ${notes}` : (subj && subj !== ls.defaultTitle ? `📝 ${subj}` : ''), badge: ls.p
+        });
       });
 
-      // 7. 下午活動與當值 (從 Daily_Schedule 讀取)
-      const matchedSchedules = dailyScheduleRows.filter(r => (r['Weekday'] || '').trim() === currentWeekday);
+      // B. Daily_Settings & Daily_Schedule (分拆 上午Weekly 與 下午Weekly)
+      const daySettings = settingsRows.filter(r => normalizeWeekday(getProp(r, ['Weekday', '星期'])) === normalizedTargetWeekday);
+      const daySchedules = dailyRows.filter(r => normalizeWeekday(getProp(r, ['Weekday', '星期'])) === normalizedTargetWeekday);
 
-      if (matchedSchedules.length > 0) {
-        matchedSchedules.forEach(ds => {
-          const eventType = ds['Event_Type'] || '';
-          const isDuty = eventType.includes('當值') || eventType.includes('Duty');
-          timeline.push({
-            time: `${ds['Start_Time']} - ${ds['End_Time']}`,
-            type: isDuty ? 'duty' : 'activity',
-            title: ds['Activity_Or_Duty_Name'] || eventType,
-            desc: ds['Venue_Or_Details'] || '',
-            badge: ds['Time_Slot'] || '下午'
-          });
-        });
-      } else {
-        timeline.push({
-          time: isFri ? "13:15 - 15:25" : "13:45 - 17:15",
-          type: 'activity',
-          title: isFri ? 'Class Teacher Period / 放學當值' : '下午活動與當值安排',
-          desc: '請於 Daily_Schedule 表格中補充詳細安排',
-          badge: '下午'
-        });
+      daySettings.forEach(set => {
+        const slot = getProp(set, ['Time_Slot', '時段']).trim();
+        let sTime = formatTimeStr(getProp(set, ['Start_Time', '開始時間']));
+        let eTime = formatTimeStr(getProp(set, ['End_Time', '結束時間']));
+        let defaultEvent = getProp(set, ['Event_Type', '事項類型']).trim() || slot;
+
+        const matchedDuty = daySchedules.find(sch => getProp(sch, ['Time_Slot', '時段']).trim().toLowerCase() === slot.toLowerCase());
+
+        let item = null;
+        if (sTime && eTime) {
+          if (matchedDuty) {
+            const eventType = getProp(matchedDuty, ['Event_Type', '事項類型']).trim();
+            const isDuty = eventType.includes('當值') || eventType.includes('Duty');
+            let actName = getProp(matchedDuty, ['Activity_Or_Duty_Name', '活動或當值名稱']).trim() || defaultEvent;
+            let venue = getProp(matchedDuty, ['Venue_Or_Details', '地點或詳情', 'Venue', '地點']).trim();
+
+            item = { time: `${sTime} - ${eTime}`, type: isDuty ? 'duty' : 'activity', title: actName, location: venue ? `📍 ${venue}` : '', details: '', badge: slot };
+          } else {
+            item = { time: `${sTime} - ${eTime}`, type: 'free', title: defaultEvent, location: '', details: '', badge: slot };
+          }
+
+          // 判斷屬於上午還是下午 (以 12:00 為界)
+          if (sTime < '12:00') {
+            morningWeekly.push(item);
+          } else {
+            afternoonWeekly.push(item);
+          }
+        }
+      });
+
+      morningWeekly.sort((a, b) => a.time.localeCompare(b.time));
+      cycleTimeline.sort((a, b) => a.time.localeCompare(b.time));
+      afternoonWeekly.sort((a, b) => a.time.localeCompare(b.time));
+
+      // 渲染單個卡片的 HTML
+      function renderCards(items) {
+        if (!items || items.length === 0) return '<div style="font-size: 0.8rem; color: #94a3b8; text-align: center; padding: 4px;">無安排</div>';
+        return items.map(item => {
+          let cardClass = '';
+          if (item.type === 'duty') cardClass = 'duty';
+          else if (item.type === 'class') cardClass = 'class';
+          else if (item.type === 'activity') cardClass = 'activity';
+          else if (item.type === 'free') cardClass = 'is-free';
+
+          let descHtml = '';
+          if (item.location || item.details) {
+            descHtml = `<div class="time-content-desc">
+              ${item.location ? `<div>${item.location}</div>` : ''}
+              ${item.details ? `<div>${item.details}</div>` : ''}
+            </div>`;
+          }
+
+          let badgeHtml = item.badge ? `<div><span class="time-badge">${item.badge}</span></div>` : '';
+
+          return `
+            <div class="time-card ${cardClass}">
+              <div>
+                <div class="time-slot-info">🕒 ${item.time}</div>
+                <div class="time-content-title">${item.title}</div>
+                ${descHtml}
+              </div>
+              ${badgeHtml}
+            </div>
+          `;
+        }).join('');
       }
 
-      // 渲染至畫面
-      timeline.forEach(item => {
-        const card = document.createElement('div');
-        card.className = `time-card ${item.type === 'duty' ? 'duty' : ''}`;
-        card.innerHTML = `
-          <div>
-            <div class="time-slot-info">🕒 ${item.time}</div>
-            <div class="time-content-title">${item.title}</div>
-            ${item.desc ? `<div class="time-content-desc">📍 ${item.desc}</div>` : ''}
-          </div>
-          <div><span class="time-badge">${item.badge}</span></div>
-        `;
-        container.appendChild(card);
-      });
+      // 🌟 組裝三大獨立區塊 HTML
+      let morningSection = `
+        <div class="time-section">
+          <div class="section-header">☀️ 上午 Weekly 行程</div>
+          <div class="timeline-list">${renderCards(morningWeekly)}</div>
+        </div>
+      `;
+
+      let cycleSection = `
+        <div class="time-section">
+          <div class="section-header">📚 循環日課堂 (Cycle Timetable)</div>
+          <div class="timeline-list">${renderCards(cycleTimeline)}</div>
+        </div>
+      `;
+
+      let afternoonSection = `
+        <div class="time-section">
+          <div class="section-header">🌆 下午 Weekly 行程</div>
+          <div class="timeline-list">${renderCards(afternoonWeekly)}</div>
+        </div>
+      `;
+
+      return headerHtml + morningSection + cycleSection + afternoonSection;
     }
   </script>
 </body>
