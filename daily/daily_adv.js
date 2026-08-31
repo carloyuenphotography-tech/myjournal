@@ -8,7 +8,9 @@ const CATEGORIES = [
   { id: 'urgent',   name: '🔥 重要/緊急', tag: '#urgent',   bg: '#ffe4e6', color: '#9f1239' },
   { id: 'finance',  name: '💰 財務/購物', tag: '#finance',  bg: '#ffedd5', color: '#9a3412' },
   { id: 'health',   name: '🌿 健康/運動', tag: '#health',   bg: '#ccfbf1', color: '#115e59' },
-  { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',    bg: '#1E1542', color: '#C5BCDE' }
+  { id: 'photo',    name: '📷 攝影/天氣', tag: '#photo',    bg: '#1E1542', color: '#C5BCDE' },
+  { id: 'std',      name: '🎓 學生',      tag: '#std',      bg: '#e0e7ff', color: '#3730a3' },
+  { id: 'bday',     name: '🎂 生日',      tag: '#bday',     bg: '#fce7f3', color: '#9d174d' }
 ];
 
 let allLogs = [];
@@ -58,7 +60,10 @@ window.addEventListener('DOMContentLoaded', () => {
     showStatus('❌ 找不到 config.js 設定', '#ef4444');
     return;
   }
-  const savedEmail = sessionStorage.getItem("user_google_email") || (sessionStorage.getItem("google_user") ? JSON.parse(sessionStorage.getItem("google_user")).email : null);
+
+  const savedEmail = localStorage.getItem("user_google_email") || 
+                    (localStorage.getItem("google_user") ? JSON.parse(localStorage.getItem("google_user")).email : null);
+
   if (savedEmail && typeof ALLOWED_EMAILS !== 'undefined' && Array.isArray(ALLOWED_EMAILS)) {
     if (ALLOWED_EMAILS.map(e => e.toLowerCase().trim()).includes(savedEmail.toLowerCase().trim())) {
       initializeApp();
@@ -67,7 +72,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   checkLoginStatus();
 
-  // 7. 離線檢查與同步監聽
   if (navigator.onLine) syncOfflineQueue();
 });
 
@@ -146,8 +150,8 @@ function handleCredentialResponse(response) {
         return;
       }
     }
-    sessionStorage.setItem("user_google_email", userEmail);
-    sessionStorage.setItem('google_user', JSON.stringify({ name: payload.name, email: userEmail, picture: payload.picture }));
+    localStorage.setItem("user_google_email", userEmail);
+    localStorage.setItem('google_user', JSON.stringify({ name: payload.name, email: userEmail, picture: payload.picture }));
     initializeApp();
   }
 }
@@ -161,10 +165,18 @@ function parseJwt(token) {
 }
 
 function checkLoginStatus() {
-  if (sessionStorage.getItem('google_user')) initializeApp();
+  if (localStorage.getItem('google_user')) initializeApp();
   else {
     if (document.getElementById('authOverlay')) document.getElementById('authOverlay').style.display = 'flex';
     if (document.getElementById('mainContainer')) document.getElementById('mainContainer').style.display = 'none';
+  }
+}
+
+function logout() {
+  if (confirm('確定要登出系統嗎？')) {
+    localStorage.removeItem("user_google_email");
+    localStorage.removeItem("google_user");
+    location.reload();
   }
 }
 
@@ -246,6 +258,27 @@ function toggleQuickDateInput(chk) {
   }
 }
 
+/* ⚡ 自動將特定字眼轉成 Emoji */
+function autoEmojiReplace(text) {
+  const emojiMap = {
+    'meeting': '📅 開會',
+    'exam': '📝 考試',
+    'pay': '💰 繳費',
+    'call': '📞 電話',
+    'email': '✉️ 電郵',
+    'lunch': '🍽️ 午餐',
+    'buy': '🛒 購買',
+    'birthday': '🎂 生日',
+    'bday': '🎂 生日'
+  };
+  let processed = text;
+  for (let [keyword, emojiStr] of Object.entries(emojiMap)) {
+    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+    processed = processed.replace(regex, emojiStr);
+  }
+  return processed;
+}
+
 function handleQuickSubmit(e) {
   e.preventDefault();
   const type = document.getElementById('quickType').value;
@@ -255,6 +288,8 @@ function handleQuickSubmit(e) {
   const quickDateVal = document.getElementById('quickDate').value;
 
   if (!content) return;
+
+  content = autoEmojiReplace(content);
 
   let remarks = '';
   const targetCatObj = CATEGORIES.find(c => c.id === catId);
@@ -322,7 +357,6 @@ function updateAllBadges() {
   if (document.getElementById('archivedBadgeCount')) document.getElementById('archivedBadgeCount').textContent = archivedCount;
 }
 
-/* ⚡ LocalStorage 儲存卡片拖曳順序 */
 function saveDayOrder(dateStr, cardIds) {
   try {
     const savedOrders = JSON.parse(localStorage.getItem('daily_card_orders') || '{}');
@@ -357,8 +391,25 @@ function renderTimeline() {
 
   const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
+  let lastMonthYearKey = null;
+
   sortedDates.forEach(dateVal => {
     const d = new Date(dateVal);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const monthYearKey = `${year}-${month}`;
+
+    if (monthYearKey !== lastMonthYearKey) {
+      lastMonthYearKey = monthYearKey;
+      const monthDivider = document.createElement('div');
+      monthDivider.className = 'month-divider';
+      monthDivider.innerHTML = `
+        <span class="month-text">🗓️ ${year} 年 ${month} 月</span>
+        <span class="year-badge">${year}</span>
+      `;
+      container.appendChild(monthDivider);
+    }
+
     const weekdayStr = weekdays[d.getDay()];
     const dateParts = dateVal.split('-');
     const dayNum = dateParts[2] ? parseInt(dateParts[2], 10) : d.getDate();
@@ -371,17 +422,23 @@ function renderTimeline() {
 
     let dayItems = filteredLogs.filter(i => i.date === dateVal);
 
-    // 套用拖曳順序
     const savedOrder = getDayOrder(dateVal);
-    if (savedOrder && Array.isArray(savedOrder)) {
-      dayItems.sort((a, b) => {
+    dayItems.sort((a, b) => {
+      const isUrgentA = (a.content + a.remarks).includes('#urgent') || (a.content + a.remarks).includes('#important');
+      const isUrgentB = (b.content + b.remarks).includes('#urgent') || (b.content + b.remarks).includes('#important');
+      
+      if (isUrgentA && !isUrgentB) return -1;
+      if (!isUrgentA && isUrgentB) return 1;
+
+      if (savedOrder && Array.isArray(savedOrder)) {
         let idxA = savedOrder.indexOf(String(a.id));
         let idxB = savedOrder.indexOf(String(b.id));
         if (idxA === -1) idxA = 999;
         if (idxB === -1) idxB = 999;
         return idxA - idxB;
-      });
-    }
+      }
+      return 0;
+    });
 
     const pendingCount = dayItems.filter(i => !isNoteType(i.type)).length;
 
@@ -414,7 +471,6 @@ function renderTimeline() {
   initSortable();
 }
 
-/* ⚡ 初始化 SortableJS 拖曳排序 */
 function initSortable() {
   if (typeof Sortable === 'undefined') return;
 
@@ -437,6 +493,7 @@ function initSortable() {
   });
 }
 
+/* ⚡ 獨立辨識地點與時間 + 計算生日年紀 */
 function createTaskCard(item) {
   const card = document.createElement('div');
   const tagClass = getTagClasses(item);
@@ -445,17 +502,49 @@ function createTaskCard(item) {
   card.onclick = (e) => { e.stopPropagation(); openEditModal(item); };
 
   let displayTitle = item.content;
-  let locationBadgeHtml = '';
+  let displayRemarks = item.remarks || '';
+  let locText = '';
+  let timeText = '';
 
-  const match = displayTitle.match(/@([^\s#(\[]+)(?:\((.*?)\))?/);
-  if (match) {
-    const locText = match[1];
-    const timeText = match[2];
-    displayTitle = displayTitle.replace(/@[^\s#]+(\(.*?\))?/, '').trim();
+  const fullText = displayTitle + ' ' + displayRemarks;
+
+  // 1. 獨立提取地點：匹配 @開頭的字詞（允許後面空一格）
+  const locMatch = fullText.match(/@([^\s#(\[]+)/);
+  if (locMatch) {
+    locText = locMatch[1];
+    displayTitle = displayTitle.replace(/@([^\s#(\[]+)/, '').trim();
+    displayRemarks = displayRemarks.replace(/@([^\s#(\[]+)/, '').trim();
+  }
+
+  // 2. 獨立提取時間：匹配 (時間) 格式，避免與年份混淆
+  const timeMatch = fullText.match(/\((?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)|([^\)]*?時間[^\)]*?))\)/);
+  if (timeMatch) {
+    timeText = timeMatch[1] || timeMatch[2];
+    displayTitle = displayTitle.replace(/\((?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)|([^\)]*?時間[^\)]*?))\)/, '').trim();
+    displayRemarks = displayRemarks.replace(/\((?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)|([^\)]*?時間[^\)]*?))\)/, '').trim();
+  }
+
+  // 🎂 3. 計算生日年紀（若有年份資訊）
+  if (tagClass.includes('tag-bday') || fullText.includes('#bday') || fullText.includes('生日')) {
+    const birthYearMatch = fullText.match(/(\d{4})[-\/\.]?\d{0,2}[-\/\.]?\d{0,2}/) || fullText.match(/\((\d{4})\)/);
+    if (birthYearMatch) {
+      const birthYear = parseInt(birthYearMatch[1], 10);
+      const currentYear = item.date ? parseInt(item.date.split('-')[0], 10) : new Date().getFullYear();
+      const age = currentYear - birthYear;
+      if (age > 0 && age < 120) {
+        if (!displayTitle.includes('歲')) {
+          displayTitle += ` (${age}歲生日 🎂)`;
+        }
+      }
+    }
+  }
+
+  let locationBadgeHtml = '';
+  if (locText || timeText) {
     locationBadgeHtml = `
       <span class="location-badge">
-        📍 ${locText}
-        ${timeText ? `<span class="loc-time">🕒 ${timeText}</span>` : ''}
+        ${locText ? `📍 ${locText}` : ''}
+        ${timeText ? `<span class="loc-time" style="${!locText ? 'border-left:none; padding-left:0;' : ''}">🕒 ${timeText}</span>` : ''}
       </span>
     `;
   }
@@ -463,7 +552,7 @@ function createTaskCard(item) {
   card.innerHTML = `
     <div class="task-info">
       <div class="task-title">${displayTitle}</div>
-      ${item.remarks ? `<div class="task-remarks">💬 ${item.remarks}</div>` : ''}
+      ${displayRemarks ? `<div class="task-remarks">💬 ${displayRemarks}</div>` : ''}
       ${locationBadgeHtml}
     </div>
     <div class="drag-handle" title="拖曳排序" onclick="event.stopPropagation()">⋮⋮</div>
@@ -479,8 +568,6 @@ function sortReverseChronological(items) {
     return String(b.id).localeCompare(String(a.id));
   });
 }
-
-/* ⚡ Modal 開啟/對話框視窗渲染 */
 
 function openOverdueModal() {
   renderOverdueModal();
@@ -959,10 +1046,12 @@ function handleFormSubmit(e) {
   const id = document.getElementById('modalItemId').value;
   const date = document.getElementById('modalDate').value.trim();
   const type = document.getElementById('modalType').value;
-  const content = document.getElementById('modalContent').value.trim();
+  let content = document.getElementById('modalContent').value.trim();
   const remarks = document.getElementById('modalRemarks').value.trim();
 
   if (!content) return;
+
+  content = autoEmojiReplace(content);
 
   if (id) {
     const target = allLogs.find(l => String(l.id) === String(id));
@@ -982,103 +1071,10 @@ function handleFormSubmit(e) {
   refreshAllViews();
 }
 
-
-// =========================================================
-// 🚀 新增功能 1. 原生 Command Palette (⌘K / Ctrl+K) 選單
-// =========================================================
-document.addEventListener('keydown', (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-    e.preventDefault();
-    const palette = document.getElementById('cmdPalette');
-    if (palette) {
-      palette.open ? palette.close() : palette.showModal();
-      const input = document.getElementById('cmdInput');
-      if (input) input.focus();
-    }
-  }
-});
-
-function filterCmdList() {
-  const query = (document.getElementById('cmdInput')?.value || '').toLowerCase();
-  const items = document.querySelectorAll('.cmd-item');
-  items.forEach(item => {
-    const text = item.textContent.toLowerCase();
-    item.style.display = text.includes(query) ? 'block' : 'none';
-  });
-}
-
-function navigateCmd(url) {
-  const palette = document.getElementById('cmdPalette');
-  if (palette) palette.close();
-  window.location.href = url;
-}
-
-
-// =========================================================
-// 🚀 新增功能 2. 廣東話 / 中文語音速記 (Web Speech API)
-// =========================================================
-let voiceRecognition = null;
-let isRecognizingVoice = false;
-
-function toggleVoiceInput(targetInputId, btnId) {
-  const micBtn = document.getElementById(btnId);
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    alert('你的瀏覽器不支援語音辨識，請使用 Chrome 或 Safari。');
-    return;
-  }
-
-  if (isRecognizingVoice) {
-    if (voiceRecognition) voiceRecognition.stop();
-    return;
-  }
-
-  voiceRecognition = new SpeechRecognition();
-  voiceRecognition.lang = 'zh-HK'; // 設為廣東話 (亦可切換為 zh-TW)
-  voiceRecognition.continuous = false;
-  voiceRecognition.interimResults = false;
-
-  voiceRecognition.onstart = () => {
-    isRecognizingVoice = true;
-    if (micBtn) {
-      micBtn.textContent = '🔴';
-      micBtn.style.background = '#ef4444';
-    }
-  };
-
-  voiceRecognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    const inputEl = document.getElementById(targetInputId);
-    if (inputEl) {
-      inputEl.value += (inputEl.value ? ' ' : '') + transcript;
-    }
-  };
-
-  voiceRecognition.onerror = (e) => {
-    console.error('語音辨識出錯:', e);
-  };
-
-  voiceRecognition.onend = () => {
-    isRecognizingVoice = false;
-    if (micBtn) {
-      micBtn.textContent = '🎙️';
-      micBtn.style.background = '#0284c7';
-    }
-  };
-
-  voiceRecognition.start();
-}
-
-
-// =========================================================
-// 🚀 新增功能 3. 跨分頁即時資料同步 (BroadcastChannel API)
-// =========================================================
 const dailyBroadcastChannel = new BroadcastChannel('daily_adv_sync_channel');
 
 dailyBroadcastChannel.onmessage = (event) => {
   if (event.data && event.data.action === 'REFRESH_DATA') {
-    console.log('⚡ 偵測到其他分頁資料更新，自動刷新清單...');
     loadLogsData();
   }
 };
@@ -1087,37 +1083,6 @@ function notifyTabsDataChanged() {
   dailyBroadcastChannel.postMessage({ action: 'REFRESH_DATA', timestamp: Date.now() });
 }
 
-
-// =========================================================
-// 🚀 新增功能 4. 剪貼簿截圖直接貼上 (Clipboard API)
-// =========================================================
-document.addEventListener('paste', (e) => {
-  const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
-  if (!items) return;
-
-  const activeEl = document.activeElement;
-  if (!activeEl || (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA')) return;
-
-  for (let item of items) {
-    if (item.type.indexOf('image') !== -1) {
-      const file = item.getAsFile();
-      const reader = new FileReader();
-
-      reader.onload = (event) => {
-        const base64Data = event.target.result;
-        activeEl.value += ` ![截圖](${base64Data}) `;
-        alert('🖼️ 已成功貼上剪貼簿圖片！');
-      };
-
-      reader.readAsDataURL(file);
-    }
-  }
-});
-
-
-// =========================================================
-// 🚀 新增功能 7. 離線暫存佇列 (Offline Queue & Sync)
-// =========================================================
 function saveToOfflineQueue(action, paramsObj) {
   let queue = JSON.parse(localStorage.getItem('daily_adv_offline_queue') || '[]');
   queue.push({ action, paramsObj, timestamp: new Date().getTime() });
@@ -1144,7 +1109,6 @@ async function syncOfflineQueue() {
       await fetch(`${apiUrl}?${params.toString()}`, { mode: 'no-cors' });
       await new Promise(r => setTimeout(r, 350));
     } catch (err) {
-      console.error('離線紀錄同步失敗，將排隊至下次連線:', err);
       remainingQueue = queue.slice(i);
       break;
     }
@@ -1161,10 +1125,6 @@ async function syncOfflineQueue() {
 
 window.addEventListener('online', syncOfflineQueue);
 
-
-// =========================================================
-// ⚙️ 修改後的 syncToSheet (結合離線佇列與廣播機制)
-// =========================================================
 function syncToSheet(action, paramsObj) {
   if (!navigator.onLine) {
     saveToOfflineQueue(action, paramsObj);
@@ -1180,7 +1140,6 @@ function syncToSheet(action, paramsObj) {
       notifyTabsDataChanged();
     })
     .catch((err) => {
-      console.warn('網路連線中斷，轉入離線佇列:', err);
       saveToOfflineQueue(action, paramsObj);
     });
 }
