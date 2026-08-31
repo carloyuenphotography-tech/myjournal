@@ -493,7 +493,7 @@ function initSortable() {
   });
 }
 
-/* ⚡ 獨立辨識地點與時間 + 計算生日年紀 */
+/* ⚡ 獨立辨識地點與時間 */
 function createTaskCard(item) {
   const card = document.createElement('div');
   const tagClass = getTagClasses(item);
@@ -508,7 +508,7 @@ function createTaskCard(item) {
 
   const fullText = displayTitle + ' ' + displayRemarks;
 
-  // 1. 獨立提取地點：匹配 @開頭的字詞（允許後面空一格）
+  // 1. 獨立提取地點：匹配 @開頭的字詞
   const locMatch = fullText.match(/@([^\s#(\[]+)/);
   if (locMatch) {
     locText = locMatch[1];
@@ -516,27 +516,12 @@ function createTaskCard(item) {
     displayRemarks = displayRemarks.replace(/@([^\s#(\[]+)/, '').trim();
   }
 
-  // 2. 獨立提取時間：匹配 (時間) 格式，避免與年份混淆
+  // 2. 獨立提取時間：匹配 (時間) 格式
   const timeMatch = fullText.match(/\((?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)|([^\)]*?時間[^\)]*?))\)/);
   if (timeMatch) {
     timeText = timeMatch[1] || timeMatch[2];
     displayTitle = displayTitle.replace(/\((?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)|([^\)]*?時間[^\)]*?))\)/, '').trim();
     displayRemarks = displayRemarks.replace(/\((?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)|([^\)]*?時間[^\)]*?))\)/, '').trim();
-  }
-
-  // 🎂 3. 計算生日年紀（若有年份資訊）
-  if (tagClass.includes('tag-bday') || fullText.includes('#bday') || fullText.includes('生日')) {
-    const birthYearMatch = fullText.match(/(\d{4})[-\/\.]?\d{0,2}[-\/\.]?\d{0,2}/) || fullText.match(/\((\d{4})\)/);
-    if (birthYearMatch) {
-      const birthYear = parseInt(birthYearMatch[1], 10);
-      const currentYear = item.date ? parseInt(item.date.split('-')[0], 10) : new Date().getFullYear();
-      const age = currentYear - birthYear;
-      if (age > 0 && age < 120) {
-        if (!displayTitle.includes('歲')) {
-          displayTitle += ` (${age}歲生日 🎂)`;
-        }
-      }
-    }
   }
 
   let locationBadgeHtml = '';
