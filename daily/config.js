@@ -14,6 +14,7 @@ const CONFIG = {
     DAILY_LOG: '0',
     IDEAS: '0',                    
     MONTHLY: "1986460880",
+    BIRTHDAYS: "1194139889",
     DAILY_RECURRING: "702099618" 
     
   },
