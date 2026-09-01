@@ -495,7 +495,7 @@
   </div>
 
   <div class="container" id="mainContainer">
-    <!-- ☰ 頂部與抽屜式導覽列 (載入 nav.html) -->
+    <!-- ☰ 三劃抽屜式導覽列 (透過 nav.html 載入) -->
     <div class="nav-bar-header">
       <div class="nav-bar-title">🧭 導覽選單</div>
       <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
@@ -664,9 +664,8 @@
     /* 預設選單清單 (備援機制) */
     const DEFAULT_NAV_ITEMS = [
       { href: 'index.html', label: '📊 日誌主頁' },
-      { href: 'daily_2.html', label: '⚡ 速記清單' },
       { href: 'memo.html', label: '📐 數學日誌' },
-      { href: 'ct_memo_2.html', label: '🏫 班主任事務' }
+      { href: 'ct_memo.html', label: '🏫 班主任事務' }
     ];
 
     /* ☰ 抽屜導覽列控制項 */
