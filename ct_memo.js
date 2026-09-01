@@ -1,4 +1,4 @@
-// ct_memo.js - 2A 班主任 Memo 控制邏輯
+// ct_memo.js - 2A 班主任 Memo 控制邏輯 (已修正時區與日期跳動問題)
 let rawMemos = [];
 let currentCategory = 'ALL';
 let showArchived = false;
@@ -6,6 +6,25 @@ let showArchived = false;
 window.onload = () => {
   fetchMemos();
 };
+
+// 輔助函數：將日期安全轉換為 YYYY-MM-DD (避免 UTC 時區導致日期偏了一天)
+function formatDateStr(dateVal) {
+  if (!dateVal) return '';
+  if (typeof dateVal === 'string') {
+    // 如果是 ISO 格式 (例如: 2026-09-01T00:00:00.000Z)
+    if (dateVal.includes('T')) {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return dateVal.substring(0, 10);
+      const localD = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+      return localD.toISOString().split('T')[0];
+    }
+    return dateVal.substring(0, 10);
+  }
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return '';
+  const localD = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+  return localD.toISOString().split('T')[0];
+}
 
 async function fetchMemos() {
   const listContainer = document.getElementById('memoList');
@@ -86,7 +105,7 @@ function renderMemos() {
             <span class="badge">2A 班</span>
             <span class="badge category">${memo.category || '行政'}</span>
           </div>
-          <div class="memo-date">${memo.date ? memo.date.substring(0,10) : ''}</div>
+          <div class="memo-date">${formatDateStr(memo.date)}</div>
           <div class="memo-title">${memo.topic || '(無主題)'}</div>
         </div>
         <div style="white-space:nowrap;">
@@ -222,7 +241,13 @@ function addHomeworkRow(data = {}) {
 function openModal() {
   document.getElementById('modalTitle').innerText = '新增班主任 Memo';
   document.getElementById('formMemoId').value = '';
-  document.getElementById('formDate').valueAsDate = new Date();
+
+  // 修正：使用本地時區計算今日 YYYY-MM-DD，避免 valueAsDate 產生的 UTC 日期偏差
+  const today = new Date();
+  const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000))
+                      .toISOString().split('T')[0];
+  document.getElementById('formDate').value = localDate;
+
   document.getElementById('formCategory').value = '螢亮手冊';
   document.getElementById('formTopic').value = '';
   document.getElementById('formContent').value = '';
@@ -241,7 +266,10 @@ function openEditModal(memoId, event) {
 
   document.getElementById('modalTitle').innerText = '修改班主任 Memo';
   document.getElementById('formMemoId').value = memo.id;
-  document.getElementById('formDate').value = memo.date ? memo.date.substring(0, 10) : '';
+  
+  // 修正：使用 formatDateStr 轉換日期，確保編輯時日期正確不跳動
+  document.getElementById('formDate').value = formatDateStr(memo.date);
+
   document.getElementById('formCategory').value = memo.category || '螢亮手冊';
   document.getElementById('formTopic').value = memo.topic || '';
   document.getElementById('formContent').value = memo.content || '';
