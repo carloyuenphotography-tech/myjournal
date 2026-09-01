@@ -12,7 +12,7 @@ const CONFIG = {
   // 各分頁的 GID
   GIDS: {
     DAILY_LOG: '0',
-    IDEAS: '0',                    
+    IDEAS: '1821924181',                    
     MONTHLY: "1986460880",
     BIRTHDAYS: "1194139889",
     DAILY_RECURRING: "702099618" 
