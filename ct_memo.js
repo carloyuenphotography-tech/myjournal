@@ -1,4 +1,4 @@
-// ct_memo.js - 2A 班主任 Memo 控制邏輯 (已修正時區與日期跳動問題)
+// ct_memo.js - 2A 班主任 Memo 控制邏輯 (已徹底修復標題與內文自動轉為 ISO 時間問題)
 let rawMemos = [];
 let currentCategory = 'ALL';
 let showArchived = false;
@@ -7,11 +7,11 @@ window.onload = () => {
   fetchMemos();
 };
 
-// 輔助函數：將日期安全轉換為 YYYY-MM-DD (避免 UTC 時區導致日期偏了一天)
+// 輔助函數 1：將日期安全轉換為 YYYY-MM-DD (避免 UTC 時區導致日期偏了一天)
 function formatDateStr(dateVal) {
   if (!dateVal) return '';
   if (typeof dateVal === 'string') {
-    // 如果是 ISO 格式 (例如: 2026-09-01T00:00:00.000Z)
+    // 如果是 ISO 格式 (例如: 2026-08-31T16:00:00.000Z)
     if (dateVal.includes('T')) {
       const d = new Date(dateVal);
       if (isNaN(d.getTime())) return dateVal.substring(0, 10);
@@ -24,6 +24,17 @@ function formatDateStr(dateVal) {
   if (isNaN(d.getTime())) return '';
   const localD = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
   return localD.toISOString().split('T')[0];
+}
+
+// 輔助函數 2：防止標題/主題/內文被 Google Sheet / GAS 當成 Date 物件並格式化成 ISO 時間字串
+function formatTextStr(textVal) {
+  if (!textVal) return '';
+  const str = String(textVal).trim();
+  // 檢查是否符合 ISO 8601 日期時間字串格式 (例如: 2026-08-31T16:00:00.000Z)
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(str)) {
+    return formatDateStr(str);
+  }
+  return str;
 }
 
 async function fetchMemos() {
@@ -85,7 +96,7 @@ function renderMemos() {
           ${memo.homework_list.map(hw => `
             <div class="hw-item">
               <div class="hw-item-top">
-                <span class="hw-item-title">${hw.title || '-'}</span>
+                <span class="hw-item-title">${formatTextStr(hw.title) || '-'}</span>
               </div>
               <div class="hw-badges">
                 <span class="pill pill-collect-${hw.collect_status || '未收齊'}" style="cursor:pointer;" title="點擊切換收集狀態" onclick="cycleCollectStatus('${hw.homework_id}')">${hw.collect_status || '未收齊'}</span>
@@ -106,7 +117,8 @@ function renderMemos() {
             <span class="badge category">${memo.category || '行政'}</span>
           </div>
           <div class="memo-date">${formatDateStr(memo.date)}</div>
-          <div class="memo-title">${memo.topic || '(無主題)'}</div>
+          <!-- 使用 formatTextStr 清理主題標題，防止顯示 ISO 時間字串 -->
+          <div class="memo-title">${formatTextStr(memo.topic) || '(無主題)'}</div>
         </div>
         <div style="white-space:nowrap;">
           <span class="action-btn" title="修改Memo" onclick="openEditModal('${memo.id}', event)">✏️</span>
@@ -122,8 +134,9 @@ function renderMemos() {
       <div style="margin-top:6px;">${tagsHtml}</div>
 
       <div class="memo-body">
-        <div class="teaching-content">${memo.content || '<span style="color:#94a3b8; font-size:14px;">(暫無跟進內容)</span>'}</div>
-        ${memo.reminders ? `<div class="reminder-box">🔔 ${memo.reminders}</div>` : ''}
+        <!-- 為跟進內容與提醒事項加上 formatTextStr 防護 -->
+        <div class="teaching-content">${formatTextStr(memo.content) || '<span style="color:#94a3b8; font-size:14px;">(暫無跟進內容)</span>'}</div>
+        ${memo.reminders ? `<div class="reminder-box">🔔 ${formatTextStr(memo.reminders)}</div>` : ''}
         ${hwHtml}
       </div>
     `;
@@ -184,7 +197,7 @@ function editMissingStudents(hwId) {
   const target = findHomeworkAndMemo(hwId);
   if (!target) return;
   const currentVal = target.hw.missing_students || '';
-  const newVal = prompt(`請輸入 ${target.hw.title} 的未交學生號碼（例如: 03, 15）：`, currentVal);
+  const newVal = prompt(`請輸入 ${formatTextStr(target.hw.title)} 的未交學生號碼（例如: 03, 15）：`, currentVal);
   if (newVal !== null) {
     updateHwAndSync(hwId, { missing_students: newVal.trim() });
   }
@@ -223,7 +236,7 @@ function addHomeworkRow(data = {}) {
       </div>
 
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-        <input type="text" class="hw-title" placeholder="項目名稱 (例: 回條 #01)" value="${data.title || ''}" style="grid-column: span 2;">
+        <input type="text" class="hw-title" placeholder="項目名稱 (例: 回條 #01)" value="${formatTextStr(data.title) || ''}" style="grid-column: span 2;">
         
         <select class="hw-collect">
           <option value="未收齊" ${data.collect_status === '未收齊' ? 'selected' : ''}>未收齊</option>
@@ -267,13 +280,12 @@ function openEditModal(memoId, event) {
   document.getElementById('modalTitle').innerText = '修改班主任 Memo';
   document.getElementById('formMemoId').value = memo.id;
   
-  // 修正：使用 formatDateStr 轉換日期，確保編輯時日期正確不跳動
+  // 修正：使用 formatDateStr 轉換日期欄位，並用 formatTextStr 清理主題與內文欄位
   document.getElementById('formDate').value = formatDateStr(memo.date);
-
   document.getElementById('formCategory').value = memo.category || '螢亮手冊';
-  document.getElementById('formTopic').value = memo.topic || '';
-  document.getElementById('formContent').value = memo.content || '';
-  document.getElementById('formReminders').value = memo.reminders || '';
+  document.getElementById('formTopic').value = formatTextStr(memo.topic);
+  document.getElementById('formContent').value = formatTextStr(memo.content);
+  document.getElementById('formReminders').value = formatTextStr(memo.reminders);
   document.getElementById('formHashtags').value = memo.hashtags || '';
 
   const container = document.getElementById('homeworkFormContainer');
