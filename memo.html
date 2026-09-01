@@ -11,15 +11,16 @@
   <meta name="apple-mobile-web-app-title" content="數學科 Memo">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <title>數學科 Teaching Memo App</title>
+  <title>📐 數學科 Teaching Memo App</title>
   <style>
     :root {
-      --bg-color: #f4f6f8;
+      --bg-color: #f8fafc;
       --card-bg: #ffffff;
       --primary: #2b5c8f;
       --accent: #f39c12;
-      --text: #333333;
-      --border: #e0e0e0;
+      --text: #1e293b;
+      --border: #e2e8f0;
+      --header-bg: #1e293b;
       
       --color-2a: #2b5c8f;
       --color-2b: #2e7d32;
@@ -38,7 +39,103 @@
     }
 
     .container { max-width: 1100px; margin: 0 auto; }
-    
+
+    /* ☰ 三劃抽屜式導覽列樣式 (同步 ct_memo.html) */
+    .nav-bar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 10px 14px;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 12px;
+    }
+    .nav-bar-title {
+      font-size: 1.05rem;
+      font-weight: bold;
+      color: var(--header-bg);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hamburger-btn {
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      font-size: 1.2rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #334155;
+      transition: background 0.2s;
+    }
+    .hamburger-btn:hover { background: #e2e8f0; }
+
+    .nav-drawer {
+      position: fixed;
+      top: 0;
+      right: -280px;
+      width: 280px;
+      height: 100%;
+      background: #ffffff;
+      box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+      z-index: 10000;
+      transition: right 0.3s ease;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .nav-drawer.open { right: 0; }
+
+    .nav-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      font-weight: bold;
+      color: #1e293b;
+    }
+    .nav-drawer-close {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #64748b;
+    }
+
+    .nav-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.4);
+      z-index: 9999;
+      display: none;
+      backdrop-filter: blur(2px);
+    }
+    .nav-overlay.open { display: block; }
+
+    .nav-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .nav-btn {
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      text-decoration: none;
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: bold;
+      transition: all 0.2s ease;
+      display: block;
+    }
+    .nav-btn:hover { background: #e2e8f0; }
+    .nav-btn.active { background: var(--primary); color: #ffffff; }
+
     header {
       display: flex;
       justify-content: space-between;
@@ -70,24 +167,6 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.15);
       flex-shrink: 0;
     }
-
-    /* ☰ 三劃選單按鈕樣式 */
-    .btn-hamburger {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      color: var(--primary);
-      border-radius: 8px;
-      padding: 4px 10px;
-      font-size: 1.2rem;
-      line-height: 1;
-      font-weight: bold;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-    .btn-hamburger:hover { background: var(--primary); color: #fff; }
 
     .controls {
       display: flex;
@@ -217,12 +296,25 @@
 <body>
 
   <div class="container">
-    <div id="navbar" class="nav-tabs"></div>
+    <!-- ☰ 頂部與抽屜式導覽列 (同步 ct_memo.html) -->
+    <div class="nav-bar-header">
+      <div class="nav-bar-title">🧭 導覽選單</div>
+      <button class="hamburger-btn" onclick="openNavDrawer()">☰</button>
+    </div>
+
+    <div id="navOverlay" class="nav-overlay" onclick="closeNavDrawer()"></div>
+    <div id="navDrawer" class="nav-drawer">
+      <div class="nav-drawer-header">
+        <span>🧭 功能選單</span>
+        <button class="nav-drawer-close" onclick="closeNavDrawer()">✕</button>
+      </div>
+      <div id="navbar" class="nav-tabs"></div>
+    </div>
+
     <header>
       <h2>📐 數學科 Teaching Memo</h2>
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="icon-btn-add" onclick="openModal()" title="新增 Memo">➕</button>
-        <button type="button" class="btn-hamburger" onclick="toggleNavMenu()" title="切換選單">☰</button>
       </div>
     </header>
 
@@ -314,87 +406,78 @@
     </div>
   </div>
 
-  <div id="hwQuickEditModal" class="modal">
-    <div class="modal-content">
-      <h3 style="margin-top:0;" id="quickHwTitle">✏️ 修改功課狀態</h3>
-      <input type="hidden" id="quickHwId">
-
-      <div class="form-group">
-        <label>收繳狀態</label>
-        <select id="quickCollect">
-          <option value="未收齊">未收齊</option>
-          <option value="收集中">收集中</option>
-          <option value="收齊">收齊</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>批改狀態</label>
-        <select id="quickMarking">
-          <option value="未批改">未批改</option>
-          <option value="批改中">批改中</option>
-          <option value="完成批改">完成批改</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>欠交學生號碼 (用逗號分隔)</label>
-        <input type="text" id="quickMissing" placeholder="例如: #10, #12">
-      </div>
-
-      <div class="form-group">
-        <label>存放位置</label>
-        <select id="quickLocation">
-          <option value="教員室">教員室</option>
-          <option value="7/F簿櫃">7/F簿櫃</option>
-          <option value="課室外">課室外</option>
-          <option value="課室內">課室內</option>
-          <option value="學生">學生</option>
-        </select>
-      </div>
-
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
-        <button class="btn-archive" onclick="closeQuickHwModal()">取消</button>
-        <button id="quickSaveBtn" class="filter-btn btn-class-2a" style="opacity:1;" onclick="submitQuickHwEdit()">儲存更新</button>
-      </div>
-    </div>
-  </div>
-
   <script src="memo_gas.js"></script>
   <script src="memo.js"></script>
 
-<script>
-function toggleNavMenu() {
-  const nav = document.getElementById('navbar');
-  if (nav) {
-    nav.style.display = (nav.style.display === 'none' || getComputedStyle(nav).display === 'none') ? 'flex' : 'none';
-  }
-}
+  <script>
+    /* 預設選單清單 (備援機制) */
+    const DEFAULT_NAV_ITEMS = [
+      { href: 'index.html', label: '📊 日誌主頁' },
+      { href: 'daily_2.html', label: '⚡ 速記清單' },
+      { href: 'daily_adv.html', label: '⚡ 進階速記日誌' },
+      { href: 'daily_monthly_2.html', label: '📅 速記月視圖' },
+      { href: 'monthly_2.html', label: '📅 Monthly Log' },
+      { href: 'projects_2.html', label: '📁 專案管理' },
+      { href: 'ideas.html', label: '💡 靈感 Ideas' },
+      { href: 'memo_2.html', label: '📐 數學日誌' },
+      { href: 'ct_memo_2.html', label: '🏫 班主任事務' },
+      { href: 'tracker_2.html', label: '🎯 Habit Tracker' },
+      { href: 'procedures_2.html', label: '📋 Procedures' },
+      { href: 'book-writer_2.html', label: '📖 Book Writer' },
+      { href: 'logging_2.html', label: '✍️ 快速 Logging' }
+    ];
 
-function loadGlobalNavbar() {
-  fetch('nav.html')
-    .then(res => res.text())
-    .then(data => {
+    /* ☰ 抽屜導覽列控制項 */
+    function openNavDrawer() {
+      document.getElementById('navDrawer').classList.add('open');
+      document.getElementById('navOverlay').classList.add('open');
+    }
+
+    function closeNavDrawer() {
+      document.getElementById('navDrawer').classList.remove('open');
+      document.getElementById('navOverlay').classList.remove('open');
+    }
+
+    function loadNavbar() {
       const navContainer = document.getElementById('navbar');
-      if (navContainer) {
-        navContainer.innerHTML = data;
-        const currentPath = window.location.pathname.split('/').pop() || 'memo_2.html';
-        navContainer.querySelectorAll('.nav-btn').forEach(link => {
-          if (link.getAttribute('href') === currentPath) {
-            link.classList.add('active');
+      if (!navContainer) return;
+
+      fetch('nav.html')
+        .then(res => {
+          if (!res.ok) throw new Error('無法讀取 nav.html');
+          return res.text();
+        })
+        .then(data => {
+          if (data.trim().length > 0) {
+            renderNavLinks(navContainer, data);
           } else {
-            link.classList.remove('active');
+            throw new Error('nav.html 內容空白');
           }
+        })
+        .catch(err => {
+          console.warn('導覽列載入失敗，已啟用預設備援選單:', err);
+          const fallbackHtml = DEFAULT_NAV_ITEMS.map(
+            item => `<a href="${item.href}" class="nav-btn">${item.label}</a>`
+          ).join('');
+          renderNavLinks(navContainer, fallbackHtml);
         });
-      }
-    }).catch(err => console.error('導覽列載入失敗:', err));
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', loadGlobalNavbar);
-} else {
-  loadGlobalNavbar();
-}
-</script>
+    }
+
+    function renderNavLinks(container, htmlContent) {
+      container.innerHTML = htmlContent;
+      const currentPath = window.location.pathname.split('/').pop() || 'memo.html';
+      container.querySelectorAll('.nav-btn').forEach(link => {
+        const href = link.getAttribute('href') || '';
+        if (href.includes(currentPath) || (currentPath.includes('memo') && href.includes('memo'))) {
+          link.classList.add('active');
+        } else {
+          link.classList.remove('active');
+        }
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', loadNavbar);
+  </script>
 
 </body>
 </html>
