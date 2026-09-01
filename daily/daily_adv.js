@@ -197,19 +197,67 @@ function loadLogsData() {
   });
 }
 
-function getProp(obj, keyNames) {
+/* ⚡ 終極強化版 getProp：名稱對不上時自動按欄位順序 (A, B, C, D...) 抓取 */
+function getProp(obj, keyNames, columnIndex = -1) {
   if (!obj) return '';
-  const keys = Object.keys(obj);
+  const rawKeys = Object.keys(obj);
+  
+  // 1. 優先嘗試「名稱關鍵字」模糊比對
   for (let targetKey of keyNames) {
     const targetClean = targetKey.toLowerCase().trim();
-    for (let rawKey of keys) {
+    for (let rawKey of rawKeys) {
       const keyClean = rawKey.replace(/^\ufeff/, '').toLowerCase().trim();
-      if (keyClean === targetClean) {
+      if (keyClean === targetClean || keyClean.includes(targetClean)) {
         return String(obj[rawKey]).trim();
       }
     }
   }
+
+  // 2. 若名稱完全對不上，則強制按「欄位順序位置」抓取 (0:ID, 1:Date, 2:Type, 3:Content, 4:Status, 5:Remarks)
+  if (columnIndex >= 0 && rawKeys[columnIndex] !== undefined) {
+    return String(obj[rawKeys[columnIndex]]).trim();
+  }
+
   return '';
+}
+
+/* ⚡ 配合欄位順序備援的 parseLogs */
+function parseLogs(rows) {
+  if (!rows || !Array.isArray(rows)) return [];
+  return rows.map((r, i) => {
+    // 傳入欄位位置索引 (A欄:0, B欄:1, C欄:2, D欄:3, E欄:4, F欄:5)
+    const idVal = getProp(r, ['id', 'ID', '編號'], 0);
+    const dateVal = getProp(r, ['date', 'Date', '日期'], 1);
+    const typeVal = getProp(r, ['type', 'Type', '類型'], 2);
+    const contentVal = getProp(r, ['content', 'Content', '內容', '事項'], 3);
+    const statusVal = getProp(r, ['status', 'Status', '狀態'], 4);
+    const remarksVal = getProp(r, ['remarks', 'Remarks', '備註'], 5);
+
+    const finalId = (idVal && idVal !== '') 
+      ? idVal 
+      : `L_${i}_${Math.random().toString(36).substr(2, 5)}`;
+
+    let cleanDate = dateVal;
+    if (cleanDate) {
+      cleanDate = cleanDate.replace(/[\/.]/g, '-');
+      const parts = cleanDate.split('-');
+      if (parts.length === 3) {
+        const y = parts[0];
+        const m = parts[1].padStart(2, '0');
+        const d = parts[2].padStart(2, '0');
+        cleanDate = `${y}-${m}-${d}`;
+      }
+    }
+
+    return {
+      id: finalId,
+      date: cleanDate,
+      type: typeVal || 'Task',
+      content: contentVal || '',
+      status: statusVal || 'Pending',
+      remarks: remarksVal || ''
+    };
+  });
 }
 
 function parseLogs(rows) {
