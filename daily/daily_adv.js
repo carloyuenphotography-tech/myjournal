@@ -258,7 +258,6 @@ function toggleQuickDateInput(chk) {
   }
 }
 
-/* ⚡ 自動將特定字眼轉成 Emoji */
 function autoEmojiReplace(text) {
   const emojiMap = {
     'meeting': '📅 開會',
@@ -493,7 +492,7 @@ function initSortable() {
   });
 }
 
-/* ⚡ 獨立辨識地點與時間 */
+/* ⚡ 結合地點、時間與 Due Date 辨識 */
 function createTaskCard(item) {
   const card = document.createElement('div');
   const tagClass = getTagClasses(item);
@@ -505,10 +504,47 @@ function createTaskCard(item) {
   let displayRemarks = item.remarks || '';
   let locText = '';
   let timeText = '';
+  let dueDateStr = '';
+  let dueBadgeHtml = '';
 
   const fullText = displayTitle + ' ' + displayRemarks;
 
-  // 1. 獨立提取地點：匹配 @開頭的字詞
+  // 1. Due Date 提取與倒數計算
+  const dueMatch = fullText.match(/\bdue:(\d{4}-\d{2}-\d{2}|\d{2}-\d{2})\b/i);
+  if (dueMatch) {
+    let rawDue = dueMatch[1];
+    if (rawDue.length === 5) {
+      const currentYear = item.date ? item.date.split('-')[0] : new Date().getFullYear();
+      rawDue = `${currentYear}-${rawDue}`;
+    }
+    dueDateStr = rawDue;
+
+    displayTitle = displayTitle.replace(/\bdue:\S+/gi, '').trim();
+    displayRemarks = displayRemarks.replace(/\bdue:\S+/gi, '').trim();
+
+    const baseDate = new Date(item.date || todayStr);
+    const dueDate = new Date(dueDateStr);
+    const diffTime = dueDate - baseDate;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    let dueStyle = "background: rgba(255, 255, 255, 0.25); border: 1px solid rgba(255, 255, 255, 0.4);";
+    let dueStatusText = `📅 截止: ${dueDateStr}`;
+
+    if (diffDays < 0) {
+      dueStyle = "background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-weight:bold;";
+      dueStatusText = `🚨 已逾期 ${Math.abs(diffDays)} 天 (${dueDateStr})`;
+    } else if (diffDays === 0) {
+      dueStyle = "background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight:bold;";
+      dueStatusText = `⚠️ 今天到期 (${dueDateStr})`;
+    } else if (diffDays <= 3) {
+      dueStyle = "background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa;";
+      dueStatusText = `⏳ 倒數 ${diffDays} 天 (${dueDateStr})`;
+    }
+
+    dueBadgeHtml = `<span class="location-badge" style="${dueStyle}">${dueStatusText}</span>`;
+  }
+
+  // 2. 地點提取
   const locMatch = fullText.match(/@([^\s#(\[]+)/);
   if (locMatch) {
     locText = locMatch[1];
@@ -516,7 +552,7 @@ function createTaskCard(item) {
     displayRemarks = displayRemarks.replace(/@([^\s#(\[]+)/, '').trim();
   }
 
-  // 2. 獨立提取時間：匹配 (時間) 格式
+  // 3. 時間提取
   const timeMatch = fullText.match(/\((?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)|([^\)]*?時間[^\)]*?))\)/);
   if (timeMatch) {
     timeText = timeMatch[1] || timeMatch[2];
@@ -538,7 +574,10 @@ function createTaskCard(item) {
     <div class="task-info">
       <div class="task-title">${displayTitle}</div>
       ${displayRemarks ? `<div class="task-remarks">💬 ${displayRemarks}</div>` : ''}
-      ${locationBadgeHtml}
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        ${locationBadgeHtml}
+        ${dueBadgeHtml}
+      </div>
     </div>
     <div class="drag-handle" title="拖曳排序" onclick="event.stopPropagation()">⋮⋮</div>
   `;
@@ -832,6 +871,7 @@ function openAddModal(presetDate) {
   document.getElementById('modalFormTitle').textContent = '➕ 新增事項';
   document.getElementById('modalItemId').value = '';
   document.getElementById('modalDate').value = presetDate || todayStr;
+  document.getElementById('modalDueDate').value = '';
   document.getElementById('modalType').value = 'Task';
   document.getElementById('modalContent').value = '';
   document.getElementById('modalRemarks').value = '';
@@ -853,9 +893,20 @@ function openEditModal(targetOrId) {
   document.getElementById('modalFormTitle').textContent = '✏️ 編輯 / 操作事項';
   document.getElementById('modalItemId').value = target.id;
   document.getElementById('modalDate').value = target.date || '';
+
+  // 從備註中解析出 due:YYYY-MM-DD
+  let cleanRemarks = target.remarks || '';
+  let foundDue = '';
+  const dueMatch = cleanRemarks.match(/\bdue:(\d{4}-\d{2}-\d{2})\b/i);
+  if (dueMatch) {
+    foundDue = dueMatch[1];
+    cleanRemarks = cleanRemarks.replace(/\bdue:\S+/gi, '').trim();
+  }
+  document.getElementById('modalDueDate').value = foundDue;
+
   document.getElementById('modalType').value = target.type;
   document.getElementById('modalContent').value = target.content;
-  document.getElementById('modalRemarks').value = target.remarks || '';
+  document.getElementById('modalRemarks').value = cleanRemarks;
 
   updateModalButtonsState(target);
   document.getElementById('itemModal').style.display = 'flex';
@@ -1030,13 +1081,19 @@ function handleFormSubmit(e) {
   e.preventDefault();
   const id = document.getElementById('modalItemId').value;
   const date = document.getElementById('modalDate').value.trim();
+  const dueDate = document.getElementById('modalDueDate').value.trim();
   const type = document.getElementById('modalType').value;
   let content = document.getElementById('modalContent').value.trim();
-  const remarks = document.getElementById('modalRemarks').value.trim();
+  let remarks = document.getElementById('modalRemarks').value.trim();
 
   if (!content) return;
 
   content = autoEmojiReplace(content);
+
+  // 若填寫了截止日期，自動附加在備註後面
+  if (dueDate) {
+    remarks = remarks ? `${remarks} due:${dueDate}` : `due:${dueDate}`;
+  }
 
   if (id) {
     const target = allLogs.find(l => String(l.id) === String(id));
