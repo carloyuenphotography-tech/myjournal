@@ -183,7 +183,8 @@ function loadLogsData() {
   const gid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_LOG : '0';
   if (!sheetId) { showStatus('❌ 缺少 DAILY_SHEET_ID', '#ef4444'); return; }
 
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&t=${new Date().getTime()}`;
+  // 💡 優先使用 gid，同時加上 sheet=Daily 指定分頁名稱，防止讀錯工作表
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=Daily&gid=${gid}&t=${new Date().getTime()}`;
 
   Papa.parse(csvUrl, {
     download: true, header: true, skipEmptyLines: true,
