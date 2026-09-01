@@ -1,4 +1,4 @@
-// memo.js
+// memo.js - 數學科 Memo 控制邏輯 (已同步防護 ISO 時間字串問題)
 let rawMemos = [];
 let currentClass = 'ALL';
 let showArchived = false;
@@ -7,12 +7,40 @@ window.onload = () => {
   fetchMemos();
 };
 
+// 輔助函數 1：將日期安全轉換為 YYYY-MM-DD (避免 UTC 時區導致日期偏了一天)
+function formatDateStr(dateVal) {
+  if (!dateVal) return '';
+  if (typeof dateVal === 'string') {
+    if (dateVal.includes('T')) {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return dateVal.substring(0, 10);
+      const localD = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+      return localD.toISOString().split('T')[0];
+    }
+    return dateVal.substring(0, 10);
+  }
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return '';
+  const localD = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+  return localD.toISOString().split('T')[0];
+}
+
+// 輔助函數 2：防止標題/主題/內文被 Google Sheet / GAS 當成 Date 物件並格式化成 ISO 時間字串
+function formatTextStr(textVal) {
+  if (!textVal) return '';
+  const str = String(textVal).trim();
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(str)) {
+    return formatDateStr(str);
+  }
+  return str;
+}
+
 async function fetchMemos() {
   try {
     const response = await fetch(`${CONFIG.GAS_API_URL}?action=getAll`);
     const result = await response.json();
     if (result.status === 'success') {
-      rawMemos = result.data;
+      rawMemos = result.data || [];
       
       rawMemos.sort((a, b) => {
         const dateA = new Date(a.date || a.created_at || 0);
@@ -23,7 +51,7 @@ async function fetchMemos() {
       renderMemos();
     }
   } catch (err) {
-    document.getElementById('memoList').innerHTML = '<p>資料載入失敗，請檢查 API 設定。</p>';
+    document.getElementById('memoList').innerHTML = '<p style="color:red;">❌ 資料載入失敗，請檢查 API 設定。</p>';
   }
 }
 
@@ -49,7 +77,7 @@ function renderMemos() {
   });
 
   if (filtered.length === 0) {
-    listContainer.innerHTML = '<p>目前沒有符合條件的 Memo。</p>';
+    listContainer.innerHTML = '<p style="color:#64748b;">目前沒有符合條件的 Memo。</p>';
     return;
   }
 
@@ -74,7 +102,7 @@ function renderMemos() {
           ${memo.homework_list.map(hw => `
             <div class="hw-item">
               <div class="hw-item-top">
-                <span class="hw-item-title">${hw.title || '-'}</span>
+                <span class="hw-item-title">${formatTextStr(hw.title) || '-'}</span>
               </div>
               <div class="hw-badges">
                 <span class="pill pill-collect-${hw.collect_status || '未收齊'}" style="cursor:pointer;" title="點擊切換收繳狀態" onclick="cycleCollectStatus('${hw.homework_id}')">${hw.collect_status || '未收齊'}</span>
@@ -96,8 +124,8 @@ function renderMemos() {
             <span class="badge class-${className}">${className || '未指定'}</span>
             ${memo.cycle_day ? `<span class="badge cycle-day">${memo.cycle_day}</span>` : ''}
           </div>
-          <div class="memo-date">${memo.date ? memo.date.substring(0,10) : ''}</div>
-          <div class="memo-title">${memo.topic || '(無課題名稱)'}</div>
+          <div class="memo-date">${formatDateStr(memo.date)}</div>
+          <div class="memo-title">${formatTextStr(memo.topic) || '(無課題名稱)'}</div>
         </div>
         <div style="white-space:nowrap;">
           <span class="action-btn" title="修改Memo" onclick="openEditModal('${memo.id}', event)">✏️</span>
@@ -113,8 +141,8 @@ function renderMemos() {
       <div style="margin-top:6px;">${tagsHtml}</div>
 
       <div class="memo-body">
-        <div class="teaching-content">${memo.content || '<span style="color:#999; font-size:15px;">(暫無教學內容)</span>'}</div>
-        ${memo.reminders ? `<div class="reminder-box">🔔 ${memo.reminders}</div>` : ''}
+        <div class="teaching-content">${formatTextStr(memo.content) || '<span style="color:#999; font-size:15px;">(暫無教學內容)</span>'}</div>
+        ${memo.reminders ? `<div class="reminder-box">🔔 ${formatTextStr(memo.reminders)}</div>` : ''}
         ${hwHtml}
       </div>
     `;
@@ -123,7 +151,6 @@ function renderMemos() {
   });
 }
 
-// 輔助工具：尋找特定 homework 並回傳該 hw 與其 memo
 function findHomeworkAndMemo(hwId) {
   for (let memo of rawMemos) {
     if (memo.homework_list) {
@@ -134,16 +161,13 @@ function findHomeworkAndMemo(hwId) {
   return null;
 }
 
-// 快速更新並同步到後端
 async function updateHwAndSync(hwId, updatedFields) {
   const target = findHomeworkAndMemo(hwId);
   if (!target) return;
 
-  // 局部更新前端資料
   Object.assign(target.hw, updatedFields);
-  renderMemos(); // 立即重新渲染畫面
+  renderMemos();
 
-  // 背景發送 API 更新
   const payload = {
     action: 'updateHomeworkInline',
     data: {
@@ -162,7 +186,6 @@ async function updateHwAndSync(hwId, updatedFields) {
   });
 }
 
-// 1. 循環切換收繳狀態
 function cycleCollectStatus(hwId) {
   const target = findHomeworkAndMemo(hwId);
   if (!target) return;
@@ -172,7 +195,6 @@ function cycleCollectStatus(hwId) {
   updateHwAndSync(hwId, { collect_status: nextStatus });
 }
 
-// 2. 循環切換批改狀態
 function cycleMarkingStatus(hwId) {
   const target = findHomeworkAndMemo(hwId);
   if (!target) return;
@@ -182,7 +204,6 @@ function cycleMarkingStatus(hwId) {
   updateHwAndSync(hwId, { marking_status: nextStatus });
 }
 
-// 3. 循環切換地點
 function cycleLocation(hwId) {
   const target = findHomeworkAndMemo(hwId);
   if (!target) return;
@@ -192,12 +213,11 @@ function cycleLocation(hwId) {
   updateHwAndSync(hwId, { storage_location: nextStatus });
 }
 
-// 4. 點擊修改欠交學生
 function editMissingStudents(hwId) {
   const target = findHomeworkAndMemo(hwId);
   if (!target) return;
   const currentVal = target.hw.missing_students || '';
-  const newVal = prompt(`請輸入 ${target.hw.title} 的欠交學生號碼（例如: 10, 12, 15）：`, currentVal);
+  const newVal = prompt(`請輸入 ${formatTextStr(target.hw.title)} 的欠交學生號碼（例如: 10, 12, 15）：`, currentVal);
   if (newVal !== null) {
     updateHwAndSync(hwId, { missing_students: newVal.trim() });
   }
@@ -230,7 +250,7 @@ function addHomeworkRow(data = {}) {
     <div class="hw-form-row" id="${rowId}">
       <input type="hidden" class="hw-id" value="${data.homework_id || ''}">
       <div style="display:flex; gap:8px; margin-bottom:5px;">
-        <input type="text" class="hw-title" placeholder="功課名稱 (例: 工作紙 3.1)" value="${data.title || ''}" style="flex:2;">
+        <input type="text" class="hw-title" placeholder="功課名稱 (例: 工作紙 3.1)" value="${formatTextStr(data.title) || ''}" style="flex:2;">
         <select class="hw-location" style="flex:1;">
           <option value="教員室" ${data.storage_location === '教員室' ? 'selected' : ''}>教員室</option>
           <option value="7/F簿櫃" ${data.storage_location === '7/F簿櫃' ? 'selected' : ''}>7/F簿櫃</option>
@@ -261,7 +281,12 @@ function addHomeworkRow(data = {}) {
 function openModal() {
   document.getElementById('modalTitle').innerText = '新增教學 Memo';
   document.getElementById('formMemoId').value = '';
-  document.getElementById('formDate').valueAsDate = new Date();
+
+  const today = new Date();
+  const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000))
+                      .toISOString().split('T')[0];
+  document.getElementById('formDate').value = localDate;
+
   document.getElementById('formCycleDay').value = 'Day A';
   document.getElementById('formClass').value = '2A';
   document.getElementById('formTopic').value = '';
@@ -281,12 +306,12 @@ function openEditModal(memoId, event) {
 
   document.getElementById('modalTitle').innerText = '修改教學 Memo';
   document.getElementById('formMemoId').value = memo.id;
-  document.getElementById('formDate').value = memo.date ? memo.date.substring(0, 10) : '';
+  document.getElementById('formDate').value = formatDateStr(memo.date);
   document.getElementById('formCycleDay').value = memo.cycle_day || 'Day A';
   document.getElementById('formClass').value = memo.class_name || '2A';
-  document.getElementById('formTopic').value = memo.topic || '';
-  document.getElementById('formContent').value = memo.content || '';
-  document.getElementById('formReminders').value = memo.reminders || '';
+  document.getElementById('formTopic').value = formatTextStr(memo.topic);
+  document.getElementById('formContent').value = formatTextStr(memo.content);
+  document.getElementById('formReminders').value = formatTextStr(memo.reminders);
   document.getElementById('formHashtags').value = memo.hashtags || '';
 
   const container = document.getElementById('homeworkFormContainer');
