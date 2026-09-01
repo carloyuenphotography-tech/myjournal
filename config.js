@@ -17,7 +17,7 @@ const CONFIG = {
   // 各分頁的 GID
   GIDS: {
     DAILY_LOG: '0',
-    IDEAS: '0',                    
+    IDEAS: '1821924181',                    
     HABITS: '837132755',
     HABIT_LOGS: '1991677412',
     FT: "1351247680",
