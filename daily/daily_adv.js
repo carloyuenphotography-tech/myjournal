@@ -13,8 +13,7 @@ const CATEGORIES = [
   { id: 'bday',     name: '🎂 生日',      tag: '#bday',     bg: '#fce7f3', color: '#9d174d' }
 ];
 
-window.allLogs = [];
-let allLogs = window.allLogs;
+let allLogs = [];
 let currentCategoryFilter = 'all';
 
 function getTodayString() {
@@ -36,11 +35,6 @@ function getTomorrowString() {
 
 let todayStr = getTodayString();
 let tomorrowStr = getTomorrowString();
-
-function showStatus(text, color = '#0284c7') {
-  const msg = document.getElementById('statusMessage');
-  if (msg) { msg.style.color = color; msg.textContent = text; }
-}
 
 function initGoogleSignIn() {
   const container = document.getElementById("googleSignInContainer");
@@ -178,7 +172,19 @@ function checkLoginStatus() {
   }
 }
 
-/* ⚡ 穩定版 loadLogsData：採用 GID 搭配防呆過濾，確保精準讀取 Daily 資料 */
+function logout() {
+  if (confirm('確定要登出系統嗎？')) {
+    localStorage.removeItem("user_google_email");
+    localStorage.removeItem("google_user");
+    location.reload();
+  }
+}
+
+function showStatus(text, color = '#0284c7') {
+  const msg = document.getElementById('statusMessage');
+  if (msg) { msg.style.color = color; msg.textContent = text; }
+}
+
 function loadLogsData() {
   const sheetId = CONFIG.DAILY_SHEET_ID;
   const gid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_LOG : '0';
@@ -186,102 +192,50 @@ function loadLogsData() {
 
   const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&t=${new Date().getTime()}`;
 
-  showStatus('⏳ 正在讀取 Daily 日誌...', '#0284c7');
-
   Papa.parse(csvUrl, {
-    download: true, 
-    header: true, 
-    skipEmptyLines: true,
+    download: true, header: true, skipEmptyLines: true,
     complete: (results) => {
-      // 防呆檢查：如果抓到的是課表（含有 Cycle_Day），自動提示並切換過濾
-      const rawData = results.data;
-      if (rawData && rawData.length > 0 && (rawData[0].Cycle_Day !== undefined || rawData[0].Period !== undefined)) {
-        console.warn("⚠️ 警告：目前 GID 讀取到了課表分頁，正在自動過濾...");
-      }
-
-      window.allLogs = parseLogs(rawData);
-      allLogs = window.allLogs;
+      allLogs = parseLogs(results.data);
       showStatus('');
       refreshAllViews();
     },
-    error: (err) => {
-      console.error("❌ 讀取失敗：", err);
-      showStatus('❌ 讀取失敗，請確認 Google Sheet 公開權限', '#ef4444');
-    }
+    error: () => showStatus('❌ 讀取失敗，請確認 Google Sheet 公開權限', '#ef4444')
   });
 }
 
-/* 備用 CSV 讀取 (防止 GAS 未實作時的保險) */
-function loadLogsDataFallback() {
-  const sheetId = CONFIG.DAILY_SHEET_ID;
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=Daily&t=${new Date().getTime()}`;
-
-  Papa.parse(csvUrl, {
-    download: true, 
-    header: true, 
-    skipEmptyLines: true,
-    complete: (results) => {
-      window.allLogs = parseLogs(results.data);
-      allLogs = window.allLogs;
-      showStatus('');
-      refreshAllViews();
-    },
-    error: () => showStatus('❌ 讀取失敗，請確認 Google Sheet 權限', '#ef4444')
-  });
-}
 function getProp(obj, keyNames) {
   if (!obj) return '';
-  const keys = Object.keys(obj);
-  for (let targetKey of keyNames) {
-    const targetClean = targetKey.toLowerCase().trim();
-    for (let rawKey of keys) {
-      const keyClean = rawKey.replace(/^\ufeff/, '').toLowerCase().trim();
-      if (keyClean === targetClean) {
-        return String(obj[rawKey]).trim();
-      }
+  for (let k of Object.keys(obj)) {
+    if (keyNames.includes(k.trim().toLowerCase())) {
+      return obj[k];
     }
   }
   return '';
 }
 
 function parseLogs(rows) {
-  if (!rows || !Array.isArray(rows)) return [];
-  
+  if (!rows) return [];
   return rows.map((r, i) => {
-    const idVal = getProp(r, ['id', 'ID', '編號']);
-    const dateVal = getProp(r, ['date', 'Date', 'DATE', '日期']);
-    const typeVal = getProp(r, ['type', 'Type', 'TYPE', '類型', '類別']);
-    const contentVal = getProp(r, ['content', 'Content', 'CONTENT', '內容', '事項']);
-    const statusVal = getProp(r, ['status', 'Status', 'STATUS', '狀態']);
-    const remarksVal = getProp(r, ['remarks', 'Remarks', 'REMARKS', '備註']);
+    const idVal = getProp(r, ['id']);
+    const dateVal = getProp(r, ['date', '日期']);
+    const typeVal = getProp(r, ['type', '類型']);
+    const contentVal = getProp(r, ['content', '內容']);
+    const statusVal = getProp(r, ['status', '狀態']);
+    const remarksVal = getProp(r, ['remarks', '備註']);
 
-    if (!idVal && !dateVal && !contentVal) return null;
-
-    const finalId = (idVal && idVal !== '') 
-      ? idVal 
+    const finalId = (idVal && String(idVal).trim() !== '') 
+      ? String(idVal).trim() 
       : `L_${i}_${Math.random().toString(36).substr(2, 5)}`;
-
-    let cleanDate = String(dateVal || '').trim();
-    if (cleanDate) {
-      cleanDate = cleanDate.replace(/[\/.]/g, '-');
-      const parts = cleanDate.split('-');
-      if (parts.length === 3) {
-        const y = parts[0];
-        const m = parts[1].padStart(2, '0');
-        const d = parts[2].padStart(2, '0');
-        cleanDate = `${y}-${m}-${d}`;
-      }
-    }
 
     return {
       id: finalId,
-      date: cleanDate,
+      date: String(dateVal || '').trim(),
       type: String(typeVal || 'Task').trim(),
       content: String(contentVal || '').trim(),
       status: String(statusVal || 'Pending').trim(),
       remarks: String(remarksVal || '').trim()
     };
-  }).filter(Boolean);
+  });
 }
 
 function setCategoryFilter(category) {
@@ -304,6 +258,7 @@ function toggleQuickDateInput(chk) {
   }
 }
 
+/* ⚡ 自動將特定字眼轉成 Emoji */
 function autoEmojiReplace(text) {
   const emojiMap = {
     'meeting': '📅 開會',
@@ -538,6 +493,7 @@ function initSortable() {
   });
 }
 
+/* ⚡ 獨立辨識地點與時間 */
 function createTaskCard(item) {
   const card = document.createElement('div');
   const tagClass = getTagClasses(item);
@@ -549,45 +505,10 @@ function createTaskCard(item) {
   let displayRemarks = item.remarks || '';
   let locText = '';
   let timeText = '';
-  let dueDateStr = '';
-  let dueBadgeHtml = '';
 
   const fullText = displayTitle + ' ' + displayRemarks;
 
-  const dueMatch = fullText.match(/\bdue:(\d{4}-\d{2}-\d{2}|\d{2}-\d{2})\b/i);
-  if (dueMatch) {
-    let rawDue = dueMatch[1];
-    if (rawDue.length === 5) {
-      const currentYear = item.date ? item.date.split('-')[0] : new Date().getFullYear();
-      rawDue = `${currentYear}-${rawDue}`;
-    }
-    dueDateStr = rawDue;
-
-    displayTitle = displayTitle.replace(/\bdue:\S+/gi, '').trim();
-    displayRemarks = displayRemarks.replace(/\bdue:\S+/gi, '').trim();
-
-    const baseDate = new Date(item.date || todayStr);
-    const dueDate = new Date(dueDateStr);
-    const diffTime = dueDate - baseDate;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    let dueStyle = "background: rgba(255, 255, 255, 0.25); border: 1px solid rgba(255, 255, 255, 0.4);";
-    let dueStatusText = `📅 截止: ${dueDateStr}`;
-
-    if (diffDays < 0) {
-      dueStyle = "background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-weight:bold;";
-      dueStatusText = `🚨 已逾期 ${Math.abs(diffDays)} 天 (${dueDateStr})`;
-    } else if (diffDays === 0) {
-      dueStyle = "background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight:bold;";
-      dueStatusText = `⚠️ 今天到期 (${dueDateStr})`;
-    } else if (diffDays <= 3) {
-      dueStyle = "background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa;";
-      dueStatusText = `⏳ 倒數 ${diffDays} 天 (${dueDateStr})`;
-    }
-
-    dueBadgeHtml = `<span class="location-badge" style="${dueStyle}">${dueStatusText}</span>`;
-  }
-
+  // 1. 獨立提取地點：匹配 @開頭的字詞
   const locMatch = fullText.match(/@([^\s#(\[]+)/);
   if (locMatch) {
     locText = locMatch[1];
@@ -595,6 +516,7 @@ function createTaskCard(item) {
     displayRemarks = displayRemarks.replace(/@([^\s#(\[]+)/, '').trim();
   }
 
+  // 2. 獨立提取時間：匹配 (時間) 格式
   const timeMatch = fullText.match(/\((?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)|([^\)]*?時間[^\)]*?))\)/);
   if (timeMatch) {
     timeText = timeMatch[1] || timeMatch[2];
@@ -616,10 +538,7 @@ function createTaskCard(item) {
     <div class="task-info">
       <div class="task-title">${displayTitle}</div>
       ${displayRemarks ? `<div class="task-remarks">💬 ${displayRemarks}</div>` : ''}
-      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;">
-        ${locationBadgeHtml}
-        ${dueBadgeHtml}
-      </div>
+      ${locationBadgeHtml}
     </div>
     <div class="drag-handle" title="拖曳排序" onclick="event.stopPropagation()">⋮⋮</div>
   `;
@@ -913,7 +832,6 @@ function openAddModal(presetDate) {
   document.getElementById('modalFormTitle').textContent = '➕ 新增事項';
   document.getElementById('modalItemId').value = '';
   document.getElementById('modalDate').value = presetDate || todayStr;
-  document.getElementById('modalDueDate').value = '';
   document.getElementById('modalType').value = 'Task';
   document.getElementById('modalContent').value = '';
   document.getElementById('modalRemarks').value = '';
@@ -935,19 +853,9 @@ function openEditModal(targetOrId) {
   document.getElementById('modalFormTitle').textContent = '✏️ 編輯 / 操作事項';
   document.getElementById('modalItemId').value = target.id;
   document.getElementById('modalDate').value = target.date || '';
-  
-  let cleanRemarks = target.remarks || '';
-  let foundDue = '';
-  const dueMatch = cleanRemarks.match(/\bdue:(\d{4}-\d{2}-\d{2})\b/i);
-  if (dueMatch) {
-    foundDue = dueMatch[1];
-    cleanRemarks = cleanRemarks.replace(/\bdue:\S+/gi, '').trim();
-  }
-  document.getElementById('modalDueDate').value = foundDue;
-
   document.getElementById('modalType').value = target.type;
   document.getElementById('modalContent').value = target.content;
-  document.getElementById('modalRemarks').value = cleanRemarks;
+  document.getElementById('modalRemarks').value = target.remarks || '';
 
   updateModalButtonsState(target);
   document.getElementById('itemModal').style.display = 'flex';
@@ -1122,18 +1030,13 @@ function handleFormSubmit(e) {
   e.preventDefault();
   const id = document.getElementById('modalItemId').value;
   const date = document.getElementById('modalDate').value.trim();
-  const dueDate = document.getElementById('modalDueDate').value.trim();
   const type = document.getElementById('modalType').value;
   let content = document.getElementById('modalContent').value.trim();
-  let remarks = document.getElementById('modalRemarks').value.trim();
+  const remarks = document.getElementById('modalRemarks').value.trim();
 
   if (!content) return;
 
   content = autoEmojiReplace(content);
-
-  if (dueDate) {
-    remarks = remarks ? `${remarks} due:${dueDate}` : `due:${dueDate}`;
-  }
 
   if (id) {
     const target = allLogs.find(l => String(l.id) === String(id));
