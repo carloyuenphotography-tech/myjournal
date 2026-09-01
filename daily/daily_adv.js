@@ -178,104 +178,90 @@ function checkLoginStatus() {
   }
 }
 
+/* ⚡ 穩定版 loadLogsData：採用 GID 搭配防呆過濾，確保精準讀取 Daily 資料 */
 function loadLogsData() {
   const sheetId = CONFIG.DAILY_SHEET_ID;
   const gid = CONFIG.GIDS ? CONFIG.GIDS.DAILY_LOG : '0';
   if (!sheetId) { showStatus('❌ 缺少 DAILY_SHEET_ID', '#ef4444'); return; }
 
-  // 💡 優先使用 gid，同時加上 sheet=Daily 指定分頁名稱，防止讀錯工作表
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=Daily&gid=${gid}&t=${new Date().getTime()}`;
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}&t=${new Date().getTime()}`;
+
+  showStatus('⏳ 正在讀取 Daily 日誌...', '#0284c7');
 
   Papa.parse(csvUrl, {
-    download: true, header: true, skipEmptyLines: true,
+    download: true, 
+    header: true, 
+    skipEmptyLines: true,
+    complete: (results) => {
+      // 防呆檢查：如果抓到的是課表（含有 Cycle_Day），自動提示並切換過濾
+      const rawData = results.data;
+      if (rawData && rawData.length > 0 && (rawData[0].Cycle_Day !== undefined || rawData[0].Period !== undefined)) {
+        console.warn("⚠️ 警告：目前 GID 讀取到了課表分頁，正在自動過濾...");
+      }
+
+      window.allLogs = parseLogs(rawData);
+      allLogs = window.allLogs;
+      showStatus('');
+      refreshAllViews();
+    },
+    error: (err) => {
+      console.error("❌ 讀取失敗：", err);
+      showStatus('❌ 讀取失敗，請確認 Google Sheet 公開權限', '#ef4444');
+    }
+  });
+}
+
+/* 備用 CSV 讀取 (防止 GAS 未實作時的保險) */
+function loadLogsDataFallback() {
+  const sheetId = CONFIG.DAILY_SHEET_ID;
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=Daily&t=${new Date().getTime()}`;
+
+  Papa.parse(csvUrl, {
+    download: true, 
+    header: true, 
+    skipEmptyLines: true,
     complete: (results) => {
       window.allLogs = parseLogs(results.data);
       allLogs = window.allLogs;
       showStatus('');
       refreshAllViews();
     },
-    error: () => showStatus('❌ 讀取失敗，請確認 Google Sheet 公開權限', '#ef4444')
+    error: () => showStatus('❌ 讀取失敗，請確認 Google Sheet 權限', '#ef4444')
   });
 }
-
-/* ⚡ 終極強化版 getProp：名稱對不上時自動按欄位順序 (A, B, C, D...) 抓取 */
-function getProp(obj, keyNames, columnIndex = -1) {
+function getProp(obj, keyNames) {
   if (!obj) return '';
-  const rawKeys = Object.keys(obj);
-  
-  // 1. 優先嘗試「名稱關鍵字」模糊比對
+  const keys = Object.keys(obj);
   for (let targetKey of keyNames) {
     const targetClean = targetKey.toLowerCase().trim();
-    for (let rawKey of rawKeys) {
+    for (let rawKey of keys) {
       const keyClean = rawKey.replace(/^\ufeff/, '').toLowerCase().trim();
-      if (keyClean === targetClean || keyClean.includes(targetClean)) {
+      if (keyClean === targetClean) {
         return String(obj[rawKey]).trim();
       }
     }
   }
-
-  // 2. 若名稱完全對不上，則強制按「欄位順序位置」抓取 (0:ID, 1:Date, 2:Type, 3:Content, 4:Status, 5:Remarks)
-  if (columnIndex >= 0 && rawKeys[columnIndex] !== undefined) {
-    return String(obj[rawKeys[columnIndex]]).trim();
-  }
-
   return '';
 }
 
-/* ⚡ 配合欄位順序備援的 parseLogs */
 function parseLogs(rows) {
   if (!rows || !Array.isArray(rows)) return [];
-  return rows.map((r, i) => {
-    // 傳入欄位位置索引 (A欄:0, B欄:1, C欄:2, D欄:3, E欄:4, F欄:5)
-    const idVal = getProp(r, ['id', 'ID', '編號'], 0);
-    const dateVal = getProp(r, ['date', 'Date', '日期'], 1);
-    const typeVal = getProp(r, ['type', 'Type', '類型'], 2);
-    const contentVal = getProp(r, ['content', 'Content', '內容', '事項'], 3);
-    const statusVal = getProp(r, ['status', 'Status', '狀態'], 4);
-    const remarksVal = getProp(r, ['remarks', 'Remarks', '備註'], 5);
-
-    const finalId = (idVal && idVal !== '') 
-      ? idVal 
-      : `L_${i}_${Math.random().toString(36).substr(2, 5)}`;
-
-    let cleanDate = dateVal;
-    if (cleanDate) {
-      cleanDate = cleanDate.replace(/[\/.]/g, '-');
-      const parts = cleanDate.split('-');
-      if (parts.length === 3) {
-        const y = parts[0];
-        const m = parts[1].padStart(2, '0');
-        const d = parts[2].padStart(2, '0');
-        cleanDate = `${y}-${m}-${d}`;
-      }
-    }
-
-    return {
-      id: finalId,
-      date: cleanDate,
-      type: typeVal || 'Task',
-      content: contentVal || '',
-      status: statusVal || 'Pending',
-      remarks: remarksVal || ''
-    };
-  });
-}
-
-function parseLogs(rows) {
-  if (!rows || !Array.isArray(rows)) return [];
+  
   return rows.map((r, i) => {
     const idVal = getProp(r, ['id', 'ID', '編號']);
-    const dateVal = getProp(r, ['date', 'Date', 'DATE', '日期', 'start date', 'startdate']);
+    const dateVal = getProp(r, ['date', 'Date', 'DATE', '日期']);
     const typeVal = getProp(r, ['type', 'Type', 'TYPE', '類型', '類別']);
     const contentVal = getProp(r, ['content', 'Content', 'CONTENT', '內容', '事項']);
     const statusVal = getProp(r, ['status', 'Status', 'STATUS', '狀態']);
     const remarksVal = getProp(r, ['remarks', 'Remarks', 'REMARKS', '備註']);
 
+    if (!idVal && !dateVal && !contentVal) return null;
+
     const finalId = (idVal && idVal !== '') 
       ? idVal 
       : `L_${i}_${Math.random().toString(36).substr(2, 5)}`;
 
-    let cleanDate = dateVal;
+    let cleanDate = String(dateVal || '').trim();
     if (cleanDate) {
       cleanDate = cleanDate.replace(/[\/.]/g, '-');
       const parts = cleanDate.split('-');
@@ -290,12 +276,12 @@ function parseLogs(rows) {
     return {
       id: finalId,
       date: cleanDate,
-      type: typeVal || 'Task',
-      content: contentVal || '',
-      status: statusVal || 'Pending',
-      remarks: remarksVal || ''
+      type: String(typeVal || 'Task').trim(),
+      content: String(contentVal || '').trim(),
+      status: String(statusVal || 'Pending').trim(),
+      remarks: String(remarksVal || '').trim()
     };
-  });
+  }).filter(Boolean);
 }
 
 function setCategoryFilter(category) {
